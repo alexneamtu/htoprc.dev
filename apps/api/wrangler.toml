@@ -15,11 +15,10 @@ routes = [
   { pattern = "api.htoprc.staging.alexneamtu.top", custom_domain = true }
 ]
 
-# Uncomment after creating database with: npx wrangler d1 create htoprc-db-staging
-# [[env.staging.d1_databases]]
-# binding = "DB"
-# database_name = "htoprc-db-staging"
-# database_id = "your-staging-db-id"
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "htoprc-db-staging"
+database_id = "8b9b25a5-60bc-44f8-9645-b19c414cdc6e"
 
 # ============================================
 # Production Environment
@@ -30,11 +29,10 @@ routes = [
   { pattern = "api.htoprc.dev.alexneamtu.top", custom_domain = true }
 ]
 
-# Uncomment after creating database with: npx wrangler d1 create htoprc-db-production
-# [[env.production.d1_databases]]
-# binding = "DB"
-# database_name = "htoprc-db-production"
-# database_id = "your-production-db-id"
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "htoprc-db-production"
+database_id = "d8bb5f13-2042-458a-a8e6-75cd4cd587d6"
 
 # ============================================
 # Shared Configuration Notes
