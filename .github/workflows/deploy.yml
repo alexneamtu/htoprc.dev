@@ -3,13 +3,30 @@ name: Deploy
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  # Default to production for push to main
+  DEPLOY_ENV: ${{ github.event.inputs.environment || 'production' }}
 
 jobs:
-  deploy:
+  deploy-web:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       deployments: write
+    environment:
+      name: ${{ github.event.inputs.environment || 'production' }}
+      url: ${{ steps.deploy.outputs.deployment-url }}
 
     steps:
       - name: Checkout
@@ -27,15 +44,47 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build
-        run: pnpm build
+      - name: Build parser
+        run: pnpm --filter @htoprc/parser build
+
+      - name: Build web
+        run: pnpm --filter @htoprc/web build
 
       - name: Deploy Web to Cloudflare Pages
+        id: deploy
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy ./apps/web/dist --project-name=htoprc-dev
+          command: pages deploy ./apps/web/dist --project-name=htoprc-dev-${{ env.DEPLOY_ENV }}
+          packageManager: pnpm
+
+  deploy-api:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+    environment:
+      name: ${{ github.event.inputs.environment || 'production' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build parser
+        run: pnpm --filter @htoprc/parser build
 
       - name: Deploy API to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3
@@ -43,4 +92,5 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: ./apps/api
-          command: deploy
+          command: deploy --env ${{ env.DEPLOY_ENV }}
+          packageManager: pnpm
