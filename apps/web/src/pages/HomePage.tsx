@@ -1,5 +1,5 @@
 import { HtopPreview } from '../components/htop/HtopPreview'
-import { parseHtoprc, DEFAULT_CONFIG } from '@htoprc/parser'
+import { parseHtoprc } from '@htoprc/parser'
 
 const SAMPLE_CONFIG = `htop_version=3.2.1
 config_reader_min_version=3
