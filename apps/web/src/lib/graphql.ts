@@ -5,8 +5,8 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787'
 export const client = createClient({
   url: `${API_URL}/api/graphql`,
   exchanges: [cacheExchange, fetchExchange],
+  preferGetMethod: false,
   fetchOptions: {
-    method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
