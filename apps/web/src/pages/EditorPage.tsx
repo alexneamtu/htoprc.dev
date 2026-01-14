@@ -99,7 +99,7 @@ export function EditorPage() {
           <div className="flex gap-2 flex-wrap">
             <button
               onClick={() => navigator.clipboard.writeText(content)}
-              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm"
+              className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded text-sm text-gray-900 dark:text-white"
             >
               Copy Config
             </button>
@@ -113,24 +113,24 @@ export function EditorPage() {
                 a.click()
                 URL.revokeObjectURL(url)
               }}
-              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm"
+              className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded text-sm text-gray-900 dark:text-white"
             >
               Download .htoprc
             </button>
             <button
               onClick={handleReset}
-              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm"
+              className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded text-sm text-gray-900 dark:text-white"
             >
               Reset to Defaults
             </button>
           </div>
-          <div className="text-xs text-gray-400 bg-gray-800 p-3 rounded font-mono">
-            <div className="mb-2 text-gray-300">Install instructions:</div>
+          <div className="text-xs text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 p-3 rounded font-mono border border-gray-200 dark:border-transparent">
+            <div className="mb-2 text-gray-900 dark:text-gray-300 font-semibold">Install instructions:</div>
             <div className="flex items-center gap-2">
-              <code className="flex-1 select-all">mkdir -p ~/.config/htop && cat &gt; ~/.config/htop/htoprc</code>
+              <code className="flex-1 select-all text-gray-700 dark:text-gray-300">mkdir -p ~/.config/htop && cat &gt; ~/.config/htop/htoprc</code>
               <button
                 onClick={() => navigator.clipboard.writeText('mkdir -p ~/.config/htop && cat > ~/.config/htop/htoprc')}
-                className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs shrink-0"
+                className="px-2 py-1 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded text-xs shrink-0 text-gray-900 dark:text-white"
                 title="Copy command"
               >
                 Copy
