@@ -1,5 +1,4 @@
 import type { HtopConfig, Meter } from '@htoprc/parser'
-import { COLOR_SCHEMES } from './ColorSchemes'
 import { MeterRenderer } from './meters'
 import { ProcessList } from './ProcessList'
 
@@ -44,30 +43,31 @@ function FunctionBar() {
 }
 
 export function HtopPreview({ config }: HtopPreviewProps) {
-  const colorScheme = COLOR_SCHEMES[config.colorScheme] ?? COLOR_SCHEMES[0]
-
+  // htop uses terminal background/colors, not its own - always use dark terminal style
+  // The color_scheme setting in htoprc refers to terminal color indices, not actual colors
   return (
     <div
       className="font-mono text-sm rounded overflow-hidden border border-gray-700"
       style={
         {
-          backgroundColor: colorScheme?.bg,
-          color: colorScheme?.fg,
-          '--htop-bg': colorScheme?.bg,
-          '--htop-fg': colorScheme?.fg,
-          '--htop-header': colorScheme?.header,
-          '--htop-meter-bar': colorScheme?.meterBar,
-          '--htop-meter-text': colorScheme?.meterText,
-          '--htop-selection': colorScheme?.selection,
-          '--htop-pid': colorScheme?.pid,
-          '--htop-user': colorScheme?.user,
-          '--htop-cpu': colorScheme?.cpu,
-          '--htop-mem': colorScheme?.mem,
-          '--htop-time': colorScheme?.time,
-          '--htop-command': colorScheme?.command,
-          '--htop-fn-key': colorScheme?.fnKey,
-          '--htop-fn-label': colorScheme?.fnLabel,
-          '--htop-fn-text': colorScheme?.fnText,
+          // Use consistent dark terminal colors (htop uses terminal colors, not its own)
+          backgroundColor: '#0d0d0d',
+          color: '#aaaaaa',
+          '--htop-bg': '#0d0d0d',
+          '--htop-fg': '#aaaaaa',
+          '--htop-header': '#005577',
+          '--htop-meter-bar': '#00aa00',
+          '--htop-meter-text': '#00aa00',
+          '--htop-selection': '#005577',
+          '--htop-pid': '#00aaaa',
+          '--htop-user': '#00aa00',
+          '--htop-cpu': '#00aa00',
+          '--htop-mem': '#aaaa00',
+          '--htop-time': '#aaaaaa',
+          '--htop-command': '#aaaaaa',
+          '--htop-fn-key': '#000000',
+          '--htop-fn-label': '#00aaaa',
+          '--htop-fn-text': '#000000',
         } as React.CSSProperties
       }
     >
