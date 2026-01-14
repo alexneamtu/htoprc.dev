@@ -5,49 +5,64 @@ interface SwapMeterProps {
   totalGb?: number
 }
 
-export function SwapMeter({ meter, totalGb = 8 }: SwapMeterProps) {
-  // Usually swap is mostly unused
+function formatSize(gb: number): string {
+  if (gb >= 1) return `${gb.toFixed(2)}G`
+  return `${(gb * 1024).toFixed(0)}M`
+}
+
+export function SwapMeter({ meter, totalGb = 4 }: SwapMeterProps) {
+  // Usually swap is mostly unused (0-10%)
   const used = totalGb * (Math.random() * 0.1)
 
   if (meter.mode === 'text') {
     return (
-      <div className="text-xs">
+      <div className="text-xs font-mono">
         <span className="text-gray-400">Swp: </span>
-        <span className="text-red-400">{used.toFixed(2)}G</span>
+        <span className="text-red-400">{formatSize(used)}</span>
         <span className="text-gray-500">/</span>
-        <span className="text-gray-400">{totalGb}G</span>
+        <span className="text-gray-400">{formatSize(totalGb)}</span>
       </div>
     )
   }
 
   if (meter.mode === 'graph') {
     const bars = '▁▂▃▄▅▆▇█'
-    const percent = (used / totalGb) * 100
-    const barIndex = Math.min(Math.floor(percent / 12.5), 7)
+    const graphHistory = Array.from({ length: 20 }, () =>
+      (Math.random() * 0.1) * 100
+    )
     return (
-      <div className="text-xs flex items-center gap-1">
+      <div className="text-xs font-mono flex items-center">
         <span className="text-gray-400">Swp</span>
-        <span className="text-red-400">{bars[barIndex]}</span>
-        <span className="text-gray-500">{percent.toFixed(0)}%</span>
+        <span className="text-cyan-400">[</span>
+        <span className="tracking-tight">
+          {graphHistory.map((val, i) => {
+            const barIndex = Math.min(Math.floor(val / 12.5), 7)
+            return (
+              <span key={i} className="text-red-400">
+                {bars[barIndex]}
+              </span>
+            )
+          })}
+        </span>
+        <span className="text-cyan-400">]</span>
       </div>
     )
   }
 
-  // Default: bar mode
-  const usedPercent = (used / totalGb) * 100
+  // Default: bar mode - htop style with pipes
+  const barWidth = 35
+  const usedWidth = Math.round((used / totalGb) * barWidth)
+  const emptyWidth = barWidth - usedWidth
 
   return (
-    <div className="flex items-center gap-1 text-xs">
-      <span className="w-8 text-gray-400">Swp</span>
-      <div className="flex-1 h-2 bg-gray-800 rounded-sm overflow-hidden">
-        <div
-          className="h-full bg-red-500"
-          style={{ width: `${usedPercent}%` }}
-          title={`Used: ${used.toFixed(2)}G`}
-        />
-      </div>
-      <span className="w-16 text-right text-gray-400">
-        {used.toFixed(2)}G/{totalGb}G
+    <div className="flex items-center text-xs font-mono whitespace-nowrap">
+      <span className="text-gray-400">Swp</span>
+      <span className="text-cyan-400">[</span>
+      <span className="text-red-400">{'|'.repeat(Math.max(0, usedWidth))}</span>
+      <span>{' '.repeat(Math.max(0, emptyWidth))}</span>
+      <span className="text-cyan-400">]</span>
+      <span className="text-gray-300 ml-1">
+        {formatSize(used)}/{formatSize(totalGb)}
       </span>
     </div>
   )
