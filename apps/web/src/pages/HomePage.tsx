@@ -32,7 +32,7 @@ function HeroConfig() {
         <div className="p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <span className="px-3 py-1 bg-yellow-500/20 text-yellow-400 text-sm font-semibold rounded-full">
+              <span className="px-3 py-1 bg-yellow-500 text-yellow-900 text-sm font-semibold rounded-full">
                 Top Rated
               </span>
               <h3 className="font-semibold text-xl">{config.title}</h3>
