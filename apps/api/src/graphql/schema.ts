@@ -35,9 +35,16 @@ interface ConfigRow {
 // Simple initial schema - will be expanded with Pothos later
 export const schema = createSchema<GraphQLContext>({
   typeDefs: /* GraphQL */ `
+    enum ConfigSort {
+      SCORE_DESC
+      LIKES_DESC
+      CREATED_DESC
+      CREATED_ASC
+    }
+
     type Query {
       health: Health!
-      configs(page: Int = 1, limit: Int = 20): ConfigConnection!
+      configs(page: Int = 1, limit: Int = 20, sort: ConfigSort = SCORE_DESC, minScore: Int = 0): ConfigConnection!
       config(id: ID, slug: String): Config
     }
 
@@ -90,24 +97,38 @@ export const schema = createSchema<GraphQLContext>({
       }),
       configs: async (
         _: unknown,
-        { page = 1, limit = 20 }: { page?: number; limit?: number },
+        {
+          page = 1,
+          limit = 20,
+          sort = 'SCORE_DESC',
+          minScore = 0,
+        }: { page?: number; limit?: number; sort?: string; minScore?: number },
         ctx: GraphQLContext
       ) => {
         const offset = (page - 1) * limit
 
+        // Map sort enum to SQL
+        const sortMap: Record<string, string> = {
+          SCORE_DESC: 'score DESC',
+          LIKES_DESC: 'likes_count DESC',
+          CREATED_DESC: 'created_at DESC',
+          CREATED_ASC: 'created_at ASC',
+        }
+        const orderBy = sortMap[sort] || 'score DESC'
+
         // Get total count
         const countResult = await ctx.db
-          .prepare('SELECT COUNT(*) as count FROM configs WHERE status = ?')
-          .bind('published')
+          .prepare('SELECT COUNT(*) as count FROM configs WHERE status = ? AND score >= ?')
+          .bind('published', minScore)
           .first<{ count: number }>()
         const totalCount = countResult?.count ?? 0
 
         // Get configs
         const result = await ctx.db
           .prepare(
-            'SELECT * FROM configs WHERE status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?'
+            `SELECT * FROM configs WHERE status = ? AND score >= ? ORDER BY ${orderBy} LIMIT ? OFFSET ?`
           )
-          .bind('published', limit, offset)
+          .bind('published', minScore, limit, offset)
           .all<ConfigRow>()
 
         const nodes = (result.results ?? []).map((row) => ({

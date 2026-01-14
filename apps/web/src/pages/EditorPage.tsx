@@ -9,10 +9,12 @@ const BG_COLOR_KEY = 'htoprc-preview-bg'
 const BACKGROUND_COLORS = [
   { name: 'Black', value: '#000000' },
   { name: 'Dark Gray', value: '#1a1a1a' },
-  { name: 'Gray', value: '#2d2d2d' },
   { name: 'Dracula', value: '#282a36' },
-  { name: 'Solarized', value: '#002b36' },
+  { name: 'Solarized Dark', value: '#002b36' },
   { name: 'Nord', value: '#2e3440' },
+  { name: 'Solarized Light', value: '#fdf6e3' },
+  { name: 'Light Gray', value: '#e5e5e5' },
+  { name: 'White', value: '#ffffff' },
 ]
 
 const DEFAULT_HTOPRC = `# htoprc configuration
@@ -121,7 +123,7 @@ export function EditorPage() {
           </div>
         </div>
         <div
-          className="flex-1 rounded-lg p-4 overflow-auto"
+          className="flex-1 rounded-lg p-4 overflow-auto border border-gray-300 dark:border-gray-700"
           style={{ backgroundColor: bgColor }}
         >
           <HtopPreview config={parsed.config} />
