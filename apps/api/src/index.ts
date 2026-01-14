@@ -9,11 +9,15 @@ type Bindings = {
 
 const app = new Hono<{ Bindings: Bindings }>()
 
-// CORS for development
+// CORS configuration
 app.use(
   '*',
   cors({
-    origin: ['http://localhost:5173'],
+    origin: [
+      'http://localhost:5173',
+      'https://htoprc.dev.alexneamtu.top',
+      'https://htoprc.staging.alexneamtu.top',
+    ],
     credentials: true,
   })
 )
