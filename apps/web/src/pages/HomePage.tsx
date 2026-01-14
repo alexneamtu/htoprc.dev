@@ -42,7 +42,7 @@ function HeroConfig() {
               <span>{config.likesCount} likes</span>
             </div>
           </div>
-          <div className="aspect-[21/9] overflow-hidden rounded-lg bg-black">
+          <div className="overflow-hidden rounded-lg">
             <HtopPreview config={parsed.config} />
           </div>
         </div>
@@ -128,7 +128,7 @@ export function HomePage() {
                   className="block bg-gray-100 dark:bg-gray-900 rounded-lg overflow-hidden hover:ring-2 hover:ring-blue-500 transition-all"
                 >
                   <div className="p-3">
-                    <div className="aspect-video overflow-hidden rounded bg-black">
+                    <div className="aspect-video overflow-hidden rounded">
                       <HtopPreview config={parsed.config} />
                     </div>
                   </div>
