@@ -1,6 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { EditorPage } from './EditorPage'
+
+function renderWithRouter(initialEntries = ['/editor']) {
+  return render(
+    <MemoryRouter initialEntries={initialEntries}>
+      <EditorPage />
+    </MemoryRouter>
+  )
+}
 
 // Mock clipboard API
 const mockClipboard = {
@@ -15,21 +24,21 @@ describe('EditorPage', () => {
   })
 
   it('renders the editor and preview panels', () => {
-    render(<EditorPage />)
+    renderWithRouter()
 
     expect(screen.getByText('htoprc Editor')).toBeInTheDocument()
     expect(screen.getByText('Preview')).toBeInTheDocument()
   })
 
   it('shows default htoprc content', () => {
-    render(<EditorPage />)
+    renderWithRouter()
 
     // Should show some default config content
     expect(screen.getByText(/htop_version/)).toBeInTheDocument()
   })
 
   it('updates preview when content changes', async () => {
-    render(<EditorPage />)
+    renderWithRouter()
 
     // The preview should show process list headers
     expect(screen.getByText('PID')).toBeInTheDocument()
@@ -38,7 +47,7 @@ describe('EditorPage', () => {
 
   describe('copy to clipboard', () => {
     it('copies content to clipboard when button is clicked', async () => {
-      render(<EditorPage />)
+      renderWithRouter()
 
       const copyButton = screen.getByText('Copy Config')
       fireEvent.click(copyButton)
@@ -51,13 +60,13 @@ describe('EditorPage', () => {
 
   describe('install instructions', () => {
     it('shows install command', () => {
-      render(<EditorPage />)
+      renderWithRouter()
 
       expect(screen.getByText(/mkdir -p/)).toBeInTheDocument()
     })
 
     it('copies install command when copy button is clicked', async () => {
-      render(<EditorPage />)
+      renderWithRouter()
 
       const copyButtons = screen.getAllByText('Copy')
       const installCopyButton = copyButtons[copyButtons.length - 1]
@@ -73,7 +82,7 @@ describe('EditorPage', () => {
 
   describe('download', () => {
     it('has a download button', () => {
-      render(<EditorPage />)
+      renderWithRouter()
 
       expect(screen.getByText('Download .htoprc')).toBeInTheDocument()
     })
@@ -96,7 +105,7 @@ describe('EditorPage', () => {
         return element
       })
 
-      render(<EditorPage />)
+      renderWithRouter()
 
       const downloadButton = screen.getByText('Download .htoprc')
       fireEvent.click(downloadButton)
@@ -111,14 +120,14 @@ describe('EditorPage', () => {
 
   describe('reset to defaults', () => {
     it('has a reset button', () => {
-      render(<EditorPage />)
+      renderWithRouter()
 
       expect(screen.getByText('Reset to Defaults')).toBeInTheDocument()
     })
 
     it('resets content when reset button is clicked', async () => {
       localStorage.setItem('htoprc-editor-content', 'custom_config=test')
-      render(<EditorPage />)
+      renderWithRouter()
 
       const resetButton = screen.getByText('Reset to Defaults')
       fireEvent.click(resetButton)
@@ -132,7 +141,7 @@ describe('EditorPage', () => {
 
   describe('parse warnings', () => {
     it('shows warnings for invalid config', async () => {
-      render(<EditorPage />)
+      renderWithRouter()
 
       // The default config should parse without errors
       // Warnings section should not show for valid config
@@ -142,13 +151,13 @@ describe('EditorPage', () => {
 
   describe('score display', () => {
     it('shows the config score', () => {
-      render(<EditorPage />)
+      renderWithRouter()
 
       expect(screen.getByText(/Score:/)).toBeInTheDocument()
     })
 
     it('shows the detected version', () => {
-      render(<EditorPage />)
+      renderWithRouter()
 
       expect(screen.getByText(/Version:/)).toBeInTheDocument()
     })
@@ -158,7 +167,7 @@ describe('EditorPage', () => {
     it('loads content from localStorage on mount', async () => {
       localStorage.setItem('htoprc-editor-content', 'htop_version=3.4.0')
 
-      render(<EditorPage />)
+      renderWithRouter()
 
       await waitFor(() => {
         const editor = screen.getByTestId('htoprc-editor')
@@ -172,7 +181,7 @@ describe('EditorPage', () => {
         throw new Error('Storage not available')
       }
 
-      render(<EditorPage />)
+      renderWithRouter()
 
       await waitFor(() => {
         const editor = screen.getByTestId('htoprc-editor')

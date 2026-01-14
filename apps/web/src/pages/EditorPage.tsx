@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { HtopPreview } from '../components/htop/HtopPreview'
 import { HtoprcEditor } from '../components/editor'
 import { parseHtoprc } from '@htoprc/parser'
@@ -60,9 +61,20 @@ function useLocalStorage(key: string, initialValue: string): [string, (value: st
 }
 
 export function EditorPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [content, setContent] = useLocalStorage(STORAGE_KEY, DEFAULT_HTOPRC)
   const [bgColor, setBgColor] = useLocalStorage(BG_COLOR_KEY, BACKGROUND_COLORS[0].value)
   const [debouncedContent, setDebouncedContent] = useState(content)
+
+  // Load content from URL parameter if present
+  useEffect(() => {
+    const urlContent = searchParams.get('content')
+    if (urlContent) {
+      setContent(urlContent)
+      // Clear the URL parameter to avoid reloading on refresh
+      setSearchParams({}, { replace: true })
+    }
+  }, [searchParams, setContent, setSearchParams])
 
   // Debounce parsing for performance
   useEffect(() => {
