@@ -55,6 +55,20 @@ describe('EditorPage', () => {
 
       expect(screen.getByText(/mkdir -p/)).toBeInTheDocument()
     })
+
+    it('copies install command when copy button is clicked', async () => {
+      render(<EditorPage />)
+
+      const copyButtons = screen.getAllByText('Copy')
+      const installCopyButton = copyButtons[copyButtons.length - 1]
+      fireEvent.click(installCopyButton)
+
+      await waitFor(() => {
+        expect(mockClipboard.writeText).toHaveBeenCalledWith(
+          'mkdir -p ~/.config/htop && cat > ~/.config/htop/htoprc'
+        )
+      })
+    })
   })
 
   describe('download', () => {
@@ -63,6 +77,36 @@ describe('EditorPage', () => {
 
       expect(screen.getByText('Download .htoprc')).toBeInTheDocument()
     })
+
+    it('downloads config when download button is clicked', async () => {
+      const mockCreateObjectURL = vi.fn(() => 'blob:mock-url')
+      const mockRevokeObjectURL = vi.fn()
+      Object.assign(URL, {
+        createObjectURL: mockCreateObjectURL,
+        revokeObjectURL: mockRevokeObjectURL,
+      })
+
+      const mockClick = vi.fn()
+      const mockCreateElement = document.createElement.bind(document)
+      vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+        const element = mockCreateElement(tag)
+        if (tag === 'a') {
+          element.click = mockClick
+        }
+        return element
+      })
+
+      render(<EditorPage />)
+
+      const downloadButton = screen.getByText('Download .htoprc')
+      fireEvent.click(downloadButton)
+
+      expect(mockCreateObjectURL).toHaveBeenCalled()
+      expect(mockClick).toHaveBeenCalled()
+      expect(mockRevokeObjectURL).toHaveBeenCalled()
+
+      vi.restoreAllMocks()
+    })
   })
 
   describe('reset to defaults', () => {
@@ -70,6 +114,19 @@ describe('EditorPage', () => {
       render(<EditorPage />)
 
       expect(screen.getByText('Reset to Defaults')).toBeInTheDocument()
+    })
+
+    it('resets content when reset button is clicked', async () => {
+      localStorage.setItem('htoprc-editor-content', 'custom_config=test')
+      render(<EditorPage />)
+
+      const resetButton = screen.getByText('Reset to Defaults')
+      fireEvent.click(resetButton)
+
+      await waitFor(() => {
+        const editor = screen.getByTestId('htoprc-editor')
+        expect(editor.textContent).toContain('htop_version=3.2.1')
+      })
     })
   })
 
@@ -107,6 +164,22 @@ describe('EditorPage', () => {
         const editor = screen.getByTestId('htoprc-editor')
         expect(editor.textContent).toContain('htop_version=3.4.0')
       })
+    })
+
+    it('falls back to default when localStorage throws error', async () => {
+      const originalGetItem = Storage.prototype.getItem
+      Storage.prototype.getItem = () => {
+        throw new Error('Storage not available')
+      }
+
+      render(<EditorPage />)
+
+      await waitFor(() => {
+        const editor = screen.getByTestId('htoprc-editor')
+        expect(editor.textContent).toContain('htop_version=3.2.1')
+      })
+
+      Storage.prototype.getItem = originalGetItem
     })
   })
 })

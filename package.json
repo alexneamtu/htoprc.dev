@@ -3,6 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "pnpm": {
+    "overrides": {
+      "undici": ">=7.18.2"
+    }
+  },
   "scripts": {
     "dev": "pnpm run --parallel dev:*",
     "dev:web": "pnpm --filter @htoprc/web dev",

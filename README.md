@@ -1,8 +1,12 @@
 # htoprc.dev
 
-A web-based htoprc visualizer and gallery. Browse, preview, share, and edit htop configurations.
+A web-based htoprc visualizer and editor. Preview and edit htop configurations in real-time.
 
+[![Test](https://github.com/alexneamtu/htoprc.dev/actions/workflows/test.yml/badge.svg)](https://github.com/alexneamtu/htoprc.dev/actions/workflows/test.yml)
+[![Deploy](https://github.com/alexneamtu/htoprc.dev/actions/workflows/deploy.yml/badge.svg)](https://github.com/alexneamtu/htoprc.dev/actions/workflows/deploy.yml)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
+
+**Live:** [htoprc.dev](https://htoprc.dev) | **Staging:** [staging.htoprc.dev](https://staging.htoprc.dev)
 
 ## What is this?
 
@@ -29,11 +33,12 @@ A web-based htoprc visualizer and gallery. Browse, preview, share, and edit htop
 
 | Layer | Technology |
 |-------|------------|
-| Frontend | React, Vite, Tailwind CSS, shadcn/ui |
-| API | Hono, GraphQL (graphql-yoga, Pothos) |
-| Auth | Clerk |
+| Frontend | React 19, Vite, Tailwind CSS |
+| Editor | CodeMirror 6 (syntax highlighting, autocomplete, hover docs) |
+| API | Hono, GraphQL Yoga |
 | Database | Cloudflare D1 (SQLite) |
 | Hosting | Cloudflare Pages + Workers |
+| Testing | Vitest |
 | Monorepo | pnpm workspaces |
 
 **Cost: $0/month** on Cloudflare free tier.
@@ -55,8 +60,8 @@ htoprc.dev/
 
 ### Prerequisites
 
-- Node.js 20+
-- pnpm 8+
+- Node.js 24+
+- pnpm 9+
 
 ### Installation
 
@@ -83,7 +88,13 @@ pnpm dev:api    # Workers on localhost:8787
 ```bash
 pnpm test           # Run all tests
 pnpm test:parser    # Parser tests only
+
+# Run with coverage
+pnpm --filter @htoprc/parser test:run -- --coverage
+pnpm --filter @htoprc/web vitest run --coverage
 ```
+
+**Coverage:** Parser 100% | API 100% | Web 81%
 
 ### Database
 

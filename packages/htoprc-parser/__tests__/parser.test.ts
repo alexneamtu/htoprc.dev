@@ -64,6 +64,18 @@ tree_view=1
       expect(result.config.colorScheme).toBe(1)
       expect(result.config.treeView).toBe(true)
     })
+
+    it('ignores lines without equals sign', () => {
+      const input = `color_scheme=2
+invalid_line_without_equals
+tree_view=1`
+
+      const result = parseHtoprc(input)
+
+      expect(result.config.colorScheme).toBe(2)
+      expect(result.config.treeView).toBe(true)
+      expect(result.warnings).toEqual([])
+    })
   })
 
   describe('warnings for unknown options', () => {
@@ -118,6 +130,33 @@ column_meter_modes_1=2 2 2`
         { type: 'Uptime', mode: 'text' },
       ])
     })
+
+    it('parses graph mode (3)', () => {
+      const input = `column_meters_0=CPU
+column_meter_modes_0=3`
+
+      const result = parseHtoprc(input)
+
+      expect(result.config.leftMeters).toEqual([{ type: 'CPU', mode: 'graph' }])
+    })
+
+    it('parses led mode (4)', () => {
+      const input = `column_meters_0=Memory
+column_meter_modes_0=4`
+
+      const result = parseHtoprc(input)
+
+      expect(result.config.leftMeters).toEqual([{ type: 'Memory', mode: 'led' }])
+    })
+
+    it('falls back to bar mode for invalid mode numbers', () => {
+      const input = `column_meters_0=CPU
+column_meter_modes_0=99`
+
+      const result = parseHtoprc(input)
+
+      expect(result.config.leftMeters).toEqual([{ type: 'CPU', mode: 'bar' }])
+    })
   })
 
   describe('fields (columns) parsing', () => {
@@ -162,6 +201,15 @@ config_reader_min_version=3`
       const result = parseHtoprc(input)
 
       expect(result.version).toBe('v3')
+    })
+
+    it('detects htop 2.x format', () => {
+      const input = `htop_version=2.2.0
+config_reader_min_version=2`
+
+      const result = parseHtoprc(input)
+
+      expect(result.version).toBe('v2')
     })
 
     it('returns unknown for configs without version', () => {

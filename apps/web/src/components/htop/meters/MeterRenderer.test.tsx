@@ -29,6 +29,35 @@ describe('MeterRenderer', () => {
       const cpuLabels = screen.getAllByText(/^[0-7]$/)
       expect(cpuLabels.length).toBe(8)
     })
+
+    it('renders CPU meter in graph mode', () => {
+      const meter: Meter = { type: 'CPU', mode: 'graph' }
+      render(<MeterRenderer meter={meter} />)
+
+      expect(screen.getByText('CPU')).toBeInTheDocument()
+    })
+
+    it('renders AllCPUs2 meter', () => {
+      const meter: Meter = { type: 'AllCPUs2', mode: 'bar' }
+      render(<MeterRenderer meter={meter} />)
+
+      // AllCPUs2 renders as CPU meter
+      expect(screen.getByText('CPU')).toBeInTheDocument()
+    })
+
+    it('renders AllCPUs4 meter', () => {
+      const meter: Meter = { type: 'AllCPUs4', mode: 'bar' }
+      render(<MeterRenderer meter={meter} />)
+
+      expect(screen.getByText('CPU')).toBeInTheDocument()
+    })
+
+    it('renders AllCPUs8 meter', () => {
+      const meter: Meter = { type: 'AllCPUs8', mode: 'bar' }
+      render(<MeterRenderer meter={meter} />)
+
+      expect(screen.getByText('CPU')).toBeInTheDocument()
+    })
   })
 
   describe('Memory meter', () => {
@@ -45,6 +74,13 @@ describe('MeterRenderer', () => {
 
       expect(screen.getByText(/Mem:/)).toBeInTheDocument()
     })
+
+    it('renders Memory meter in graph mode', () => {
+      const meter: Meter = { type: 'Memory', mode: 'graph' }
+      render(<MeterRenderer meter={meter} />)
+
+      expect(screen.getByText('Mem')).toBeInTheDocument()
+    })
   })
 
   describe('Swap meter', () => {
@@ -54,62 +90,133 @@ describe('MeterRenderer', () => {
 
       expect(screen.getByText('Swp')).toBeInTheDocument()
     })
+
+    it('renders Swap meter in text mode', () => {
+      const meter: Meter = { type: 'Swap', mode: 'text' }
+      render(<MeterRenderer meter={meter} />)
+
+      expect(screen.getByText(/Swp:/)).toBeInTheDocument()
+    })
+
+    it('renders Swap meter in graph mode', () => {
+      const meter: Meter = { type: 'Swap', mode: 'graph' }
+      render(<MeterRenderer meter={meter} />)
+
+      expect(screen.getByText('Swp')).toBeInTheDocument()
+    })
   })
 
   describe('Text meters', () => {
-    it('renders Tasks meter', () => {
+    it('renders Tasks meter in bar mode', () => {
       const meter: Meter = { type: 'Tasks', mode: 'bar' }
       render(<MeterRenderer meter={meter} />)
 
       expect(screen.getByText('Tasks:')).toBeInTheDocument()
     })
 
-    it('renders LoadAverage meter', () => {
+    it('renders Tasks meter in text mode', () => {
+      const meter: Meter = { type: 'Tasks', mode: 'text' }
+      render(<MeterRenderer meter={meter} />)
+
+      expect(screen.getByText(/Tasks:/)).toBeInTheDocument()
+    })
+
+    it('renders LoadAverage meter in bar mode', () => {
       const meter: Meter = { type: 'LoadAverage', mode: 'bar' }
       render(<MeterRenderer meter={meter} />)
 
       expect(screen.getByText('Load:')).toBeInTheDocument()
     })
 
-    it('renders Uptime meter', () => {
+    it('renders LoadAverage meter in text mode', () => {
+      const meter: Meter = { type: 'LoadAverage', mode: 'text' }
+      render(<MeterRenderer meter={meter} />)
+
+      expect(screen.getByText(/Load:/)).toBeInTheDocument()
+    })
+
+    it('renders Uptime meter in bar mode', () => {
       const meter: Meter = { type: 'Uptime', mode: 'bar' }
       render(<MeterRenderer meter={meter} />)
 
       expect(screen.getByText('Uptime:')).toBeInTheDocument()
     })
 
-    it('renders Clock meter', () => {
+    it('renders Uptime meter in text mode', () => {
+      const meter: Meter = { type: 'Uptime', mode: 'text' }
+      render(<MeterRenderer meter={meter} />)
+
+      expect(screen.getByText(/Uptime:/)).toBeInTheDocument()
+    })
+
+    it('renders Clock meter in bar mode', () => {
       const meter: Meter = { type: 'Clock', mode: 'bar' }
       render(<MeterRenderer meter={meter} />)
 
       expect(screen.getByText('Time:')).toBeInTheDocument()
     })
 
-    it('renders Hostname meter', () => {
+    it('renders Clock meter in text mode', () => {
+      const meter: Meter = { type: 'Clock', mode: 'text' }
+      render(<MeterRenderer meter={meter} />)
+
+      // In text mode, Clock shows time without label
+      expect(screen.getByText(/\d{2}:\d{2}:\d{2}/)).toBeInTheDocument()
+    })
+
+    it('renders Hostname meter in bar mode', () => {
       const meter: Meter = { type: 'Hostname', mode: 'bar' }
       render(<MeterRenderer meter={meter} />)
 
       expect(screen.getByText('Host:')).toBeInTheDocument()
     })
 
-    it('renders DiskIO meter', () => {
+    it('renders Hostname meter in text mode', () => {
+      const meter: Meter = { type: 'Hostname', mode: 'text' }
+      render(<MeterRenderer meter={meter} />)
+
+      expect(screen.getByText('dev-workstation')).toBeInTheDocument()
+    })
+
+    it('renders DiskIO meter in bar mode', () => {
       const meter: Meter = { type: 'DiskIO', mode: 'bar' }
       render(<MeterRenderer meter={meter} />)
 
       expect(screen.getByText('Disk:')).toBeInTheDocument()
     })
 
-    it('renders NetworkIO meter', () => {
+    it('renders DiskIO meter in text mode', () => {
+      const meter: Meter = { type: 'DiskIO', mode: 'text' }
+      render(<MeterRenderer meter={meter} />)
+
+      expect(screen.getByText(/IO:/)).toBeInTheDocument()
+    })
+
+    it('renders NetworkIO meter in bar mode', () => {
       const meter: Meter = { type: 'NetworkIO', mode: 'bar' }
       render(<MeterRenderer meter={meter} />)
 
       expect(screen.getByText('Net:')).toBeInTheDocument()
     })
+
+    it('renders NetworkIO meter in text mode', () => {
+      const meter: Meter = { type: 'NetworkIO', mode: 'text' }
+      render(<MeterRenderer meter={meter} />)
+
+      expect(screen.getByText(/Net:/)).toBeInTheDocument()
+    })
   })
 
   describe('Unknown meters', () => {
-    it('renders unknown meter with generic fallback', () => {
+    it('renders unknown meter in bar mode with generic fallback', () => {
       const meter: Meter = { type: 'UnknownMeter', mode: 'bar' }
+      render(<MeterRenderer meter={meter} />)
+
+      expect(screen.getByText('UnknownMeter')).toBeInTheDocument()
+    })
+
+    it('renders unknown meter in text mode', () => {
+      const meter: Meter = { type: 'UnknownMeter', mode: 'text' }
       render(<MeterRenderer meter={meter} />)
 
       expect(screen.getByText('UnknownMeter')).toBeInTheDocument()
