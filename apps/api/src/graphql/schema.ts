@@ -58,6 +58,12 @@ export const schema = createSchema<GraphQLContext>({
 
     type Mutation {
       uploadConfig(input: UploadConfigInput!): Config!
+      toggleLike(configId: ID!, userId: ID!): LikeResult!
+    }
+
+    type LikeResult {
+      liked: Boolean!
+      likesCount: Int!
     }
 
     type Health {
@@ -292,6 +298,63 @@ export const schema = createSchema<GraphQLContext>({
           score: parsed.score,
           likesCount: 0,
           createdAt,
+        }
+      },
+      toggleLike: async (
+        _: unknown,
+        { configId, userId }: { configId: string; userId: string },
+        ctx: GraphQLContext
+      ) => {
+        // Check if already liked
+        const existing = await ctx.db
+          .prepare('SELECT 1 FROM likes WHERE user_id = ? AND config_id = ?')
+          .bind(userId, configId)
+          .first()
+
+        if (existing) {
+          // Unlike: remove the like
+          await ctx.db
+            .prepare('DELETE FROM likes WHERE user_id = ? AND config_id = ?')
+            .bind(userId, configId)
+            .run()
+
+          // Decrement likes count
+          await ctx.db
+            .prepare('UPDATE configs SET likes_count = likes_count - 1 WHERE id = ?')
+            .bind(configId)
+            .run()
+
+          const config = await ctx.db
+            .prepare('SELECT likes_count FROM configs WHERE id = ?')
+            .bind(configId)
+            .first<{ likes_count: number }>()
+
+          return {
+            liked: false,
+            likesCount: config?.likes_count ?? 0,
+          }
+        } else {
+          // Like: add the like
+          await ctx.db
+            .prepare('INSERT INTO likes (user_id, config_id) VALUES (?, ?)')
+            .bind(userId, configId)
+            .run()
+
+          // Increment likes count
+          await ctx.db
+            .prepare('UPDATE configs SET likes_count = likes_count + 1 WHERE id = ?')
+            .bind(configId)
+            .run()
+
+          const config = await ctx.db
+            .prepare('SELECT likes_count FROM configs WHERE id = ?')
+            .bind(configId)
+            .first<{ likes_count: number }>()
+
+          return {
+            liked: true,
+            likesCount: config?.likes_count ?? 0,
+          }
         }
       },
     },

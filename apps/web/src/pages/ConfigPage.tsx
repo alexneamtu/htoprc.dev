@@ -1,5 +1,6 @@
 import { useParams, Link } from 'react-router-dom'
 import { HtopPreview } from '../components/htop/HtopPreview'
+import { LikeButton } from '../components/LikeButton'
 import { parseHtoprc } from '@htoprc/parser'
 import { useConfig } from '../hooks'
 
@@ -56,7 +57,7 @@ export function ConfigPage() {
 
       <div className="flex items-center gap-6 text-gray-500 dark:text-gray-400 mb-6">
         <span>Score: {config.score}</span>
-        <span>Likes: {config.likesCount}</span>
+        <LikeButton configId={config.id} initialLikesCount={config.likesCount} />
         <span>Source: {config.sourceType}</span>
       </div>
 
@@ -70,6 +71,12 @@ export function ConfigPage() {
           className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md text-white"
         >
           Open in Editor
+        </Link>
+        <Link
+          to={`/editor?content=${encodeURIComponent(config.content)}&fork=${config.slug}`}
+          className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-md text-white"
+        >
+          Fork
         </Link>
         <button
           onClick={() => navigator.clipboard.writeText(config.content)}

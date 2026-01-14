@@ -59,7 +59,8 @@ describe('ConfigPage', () => {
     })
 
     expect(screen.getByText(/Score: 25/)).toBeInTheDocument()
-    expect(screen.getByText(/Likes: 10/)).toBeInTheDocument()
+    // LikeButton shows the count
+    expect(screen.getByText('10')).toBeInTheDocument()
   })
 
   it('shows loading state', () => {
