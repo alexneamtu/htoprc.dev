@@ -6,6 +6,11 @@ const mockDB = {} as D1Database
 
 const testEnv = { DB: mockDB }
 
+// Type helpers for test assertions
+type HealthResponse = { status: string; timestamp: string }
+type ErrorResponse = { error: string }
+type GraphQLResponse<T> = { data: T }
+
 describe('API', () => {
   describe('GET /api/health', () => {
     it('returns health status', async () => {
@@ -13,7 +18,7 @@ describe('API', () => {
 
       expect(res.status).toBe(200)
 
-      const data = await res.json()
+      const data = (await res.json()) as HealthResponse
       expect(data.status).toBe('ok')
       expect(data.timestamp).toBeDefined()
     })
@@ -25,7 +30,7 @@ describe('API', () => {
 
       expect(res.status).toBe(404)
 
-      const data = await res.json()
+      const data = (await res.json()) as ErrorResponse
       expect(data.error).toBe('Not found')
     })
   })
@@ -48,7 +53,7 @@ describe('API', () => {
 
       expect(res.status).toBe(200)
 
-      const data = await res.json()
+      const data = (await res.json()) as GraphQLResponse<{ health: HealthResponse }>
       expect(data.data.health.status).toBe('ok')
       expect(data.data.health.timestamp).toBeDefined()
     })
@@ -70,7 +75,14 @@ describe('API', () => {
 
       expect(res.status).toBe(200)
 
-      const data = await res.json()
+      type ConfigsResponse = {
+        configs: {
+          nodes: unknown[]
+          totalCount: number
+          pageInfo: { page: number }
+        }
+      }
+      const data = (await res.json()) as GraphQLResponse<ConfigsResponse>
       expect(data.data.configs.nodes).toEqual([])
       expect(data.data.configs.totalCount).toBe(0)
       expect(data.data.configs.pageInfo.page).toBe(1)
@@ -93,7 +105,7 @@ describe('API', () => {
 
       expect(res.status).toBe(200)
 
-      const data = await res.json()
+      const data = (await res.json()) as GraphQLResponse<{ config: unknown }>
       expect(data.data.config).toBeNull()
     })
 
@@ -125,7 +137,17 @@ describe('API', () => {
 
       expect(res.status).toBe(200)
 
-      const data = await res.json()
+      type UploadConfigResponse = {
+        uploadConfig: {
+          id: string
+          slug: string
+          title: string
+          content: string
+          sourceType: string
+          status: string
+        }
+      }
+      const data = (await res.json()) as GraphQLResponse<UploadConfigResponse>
       expect(data.data.uploadConfig.id).toBeDefined()
       expect(data.data.uploadConfig.slug).toBe('my-config')
       expect(data.data.uploadConfig.title).toBe('My Config')
