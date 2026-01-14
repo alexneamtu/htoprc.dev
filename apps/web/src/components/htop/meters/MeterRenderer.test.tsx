@@ -17,8 +17,8 @@ describe('MeterRenderer', () => {
       const meter: Meter = { type: 'CPU', mode: 'text' }
       render(<MeterRenderer meter={meter} />)
 
-      // Text mode should show CPU with values
-      expect(screen.getByText(/CPU:/)).toBeInTheDocument()
+      // Text mode should show CPU with values in bracket format
+      expect(screen.getByText('CPU')).toBeInTheDocument()
     })
 
     it('renders AllCPUs meter showing multiple cores', () => {
@@ -41,22 +41,27 @@ describe('MeterRenderer', () => {
       const meter: Meter = { type: 'AllCPUs2', mode: 'bar' }
       render(<MeterRenderer meter={meter} />)
 
-      // AllCPUs2 renders as CPU meter
-      expect(screen.getByText('CPU')).toBeInTheDocument()
+      // AllCPUs2 renders 2 CPU bars
+      expect(screen.getByText('0')).toBeInTheDocument()
+      expect(screen.getByText('1')).toBeInTheDocument()
     })
 
     it('renders AllCPUs4 meter', () => {
       const meter: Meter = { type: 'AllCPUs4', mode: 'bar' }
       render(<MeterRenderer meter={meter} />)
 
-      expect(screen.getByText('CPU')).toBeInTheDocument()
+      // AllCPUs4 renders 4 CPU bars
+      const cpuLabels = screen.getAllByText(/^[0-3]$/)
+      expect(cpuLabels.length).toBe(4)
     })
 
     it('renders AllCPUs8 meter', () => {
       const meter: Meter = { type: 'AllCPUs8', mode: 'bar' }
       render(<MeterRenderer meter={meter} />)
 
-      expect(screen.getByText('CPU')).toBeInTheDocument()
+      // AllCPUs8 renders 8 CPU bars
+      const cpuLabels = screen.getAllByText(/^[0-7]$/)
+      expect(cpuLabels.length).toBe(8)
     })
   })
 
@@ -125,14 +130,14 @@ describe('MeterRenderer', () => {
       const meter: Meter = { type: 'LoadAverage', mode: 'bar' }
       render(<MeterRenderer meter={meter} />)
 
-      expect(screen.getByText('Load:')).toBeInTheDocument()
+      expect(screen.getByText(/Load average:/)).toBeInTheDocument()
     })
 
     it('renders LoadAverage meter in text mode', () => {
       const meter: Meter = { type: 'LoadAverage', mode: 'text' }
       render(<MeterRenderer meter={meter} />)
 
-      expect(screen.getByText(/Load:/)).toBeInTheDocument()
+      expect(screen.getByText(/Load average:/)).toBeInTheDocument()
     })
 
     it('renders Uptime meter in bar mode', () => {
@@ -182,7 +187,7 @@ describe('MeterRenderer', () => {
       const meter: Meter = { type: 'DiskIO', mode: 'bar' }
       render(<MeterRenderer meter={meter} />)
 
-      expect(screen.getByText('Disk:')).toBeInTheDocument()
+      expect(screen.getByText('Disk IO')).toBeInTheDocument()
     })
 
     it('renders DiskIO meter in text mode', () => {
@@ -196,7 +201,7 @@ describe('MeterRenderer', () => {
       const meter: Meter = { type: 'NetworkIO', mode: 'bar' }
       render(<MeterRenderer meter={meter} />)
 
-      expect(screen.getByText('Net:')).toBeInTheDocument()
+      expect(screen.getByText('Network IO')).toBeInTheDocument()
     })
 
     it('renders NetworkIO meter in text mode', () => {

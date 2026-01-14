@@ -10,6 +10,8 @@ import {
   HostnameMeter,
   DiskIOMeter,
   NetworkIOMeter,
+  PressureMeter,
+  ZramMeter,
 } from './TextMeters'
 
 interface MeterRendererProps {
@@ -51,6 +53,12 @@ export function MeterRenderer({ meter }: MeterRendererProps) {
 
     case 'NetworkIO':
       return <NetworkIOMeter meter={meter} />
+
+    case 'Pressure':
+      return <PressureMeter meter={meter} />
+
+    case 'Zram':
+      return <ZramMeter meter={meter} />
 
     default:
       // Generic fallback for unknown meters
@@ -107,4 +115,6 @@ export {
   HostnameMeter,
   DiskIOMeter,
   NetworkIOMeter,
+  PressureMeter,
+  ZramMeter,
 } from './TextMeters'

@@ -102,7 +102,7 @@ describe('HtopPreview', () => {
       render(<HtopPreview config={config} />)
 
       expect(screen.getByText('Tasks:')).toBeInTheDocument()
-      expect(screen.getByText('Load:')).toBeInTheDocument()
+      expect(screen.getByText(/Load average:/)).toBeInTheDocument()
     })
   })
 
