@@ -11,7 +11,8 @@ export function Layout({ children }: LayoutProps) {
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-htop-bg text-gray-900 dark:text-htop-fg">
       <header className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-htop-header shadow-sm">
         <nav className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <Link to="/" className="text-xl font-bold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-gray-200">
+          <Link to="/" className="flex items-center gap-2 text-xl font-bold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-gray-200">
+            <img src="/favicon.svg" alt="htoprc logo" className="w-7 h-7" />
             htoprc.dev
           </Link>
           <div className="flex items-center gap-4">
