@@ -1,0 +1,16 @@
+# htop 3.x with many meters configured
+htop_version=3.2.2
+config_reader_min_version=3
+fields=0 48 17 18 38 39 40 2 46 47 49 1
+color_scheme=4
+tree_view=0
+header_layout=two_67_33
+column_meters_0=AllCPUs Memory Swap DiskIO NetworkIO
+column_meter_modes_0=1 1 1 2 2
+column_meters_1=Hostname Clock Uptime Tasks LoadAverage
+column_meter_modes_1=2 2 2 2 2
+hide_kernel_threads=1
+highlight_base_name=1
+highlight_megabytes=1
+enable_mouse=1
+delay=15
