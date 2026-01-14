@@ -12,6 +12,8 @@ jobs:
     permissions:
       contents: read
       checks: write
+    environment:
+      name: test
 
     steps:
       - name: Checkout
