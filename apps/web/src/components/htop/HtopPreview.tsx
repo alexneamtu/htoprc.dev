@@ -1,87 +1,17 @@
 import type { HtopConfig, Meter } from '@htoprc/parser'
 import { COLOR_SCHEMES } from './ColorSchemes'
 import { MeterRenderer } from './meters'
+import { ProcessList } from './ProcessList'
 
 interface HtopPreviewProps {
   config: HtopConfig
 }
-
-// Mock process data for the preview
-const MOCK_PROCESSES = [
-  { pid: 1, user: 'root', cpu: 0.0, mem: 0.1, time: '0:03.21', command: '/sbin/init' },
-  { pid: 1234, user: 'dev', cpu: 12.5, mem: 2.4, time: '1:23.45', command: 'node /usr/local/bin/vite' },
-  { pid: 2345, user: 'dev', cpu: 8.2, mem: 5.1, time: '0:45.12', command: 'code --type=renderer' },
-  { pid: 3456, user: 'root', cpu: 2.1, mem: 1.2, time: '0:12.34', command: '/usr/lib/systemd/systemd-journald' },
-  { pid: 4567, user: 'dev', cpu: 45.3, mem: 8.7, time: '2:34.56', command: 'chromium --type=gpu-process' },
-  { pid: 5678, user: 'dev', cpu: 1.5, mem: 3.2, time: '0:08.90', command: 'htop' },
-  { pid: 6789, user: 'root', cpu: 0.3, mem: 0.5, time: '0:01.23', command: '/usr/bin/dbus-daemon --system' },
-  { pid: 7890, user: 'dev', cpu: 3.7, mem: 4.1, time: '0:15.67', command: 'spotify --type=renderer' },
-]
 
 function HeaderMeters({ meters, side }: { meters: Meter[]; side: 'left' | 'right' }) {
   return (
     <div className={`flex-1 space-y-1 ${side === 'right' ? 'pl-2' : 'pr-2'}`}>
       {meters.map((meter, i) => (
         <MeterRenderer key={i} meter={meter} />
-      ))}
-    </div>
-  )
-}
-
-function ProcessList({ config }: { config: HtopConfig }) {
-  const columns = [
-    { id: 0, name: 'PID', width: 60 },
-    { id: 48, name: 'USER', width: 80 },
-    { id: 17, name: 'CPU%', width: 50 },
-    { id: 18, name: 'MEM%', width: 50 },
-    { id: 46, name: 'TIME+', width: 80 },
-    { id: 1, name: 'Command', width: 'auto' },
-  ]
-
-  return (
-    <div className="font-mono text-xs">
-      {/* Header row */}
-      <div className="flex bg-htop-header text-white font-bold">
-        {columns.map((col) => (
-          <div
-            key={col.id}
-            className="px-1 py-0.5"
-            style={{ width: col.width === 'auto' ? undefined : col.width, flex: col.width === 'auto' ? 1 : undefined }}
-          >
-            {col.name}
-          </div>
-        ))}
-      </div>
-
-      {/* Process rows */}
-      {MOCK_PROCESSES.map((proc, i) => (
-        <div
-          key={proc.pid}
-          className={`flex ${i % 2 === 0 ? 'bg-gray-900' : 'bg-gray-800'} hover:bg-htop-selection`}
-        >
-          <div className="px-1 py-0.5 w-[60px] text-htop-pid">{proc.pid}</div>
-          <div className="px-1 py-0.5 w-[80px] text-htop-user">{proc.user}</div>
-          <div className="px-1 py-0.5 w-[50px] text-htop-cpu">{proc.cpu.toFixed(1)}</div>
-          <div className="px-1 py-0.5 w-[50px] text-htop-mem">{proc.mem.toFixed(1)}</div>
-          <div className="px-1 py-0.5 w-[80px] text-htop-time">{proc.time}</div>
-          <div className="px-1 py-0.5 flex-1 text-htop-command truncate">
-            {config.highlightBaseName ? (
-              <>
-                <span className="text-htop-command-path">
-                  {proc.command.split(' ')[0]?.split('/').slice(0, -1).join('/') ?? ''}/
-                </span>
-                <span className="text-htop-command-name font-bold">
-                  {proc.command.split(' ')[0]?.split('/').pop() ?? ''}
-                </span>
-                <span className="text-htop-command-args">
-                  {' '}{proc.command.split(' ').slice(1).join(' ')}
-                </span>
-              </>
-            ) : (
-              proc.command
-            )}
-          </div>
-        </div>
       ))}
     </div>
   )
