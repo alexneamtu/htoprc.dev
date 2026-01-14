@@ -102,6 +102,15 @@ jobs:
       - name: Build parser
         run: pnpm --filter @htoprc/parser build
 
+      - name: Run D1 Migrations
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: ./apps/api
+          command: d1 migrations apply htoprc-db-${{ env.DEPLOY_ENV }} --remote
+          packageManager: pnpm
+
       - name: Deploy API to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3
         with:
