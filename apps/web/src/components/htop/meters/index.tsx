@@ -25,6 +25,14 @@ export function MeterRenderer({ meter }: MeterRendererProps) {
     case 'AllCPUs2':
     case 'AllCPUs4':
     case 'AllCPUs8':
+    case 'LeftCPUs':
+    case 'LeftCPUs2':
+    case 'LeftCPUs4':
+    case 'LeftCPUs8':
+    case 'RightCPUs':
+    case 'RightCPUs2':
+    case 'RightCPUs4':
+    case 'RightCPUs8':
       return <CpuMeter meter={meter} cpuCount={getCpuCount(meter.type)} />
 
     case 'Memory':
@@ -67,7 +75,15 @@ export function MeterRenderer({ meter }: MeterRendererProps) {
 }
 
 function getCpuCount(meterType: string): number {
-  switch (meterType) {
+  // Check if it's a Left/Right variant (without number suffix)
+  const isLeftRightBase = meterType === 'LeftCPUs' || meterType === 'RightCPUs'
+
+  // Handle Left/Right variants the same as All variants for numbered ones
+  const normalizedType = meterType
+    .replace('LeftCPUs', 'AllCPUs')
+    .replace('RightCPUs', 'AllCPUs')
+
+  switch (normalizedType) {
     case 'AllCPUs2':
       return 2
     case 'AllCPUs4':
@@ -75,7 +91,9 @@ function getCpuCount(meterType: string): number {
     case 'AllCPUs8':
       return 8
     case 'AllCPUs':
-      return 8 // Default to 8 cores for preview
+      // LeftCPUs/RightCPUs without number default to 4 for split preview
+      // AllCPUs without number defaults to 8
+      return isLeftRightBase ? 4 : 8
     default:
       return 1
   }

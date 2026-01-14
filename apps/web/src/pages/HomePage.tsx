@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { HtopPreview } from '../components/htop/HtopPreview'
 import { parseHtoprc } from '@htoprc/parser'
-import { useConfigs, type ConfigSort } from '../hooks'
+import { useConfigs, useTopConfigs, type ConfigSort } from '../hooks'
 
 const SORT_OPTIONS: { value: ConfigSort; label: string }[] = [
   { value: 'SCORE_DESC', label: 'Highest Score' },
@@ -10,6 +10,46 @@ const SORT_OPTIONS: { value: ConfigSort; label: string }[] = [
   { value: 'CREATED_DESC', label: 'Newest' },
   { value: 'CREATED_ASC', label: 'Oldest' },
 ]
+
+function HeroConfig() {
+  const { data, fetching } = useTopConfigs(1)
+
+  if (fetching || !data || data.configs.nodes.length === 0) {
+    return null
+  }
+
+  const config = data.configs.nodes[0]
+  if (!config) return null
+
+  const parsed = parseHtoprc(config.content)
+
+  return (
+    <section className="mb-12">
+      <Link
+        to={`/config/${config.slug}`}
+        className="block bg-gradient-to-br from-blue-900/20 to-purple-900/20 border border-blue-500/30 rounded-xl overflow-hidden hover:ring-2 hover:ring-blue-500 transition-all"
+      >
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <span className="px-3 py-1 bg-yellow-500/20 text-yellow-400 text-sm font-semibold rounded-full">
+                Top Rated
+              </span>
+              <h3 className="font-semibold text-xl">{config.title}</h3>
+            </div>
+            <div className="flex items-center gap-4 text-sm text-gray-400">
+              <span>Score: {config.score}</span>
+              <span>{config.likesCount} likes</span>
+            </div>
+          </div>
+          <div className="aspect-[21/9] overflow-hidden rounded-lg bg-black">
+            <HtopPreview config={parsed.config} />
+          </div>
+        </div>
+      </Link>
+    </section>
+  )
+}
 
 export function HomePage() {
   const [page, setPage] = useState(1)
@@ -24,6 +64,8 @@ export function HomePage() {
           Browse, preview, and share htop configurations
         </p>
       </section>
+
+      <HeroConfig />
 
       <section>
         <div className="flex items-center justify-between mb-6">

@@ -32,7 +32,7 @@ function FunctionBar() {
   ]
 
   return (
-    <div className="flex bg-black text-xs">
+    <div className="flex text-xs">
       {functions.map((fn) => (
         <div key={fn.key} className="flex">
           <span className="bg-htop-fn-key px-1 text-black font-bold">{fn.key}</span>
@@ -72,7 +72,7 @@ export function HtopPreview({ config }: HtopPreviewProps) {
       {/* Header with meters */}
       <div
         className="flex p-2"
-        style={{ backgroundColor: 'var(--htop-bg)', color: 'var(--htop-fg)' }}
+        style={{ color: 'var(--htop-fg)' }}
       >
         <HeaderMeters meters={config.leftMeters} side="left" />
         <HeaderMeters meters={config.rightMeters} side="right" />

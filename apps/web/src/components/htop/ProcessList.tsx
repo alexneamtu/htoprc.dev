@@ -151,8 +151,7 @@ export function ProcessList({ config }: ProcessListProps) {
           key={proc.pid}
           className="flex hover:opacity-80"
           style={{
-            backgroundColor:
-              i % 2 === 0 ? 'var(--htop-bg)' : 'rgba(255,255,255,0.03)',
+            backgroundColor: i % 2 === 1 ? 'rgba(128,128,128,0.1)' : 'transparent',
             color: 'var(--htop-fg)',
           }}
         >

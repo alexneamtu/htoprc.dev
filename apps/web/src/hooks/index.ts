@@ -3,3 +3,5 @@ export type { Config, PageInfo, ConfigsData, UseConfigsOptions, ConfigSort } fro
 
 export { useConfig } from './useConfig'
 export type { ConfigData, UseConfigOptions } from './useConfig'
+
+export { useTopConfigs } from './useTopConfigs'
