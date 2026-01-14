@@ -48,6 +48,8 @@ jobs:
 
       - name: Build web
         run: pnpm --filter @htoprc/web build
+        env:
+          VITE_API_URL: ${{ env.DEPLOY_ENV == 'production' && 'https://api.htoprc.dev.alexneamtu.top' || 'https://api.htoprc.staging.alexneamtu.top' }}
 
       - name: Deploy Web to Cloudflare Pages
         id: deploy
