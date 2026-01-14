@@ -1,0 +1,31 @@
+name = "htoprc-api"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+# Development settings
+[dev]
+port = 8787
+
+# D1 Database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "htoprc-db"
+database_id = "placeholder-will-be-set-after-creation"
+
+# KV Namespace for caching (optional, for later)
+# [[kv_namespaces]]
+# binding = "CACHE"
+# id = "placeholder"
+
+# R2 bucket for file storage (optional, for later)
+# [[r2_buckets]]
+# binding = "STORAGE"
+# bucket_name = "htoprc-storage"
+
+# Environment variables (set via wrangler secret)
+# CLERK_SECRET_KEY
+# GITHUB_TOKEN
+
+# Cron triggers for scraper (will enable later)
+# [triggers]
+# crons = ["0 3 * * *"]  # Daily at 3am UTC
