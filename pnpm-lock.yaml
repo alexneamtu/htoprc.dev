@@ -17,6 +17,9 @@ importers:
       eslint:
         specifier: ^9.18.0
         version: 9.39.2(jiti@1.21.7)
+      globals:
+        specifier: ^17.0.0
+        version: 17.0.0
       prettier:
         specifier: ^3.4.0
         version: 3.7.4
@@ -1820,6 +1823,10 @@ packages:
 
   globals@14.0.0:
     resolution: {integrity: sha512-oahGvuMGQlPw/ivIYBjVSrWAfWLBeku5tpPE2fOPLi+WHffIWbuh2tCjhyQhTBPMf5E9jDEH4FOmTYgYwbKwtQ==}
+    engines: {node: '>=18'}
+
+  globals@17.0.0:
+    resolution: {integrity: sha512-gv5BeD2EssA793rlFWVPMMCqefTlpusw6/2TbAVMy0FzcG8wKJn4O+NqJ4+XWmmwrayJgw5TzrmWjFgmz1XPqw==}
     engines: {node: '>=18'}
 
   graphql-yoga@5.18.0:
@@ -4198,6 +4205,8 @@ snapshots:
   glob-to-regexp@0.4.1: {}
 
   globals@14.0.0: {}
+
+  globals@17.0.0: {}
 
   graphql-yoga@5.18.0(graphql@16.12.0):
     dependencies:
