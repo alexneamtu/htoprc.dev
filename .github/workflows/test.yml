@@ -20,7 +20,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version-file: '.nvmrc'
           cache: 'pnpm'
 
       - name: Install dependencies
@@ -36,24 +36,22 @@ jobs:
         run: pnpm lint
 
       - name: Test Parser
-        run: pnpm --filter @htoprc/parser vitest run --reporter=verbose --reporter=github-actions
+        run: pnpm --filter @htoprc/parser vitest run --reporter=verbose --reporter=github-actions --reporter=junit --outputFile=test-results/parser.xml
 
       - name: Test API
-        run: pnpm --filter @htoprc/api vitest run --reporter=verbose --reporter=github-actions
+        run: pnpm --filter @htoprc/api vitest run --reporter=verbose --reporter=github-actions --reporter=junit --outputFile=test-results/api.xml
 
       - name: Test Web
-        run: pnpm --filter @htoprc/web vitest run --reporter=verbose --reporter=github-actions
+        run: pnpm --filter @htoprc/web vitest run --reporter=verbose --reporter=github-actions --reporter=junit --outputFile=test-results/web.xml
+
+      - name: Test Report
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Test Results
+          path: '**/test-results/*.xml'
+          reporter: java-junit
+          fail-on-error: true
 
       - name: Build
         run: pnpm build
-
-      - name: Test Summary
-        if: always()
-        run: |
-          echo "## Test Results" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Package | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|---------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| @htoprc/parser | ${{ job.status == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| @htoprc/api | ${{ job.status == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| @htoprc/web | ${{ job.status == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY

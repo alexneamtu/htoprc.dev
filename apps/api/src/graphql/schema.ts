@@ -1,6 +1,14 @@
 import { createSchema } from 'graphql-yoga'
 import { parseHtoprc } from '@htoprc/parser'
-import { createHash } from 'crypto'
+
+// SHA-256 hash using Web Crypto API (compatible with Cloudflare Workers)
+async function sha256(content: string): Promise<string> {
+  const encoder = new TextEncoder()
+  const data = encoder.encode(content)
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+  const hashArray = Array.from(new Uint8Array(hashBuffer))
+  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
+}
 
 // GraphQL context type
 interface GraphQLContext {
@@ -171,7 +179,7 @@ export const schema = createSchema<GraphQLContext>({
 
         const id = crypto.randomUUID()
         const slug = input.title.toLowerCase().replace(/\s+/g, '-')
-        const contentHash = createHash('sha256').update(input.content).digest('hex')
+        const contentHash = await sha256(input.content)
         const createdAt = new Date().toISOString()
 
         await ctx.db
@@ -187,7 +195,7 @@ export const schema = createSchema<GraphQLContext>({
             contentHash,
             'uploaded',
             parsed.score,
-            parsed.htopVersion ?? null,
+            parsed.config.htopVersion ?? null,
             'published',
             0,
             createdAt

@@ -3,8 +3,8 @@ import app from './index'
 
 // Create a mock D1 database
 function createMockDB() {
-  const data: Record<string, unknown[]> = {
-    configs: [],
+  const data = {
+    configs: [] as unknown[],
   }
 
   const mockPrepare = vi.fn((sql: string) => {

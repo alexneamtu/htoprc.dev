@@ -36,11 +36,6 @@ export function LoadAverageMeter({ meter }: TextMeterProps) {
   const load15 = (2 + Math.random() * 2).toFixed(2)
 
   if (meter.mode === 'bar') {
-    const loadPercent = (parseFloat(load1) / 8) * 100
-    const barWidth = 25
-    const filled = Math.round((loadPercent / 100) * barWidth)
-    const empty = barWidth - filled
-
     return (
       <div className="text-xs font-mono flex items-center">
         <span className="text-gray-400">Load average: </span>
@@ -198,8 +193,19 @@ export function NetworkIOMeter({ meter }: TextMeterProps) {
     const graphHistory = Array.from({ length: 15 }, () => Math.random() * 60)
     return (
       <div className="text-xs font-mono flex items-center">
-        <span className="text-cyan-400">{formatRate(rxKb)}({formatRate(txKb)})/{formatRate(rxKb + txKb)}]</span>
-        <span className="text-gray-400 ml-1">Net</span>
+        <span className="text-gray-400">Net</span>
+        <span className="text-cyan-400">[</span>
+        <span className="tracking-tight">
+          {graphHistory.map((val, i) => {
+            const barIndex = Math.min(Math.floor(val / 12.5), 7)
+            return (
+              <span key={i} className="text-green-400">
+                {bars[barIndex]}
+              </span>
+            )
+          })}
+        </span>
+        <span className="text-cyan-400">]</span>
       </div>
     )
   }

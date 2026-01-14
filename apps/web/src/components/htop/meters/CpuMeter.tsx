@@ -7,7 +7,7 @@ interface CpuMeterProps {
 
 // Mock CPU data per core with frequency and temp
 function getMockCpuData(cpuCount: number) {
-  return Array.from({ length: cpuCount }, (_, i) => ({
+  return Array.from({ length: cpuCount }, () => ({
     user: Math.random() * 30 + 5,
     system: Math.random() * 15 + 2,
     nice: Math.random() * 5,
@@ -15,29 +15,6 @@ function getMockCpuData(cpuCount: number) {
     frequency: 3400 + Math.floor(Math.random() * 400),
     temp: 40 + Math.floor(Math.random() * 30),
   }))
-}
-
-// htop-style bar using pipe characters
-function HtopBar({
-  percentage,
-  width = 40,
-  colorClass = 'text-green-400',
-}: {
-  percentage: number
-  width?: number
-  colorClass?: string
-}) {
-  const filled = Math.round((percentage / 100) * width)
-  const empty = width - filled
-  const bar = '|'.repeat(filled) + ' '.repeat(empty)
-
-  return (
-    <span className="font-mono">
-      <span className="text-cyan-400">[</span>
-      <span className={colorClass}>{bar}</span>
-      <span className="text-cyan-400">]</span>
-    </span>
-  )
 }
 
 function CpuBarLine({
