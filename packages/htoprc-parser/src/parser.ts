@@ -49,6 +49,36 @@ const KNOWN_OPTIONS = new Set([
 ])
 
 /**
+ * Check if an option key is known (including dynamic patterns)
+ */
+function isKnownOption(key: string): boolean {
+  // Check static known options
+  if (KNOWN_OPTIONS.has(key)) {
+    return true
+  }
+
+  // htop 3.x screen definitions: screen:ScreenName
+  if (key.startsWith('screen:')) {
+    return true
+  }
+
+  // htop 3.x screen-specific options (dot-prefixed)
+  if (key.startsWith('.')) {
+    return true
+  }
+
+  // htop 2.x meter options
+  if (key.startsWith('left_meters') || key.startsWith('left_meter_modes')) {
+    return true
+  }
+  if (key.startsWith('right_meters') || key.startsWith('right_meter_modes')) {
+    return true
+  }
+
+  return false
+}
+
+/**
  * Default htoprc configuration values
  */
 export const DEFAULT_CONFIG: HtopConfig = {
@@ -192,7 +222,7 @@ export function parseHtoprc(input: string): ParseResult {
     const value = line.slice(equalsIndex + 1).trim()
 
     // Check for unknown options
-    if (!KNOWN_OPTIONS.has(key)) {
+    if (!isKnownOption(key)) {
       warnings.push({
         line: lineNum + 1,
         message: `Unknown option: ${key}`,
