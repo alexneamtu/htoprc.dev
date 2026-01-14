@@ -63,6 +63,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@clerk/clerk-react':
+        specifier: ^5.59.3
+        version: 5.59.3(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@codemirror/autocomplete':
         specifier: ^6.20.0
         version: 6.20.0
@@ -286,6 +289,25 @@ packages:
   '@bcoe/v8-coverage@1.0.2':
     resolution: {integrity: sha512-6zABk/ECA/QYSCQ1NGiVwwbQerUCZ+TQbp64Q3AgmfNvurHH0j8TtXa1qbShXA6qqkpAj4V5W8pP6mLe1mcMqA==}
     engines: {node: '>=18'}
+
+  '@clerk/clerk-react@5.59.3':
+    resolution: {integrity: sha512-r1gmAYxhXs+QkXjDwj5Eqvm0Io8PtJ4FKkA45khiAzIQXcaQLFq/wFy7d1K8OSIYAIdFbuO0bnIOU/FdgWOc+A==}
+    engines: {node: '>=18.17.0'}
+    peerDependencies:
+      react: ^18.0.0 || ~19.0.3 || ~19.1.4 || ~19.2.3 || ~19.3.0-0
+      react-dom: ^18.0.0 || ~19.0.3 || ~19.1.4 || ~19.2.3 || ~19.3.0-0
+
+  '@clerk/shared@3.42.0':
+    resolution: {integrity: sha512-sJUur/7jnHHlAsdoDosxpOmfV05VR7K5rvqlFskj3GaAMFEJrvdOztw0hmhBGVSWiCpjTZfdGITegton8mo7mQ==}
+    engines: {node: '>=18.17.0'}
+    peerDependencies:
+      react: ^18.0.0 || ~19.0.3 || ~19.1.4 || ~19.2.3 || ~19.3.0-0
+      react-dom: ^18.0.0 || ~19.0.3 || ~19.1.4 || ~19.2.3 || ~19.3.0-0
+    peerDependenciesMeta:
+      react:
+        optional: true
+      react-dom:
+        optional: true
 
   '@cloudflare/kv-asset-handler@0.4.1':
     resolution: {integrity: sha512-Nu8ahitGFFJztxUml9oD/DLb7Z28C8cd8F46IVQ7y5Btz575pvMY8AqZsXkX7Gds29eCKdMgIHjIvzskHgPSFg==}
@@ -1724,6 +1746,9 @@ packages:
     resolution: {integrity: sha512-7D2EPVltRrsTkhpQmksIu+LxeWAIEk6wRDMJ1qljlv+CKHJM+cJLlfhWIzNA44eAsHXSNe3+vO6DW1yCYx8SuQ==}
     engines: {node: '>=20'}
 
+  csstype@3.1.3:
+    resolution: {integrity: sha512-M1uQkMl8rQK/szD0LNhtqxIPLpimGm8sOBwU7lLnCpSbTyY3yeU1Vc7l4KT5zT4s/yOxHH5O7tIuuLOCnLADRw==}
+
   csstype@3.2.3:
     resolution: {integrity: sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==}
 
@@ -2038,6 +2063,10 @@ packages:
   joycon@3.1.1:
     resolution: {integrity: sha512-34wB/Y7MW7bzjKRjUKTa46I2Z7eV62Rkhva+KkopW7Qvv/OSWBqvkSY7vusOPrNuZcUG3tApvdVgNB8POj3SPw==}
     engines: {node: '>=10'}
+
+  js-cookie@3.0.5:
+    resolution: {integrity: sha512-cEiJEAEoIbWfCZYKWhVwFuvPX1gETRYPw6LlaTKoxD3s2AkXzkCjnp6h0V77ozyqj0jakteJ4YqDJT830+lVGw==}
+    engines: {node: '>=14'}
 
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
@@ -2479,6 +2508,11 @@ packages:
     resolution: {integrity: sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w==}
     engines: {node: '>= 0.4'}
 
+  swr@2.3.4:
+    resolution: {integrity: sha512-bYd2lrhc+VarcpkgWclcUi92wYCpOgMws9Sd1hG1ntAu0NEy+14CbotuFjshBU2kt9rYj9TSmDcybpxpeTU1fg==}
+    peerDependencies:
+      react: ^16.11.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+
   symbol-tree@3.2.4:
     resolution: {integrity: sha512-9QNk5KwDF+Bvz+PyObkmSYjI5ksVUYtjW7AU22r2NKcfLJcXp96hkDWU3+XndOsUb+AQ9QhfzfCT2O+CNWT5Tw==}
 
@@ -2602,6 +2636,11 @@ packages:
     peerDependencies:
       '@urql/core': ^6.0.0
       react: '>= 16.8.0'
+
+  use-sync-external-store@1.6.0:
+    resolution: {integrity: sha512-Pp6GSwGP/NrPIrxVFAIkOQeyw8lFenOHijQWkUTrDvrF4ALqylP2C/KCkeS9dpUM3KvYRQhna5vt7IL95+ZQ9w==}
+    peerDependencies:
+      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
   util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
@@ -2963,6 +3002,25 @@ snapshots:
       '@babel/helper-validator-identifier': 7.28.5
 
   '@bcoe/v8-coverage@1.0.2': {}
+
+  '@clerk/clerk-react@5.59.3(react-dom@19.2.3(react@19.2.3))(react@19.2.3)':
+    dependencies:
+      '@clerk/shared': 3.42.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      react: 19.2.3
+      react-dom: 19.2.3(react@19.2.3)
+      tslib: 2.8.1
+
+  '@clerk/shared@3.42.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)':
+    dependencies:
+      csstype: 3.1.3
+      dequal: 2.0.3
+      glob-to-regexp: 0.4.1
+      js-cookie: 3.0.5
+      std-env: 3.10.0
+      swr: 2.3.4(react@19.2.3)
+    optionalDependencies:
+      react: 19.2.3
+      react-dom: 19.2.3(react@19.2.3)
 
   '@cloudflare/kv-asset-handler@0.4.1':
     dependencies:
@@ -4145,6 +4203,8 @@ snapshots:
       css-tree: 3.1.0
       lru-cache: 11.2.4
 
+  csstype@3.1.3: {}
+
   csstype@3.2.3: {}
 
   data-urls@6.0.0:
@@ -4515,6 +4575,8 @@ snapshots:
   jiti@1.21.7: {}
 
   joycon@3.1.1: {}
+
+  js-cookie@3.0.5: {}
 
   js-tokens@4.0.0: {}
 
@@ -4955,6 +5017,12 @@ snapshots:
 
   supports-preserve-symlinks-flag@1.0.0: {}
 
+  swr@2.3.4(react@19.2.3):
+    dependencies:
+      dequal: 2.0.3
+      react: 19.2.3
+      use-sync-external-store: 1.6.0(react@19.2.3)
+
   symbol-tree@3.2.4: {}
 
   tailwindcss@3.4.19:
@@ -5093,6 +5161,10 @@ snapshots:
       '@urql/core': 6.0.1(graphql@16.12.0)
       react: 19.2.3
       wonka: 6.3.5
+
+  use-sync-external-store@1.6.0(react@19.2.3):
+    dependencies:
+      react: 19.2.3
 
   util-deprecate@1.0.2: {}
 

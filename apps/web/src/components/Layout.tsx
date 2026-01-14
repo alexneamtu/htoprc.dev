@@ -1,9 +1,40 @@
 import { Link } from 'react-router-dom'
 import type { ReactNode } from 'react'
+import { SignedIn, SignedOut, UserButton, SignInButton } from '@clerk/clerk-react'
 import { ThemeToggle } from './ThemeToggle'
 
 interface LayoutProps {
   children: ReactNode
+}
+
+const CLERK_ENABLED = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
+
+function AuthButtons() {
+  if (!CLERK_ENABLED) {
+    return null
+  }
+
+  return (
+    <>
+      <SignedOut>
+        <SignInButton mode="modal">
+          <button className="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-md">
+            Sign In
+          </button>
+        </SignInButton>
+      </SignedOut>
+      <SignedIn>
+        <UserButton
+          afterSignOutUrl="/"
+          appearance={{
+            elements: {
+              avatarBox: 'w-8 h-8',
+            },
+          }}
+        />
+      </SignedIn>
+    </>
+  )
 }
 
 export function Layout({ children }: LayoutProps) {
@@ -22,7 +53,15 @@ export function Layout({ children }: LayoutProps) {
             <Link to="/editor" className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">
               Editor
             </Link>
+            {CLERK_ENABLED && (
+              <SignedIn>
+                <Link to="/upload" className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">
+                  Upload
+                </Link>
+              </SignedIn>
+            )}
             <ThemeToggle />
+            <AuthButtons />
           </div>
         </nav>
       </header>
