@@ -52,6 +52,7 @@ export function HtopPreview({ config }: HtopPreviewProps) {
       style={
         {
           backgroundColor: colorScheme?.bg,
+          color: colorScheme?.fg,
           '--htop-bg': colorScheme?.bg,
           '--htop-fg': colorScheme?.fg,
           '--htop-header': colorScheme?.header,
