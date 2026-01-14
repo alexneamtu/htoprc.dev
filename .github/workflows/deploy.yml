@@ -70,7 +70,7 @@ jobs:
           echo "| Environment | ${{ env.DEPLOY_ENV }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Project | htoprc-${{ env.DEPLOY_ENV }} |" >> $GITHUB_STEP_SUMMARY
           if [ "${{ env.DEPLOY_ENV }}" = "production" ]; then
-            echo "| Custom Domain | htoprc.dev.alexneamtu.top |" >> $GITHUB_STEP_SUMMARY
+            echo "| Custom Domain | htoprc.dev |" >> $GITHUB_STEP_SUMMARY
           else
             echo "| Custom Domain | htoprc.staging.alexneamtu.top |" >> $GITHUB_STEP_SUMMARY
           fi
