@@ -15,7 +15,6 @@ on:
           - production
 
 env:
-  # Default to production for push to main
   DEPLOY_ENV: ${{ github.event.inputs.environment || 'production' }}
 
 jobs:
@@ -56,8 +55,22 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy ./apps/web/dist --project-name=htoprc-dev-${{ env.DEPLOY_ENV }}
+          command: pages deploy ./apps/web/dist --project-name=htoprc-${{ env.DEPLOY_ENV }}
           packageManager: pnpm
+
+      - name: Deployment Summary
+        run: |
+          echo "## Web Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Setting | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Environment | ${{ env.DEPLOY_ENV }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Project | htoprc-${{ env.DEPLOY_ENV }} |" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ env.DEPLOY_ENV }}" = "production" ]; then
+            echo "| Custom Domain | htoprc.dev.alexneamtu.top |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Custom Domain | htoprc.staging.alexneamtu.top |" >> $GITHUB_STEP_SUMMARY
+          fi
 
   deploy-api:
     runs-on: ubuntu-latest
@@ -94,3 +107,18 @@ jobs:
           workingDirectory: ./apps/api
           command: deploy --env ${{ env.DEPLOY_ENV }}
           packageManager: pnpm
+
+      - name: API Deployment Summary
+        run: |
+          echo "## API Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Setting | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Environment | ${{ env.DEPLOY_ENV }} |" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ env.DEPLOY_ENV }}" = "production" ]; then
+            echo "| Worker | htoprc-api-production |" >> $GITHUB_STEP_SUMMARY
+            echo "| Custom Domain | api.htoprc.dev.alexneamtu.top |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Worker | htoprc-api-staging |" >> $GITHUB_STEP_SUMMARY
+            echo "| Custom Domain | api.htoprc.staging.alexneamtu.top |" >> $GITHUB_STEP_SUMMARY
+          fi

@@ -6,22 +6,37 @@ compatibility_date = "2024-01-01"
 [dev]
 port = 8787
 
-# D1 Database binding
-[[d1_databases]]
+# ============================================
+# Staging Environment
+# ============================================
+[env.staging]
+name = "htoprc-api-staging"
+routes = [
+  { pattern = "api.htoprc.staging.alexneamtu.top", custom_domain = true }
+]
+
+[[env.staging.d1_databases]]
 binding = "DB"
-database_name = "htoprc-db"
-database_id = "placeholder-will-be-set-after-creation"
+database_name = "htoprc-db-staging"
+database_id = "placeholder-staging-db-id"
 
-# KV Namespace for caching (optional, for later)
-# [[kv_namespaces]]
-# binding = "CACHE"
-# id = "placeholder"
+# ============================================
+# Production Environment
+# ============================================
+[env.production]
+name = "htoprc-api-production"
+routes = [
+  { pattern = "api.htoprc.dev.alexneamtu.top", custom_domain = true }
+]
 
-# R2 bucket for file storage (optional, for later)
-# [[r2_buckets]]
-# binding = "STORAGE"
-# bucket_name = "htoprc-storage"
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "htoprc-db-production"
+database_id = "placeholder-production-db-id"
 
+# ============================================
+# Shared Configuration Notes
+# ============================================
 # Environment variables (set via wrangler secret)
 # CLERK_SECRET_KEY
 # GITHUB_TOKEN

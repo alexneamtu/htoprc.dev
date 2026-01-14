@@ -1,6 +1,9 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { HtopPreview } from '../components/htop/HtopPreview'
+import { HtoprcEditor } from '../components/editor'
 import { parseHtoprc } from '@htoprc/parser'
+
+const STORAGE_KEY = 'htoprc-editor-content'
 
 const DEFAULT_HTOPRC = `# htoprc configuration
 # Edit this config and see the preview update in real-time
@@ -22,23 +25,54 @@ highlight_megabytes=1
 highlight_threads=1
 `
 
-export function EditorPage() {
-  const [content, setContent] = useState(DEFAULT_HTOPRC)
+function useLocalStorage(key: string, initialValue: string): [string, (value: string) => void] {
+  const [storedValue, setStoredValue] = useState(() => {
+    try {
+      const item = localStorage.getItem(key)
+      return item ?? initialValue
+    } catch {
+      return initialValue
+    }
+  })
 
-  const parsed = useMemo(() => parseHtoprc(content), [content])
+  const setValue = useCallback((value: string) => {
+    setStoredValue(value)
+    try {
+      localStorage.setItem(key, value)
+    } catch {
+      // Ignore storage errors
+    }
+  }, [key])
+
+  return [storedValue, setValue]
+}
+
+export function EditorPage() {
+  const [content, setContent] = useLocalStorage(STORAGE_KEY, DEFAULT_HTOPRC)
+  const [debouncedContent, setDebouncedContent] = useState(content)
+
+  // Debounce parsing for performance
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedContent(content)
+    }, 100)
+    return () => clearTimeout(timer)
+  }, [content])
+
+  const parsed = useMemo(() => parseHtoprc(debouncedContent), [debouncedContent])
+
+  const handleReset = useCallback(() => {
+    setContent(DEFAULT_HTOPRC)
+  }, [setContent])
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-200px)]">
       {/* Editor Panel */}
       <div className="flex-1 flex flex-col">
         <h2 className="text-xl font-bold mb-2">htoprc Editor</h2>
-        <textarea
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          className="flex-1 bg-gray-900 text-gray-100 font-mono text-sm p-4 rounded-lg resize-none border border-gray-700 focus:border-blue-500 focus:outline-none"
-          placeholder="Paste your htoprc config here..."
-          spellCheck={false}
-        />
+        <div className="flex-1">
+          <HtoprcEditor value={content} onChange={setContent} />
+        </div>
         {parsed.warnings.length > 0 && (
           <div className="mt-2 p-2 bg-yellow-900/50 rounded text-yellow-300 text-sm">
             {parsed.warnings.map((w, i) => (
@@ -61,27 +95,49 @@ export function EditorPage() {
         <div className="flex-1 bg-gray-900 rounded-lg p-4 overflow-auto">
           <HtopPreview config={parsed.config} />
         </div>
-        <div className="mt-4 flex gap-2">
-          <button
-            onClick={() => navigator.clipboard.writeText(content)}
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm"
-          >
-            Copy to Clipboard
-          </button>
-          <button
-            onClick={() => {
-              const blob = new Blob([content], { type: 'text/plain' })
-              const url = URL.createObjectURL(blob)
-              const a = document.createElement('a')
-              a.href = url
-              a.download = 'htoprc'
-              a.click()
-              URL.revokeObjectURL(url)
-            }}
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm"
-          >
-            Download .htoprc
-          </button>
+        <div className="mt-4 space-y-3">
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={() => navigator.clipboard.writeText(content)}
+              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm"
+            >
+              Copy Config
+            </button>
+            <button
+              onClick={() => {
+                const blob = new Blob([content], { type: 'text/plain' })
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url
+                a.download = '.htoprc'
+                a.click()
+                URL.revokeObjectURL(url)
+              }}
+              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm"
+            >
+              Download .htoprc
+            </button>
+            <button
+              onClick={handleReset}
+              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm"
+            >
+              Reset to Defaults
+            </button>
+          </div>
+          <div className="text-xs text-gray-400 bg-gray-800 p-3 rounded font-mono">
+            <div className="mb-2 text-gray-300">Install instructions:</div>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 select-all">mkdir -p ~/.config/htop && cat &gt; ~/.config/htop/htoprc</code>
+              <button
+                onClick={() => navigator.clipboard.writeText('mkdir -p ~/.config/htop && cat > ~/.config/htop/htoprc')}
+                className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs shrink-0"
+                title="Copy command"
+              >
+                Copy
+              </button>
+            </div>
+            <div className="mt-2 text-gray-500">Then paste your config and press Ctrl+D</div>
+          </div>
         </div>
       </div>
     </div>

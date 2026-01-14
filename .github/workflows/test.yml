@@ -36,10 +36,20 @@ jobs:
         run: pnpm lint
 
       - name: Test Parser
-        run: pnpm --filter @htoprc/parser vitest run
+        run: pnpm --filter @htoprc/parser vitest run --reporter=verbose --reporter=github-actions
 
       - name: Test Web
-        run: pnpm --filter @htoprc/web vitest run
+        run: pnpm --filter @htoprc/web vitest run --reporter=verbose --reporter=github-actions
 
       - name: Build
         run: pnpm build
+
+      - name: Test Summary
+        if: always()
+        run: |
+          echo "## Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Package | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| @htoprc/parser | ${{ job.status == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| @htoprc/web | ${{ job.status == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
