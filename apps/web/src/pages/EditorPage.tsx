@@ -5,18 +5,6 @@ import { HtoprcEditor } from '../components/editor'
 import { parseHtoprc } from '@htoprc/parser'
 
 const STORAGE_KEY = 'htoprc-editor-content'
-const BG_COLOR_KEY = 'htoprc-preview-bg'
-
-const BACKGROUND_COLORS = [
-  { name: 'Black', value: '#000000' },
-  { name: 'Dark Gray', value: '#1a1a1a' },
-  { name: 'Dracula', value: '#282a36' },
-  { name: 'Solarized Dark', value: '#002b36' },
-  { name: 'Nord', value: '#2e3440' },
-  { name: 'Solarized Light', value: '#fdf6e3' },
-  { name: 'Light Gray', value: '#e5e5e5' },
-  { name: 'White', value: '#ffffff' },
-]
 
 const DEFAULT_HTOPRC = `# htoprc configuration
 # Edit this config and see the preview update in real-time
@@ -63,7 +51,6 @@ function useLocalStorage(key: string, initialValue: string): [string, (value: st
 export function EditorPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [content, setContent] = useLocalStorage(STORAGE_KEY, DEFAULT_HTOPRC)
-  const [bgColor, setBgColor] = useLocalStorage(BG_COLOR_KEY, BACKGROUND_COLORS[0].value)
   const [debouncedContent, setDebouncedContent] = useState(content)
 
   // Load content from URL parameter if present
@@ -113,31 +100,11 @@ export function EditorPage() {
       <div className="flex-1 flex flex-col">
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-xl font-bold">Preview</h2>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1">
-              {BACKGROUND_COLORS.map((color) => (
-                <button
-                  key={color.value}
-                  onClick={() => setBgColor(color.value)}
-                  className={`w-5 h-5 rounded border-2 transition-all ${
-                    bgColor === color.value
-                      ? 'border-blue-500 scale-110'
-                      : 'border-gray-400 dark:border-gray-600 hover:border-gray-500'
-                  }`}
-                  style={{ backgroundColor: color.value }}
-                  title={color.name}
-                />
-              ))}
-            </div>
-            <span className="text-sm text-gray-500">
-              Score: {parsed.score} | Version: {parsed.version}
-            </span>
-          </div>
+          <span className="text-sm text-gray-500">
+            Score: {parsed.score} | Version: {parsed.version}
+          </span>
         </div>
-        <div
-          className="flex-1 rounded-lg p-4 overflow-auto border border-gray-300 dark:border-gray-700"
-          style={{ backgroundColor: bgColor }}
-        >
+        <div className="flex-1 rounded-lg p-4 overflow-auto border border-gray-300 dark:border-gray-700 bg-black">
           <HtopPreview config={parsed.config} />
         </div>
         <div className="mt-4 space-y-3">

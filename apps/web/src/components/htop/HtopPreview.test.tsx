@@ -107,29 +107,32 @@ describe('HtopPreview', () => {
   })
 
   describe('color schemes', () => {
-    it('applies default color scheme (0)', () => {
+    // htop uses terminal colors, not its own color schemes
+    // The preview uses consistent dark terminal colors regardless of color_scheme setting
+    it('uses consistent dark terminal colors', () => {
       const config = createConfig({ colorScheme: 0 })
       const { container } = render(<HtopPreview config={config} />)
 
-      // Check that CSS variables are set
+      // Check that CSS variables are set to dark terminal colors
       const preview = container.querySelector('.font-mono')
-      expect(preview).toHaveStyle('--htop-bg: #000000')
+      expect(preview).toHaveStyle('--htop-bg: #0d0d0d')
     })
 
-    it('applies custom color scheme', () => {
-      const config = createConfig({ colorScheme: 4 }) // Midnight Commander
+    it('uses same colors regardless of color scheme setting', () => {
+      // htop's color_scheme refers to terminal color indices, not actual colors
+      const config = createConfig({ colorScheme: 4 })
       const { container } = render(<HtopPreview config={config} />)
 
       const preview = container.querySelector('.font-mono')
-      expect(preview).toHaveStyle('--htop-bg: #0000aa')
+      expect(preview).toHaveStyle('--htop-bg: #0d0d0d')
     })
 
-    it('falls back to default for invalid color scheme', () => {
+    it('handles invalid color scheme gracefully', () => {
       const config = createConfig({ colorScheme: 99 })
       const { container } = render(<HtopPreview config={config} />)
 
       const preview = container.querySelector('.font-mono')
-      expect(preview).toHaveStyle('--htop-bg: #000000')
+      expect(preview).toHaveStyle('--htop-bg: #0d0d0d')
     })
   })
 

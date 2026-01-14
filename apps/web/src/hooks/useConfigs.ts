@@ -1,8 +1,8 @@
 import { useQuery } from 'urql'
 
 const CONFIGS_QUERY = /* GraphQL */ `
-  query Configs($page: Int, $limit: Int, $sort: ConfigSort, $minScore: Int) {
-    configs(page: $page, limit: $limit, sort: $sort, minScore: $minScore) {
+  query Configs($page: Int, $limit: Int, $sort: ConfigSort, $minScore: Int, $search: String) {
+    configs(page: $page, limit: $limit, sort: $sort, minScore: $minScore, search: $search) {
       nodes {
         id
         slug
@@ -63,14 +63,15 @@ export interface UseConfigsOptions {
   limit?: number
   sort?: ConfigSort
   minScore?: number
+  search?: string
 }
 
 export function useConfigs(options: UseConfigsOptions = {}) {
-  const { page = 1, limit = 20, sort = 'SCORE_DESC', minScore = 0 } = options
+  const { page = 1, limit = 20, sort = 'SCORE_DESC', minScore = 0, search } = options
 
   const [result] = useQuery<ConfigsData>({
     query: CONFIGS_QUERY,
-    variables: { page, limit, sort, minScore },
+    variables: { page, limit, sort, minScore, search: search || undefined },
   })
 
   return result

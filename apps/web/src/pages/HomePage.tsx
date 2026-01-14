@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { HtopPreview } from '../components/htop/HtopPreview'
 import { parseHtoprc } from '@htoprc/parser'
@@ -54,7 +54,19 @@ function HeroConfig() {
 export function HomePage() {
   const [page, setPage] = useState(1)
   const [sort, setSort] = useState<ConfigSort>('SCORE_DESC')
-  const { data, fetching, error } = useConfigs({ limit: 12, page, sort })
+  const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search)
+      setPage(1) // Reset to first page when searching
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [search])
+
+  const { data, fetching, error } = useConfigs({ limit: 12, page, sort, search: debouncedSearch })
 
   return (
     <div>
@@ -68,27 +80,51 @@ export function HomePage() {
       <HeroConfig />
 
       <section>
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <h2 className="text-2xl font-bold">Gallery</h2>
-          <div className="flex items-center gap-2">
-            <label htmlFor="sort" className="text-sm text-gray-500 dark:text-gray-400">
-              Sort by:
-            </label>
-            <select
-              id="sort"
-              value={sort}
-              onChange={(e) => {
-                setSort(e.target.value as ConfigSort)
-                setPage(1)
-              }}
-              className="px-3 py-1.5 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {SORT_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search configs..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full sm:w-64 px-3 py-1.5 pl-9 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <svg
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+            </div>
+            <div className="flex items-center gap-2">
+              <label htmlFor="sort" className="text-sm text-gray-500 dark:text-gray-400">
+                Sort by:
+              </label>
+              <select
+                id="sort"
+                value={sort}
+                onChange={(e) => {
+                  setSort(e.target.value as ConfigSort)
+                  setPage(1)
+                }}
+                className="px-3 py-1.5 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {SORT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
@@ -107,13 +143,27 @@ export function HomePage() {
 
         {data && data.configs.nodes.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-gray-400">No configs found. Be the first to upload one!</p>
-            <Link
-              to="/editor"
-              className="mt-4 inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md text-white"
-            >
-              Create Config
-            </Link>
+            {debouncedSearch ? (
+              <>
+                <p className="text-gray-400">No configs found matching "{debouncedSearch}"</p>
+                <button
+                  onClick={() => setSearch('')}
+                  className="mt-4 inline-block px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded-md text-white"
+                >
+                  Clear Search
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-gray-400">No configs found. Be the first to upload one!</p>
+                <Link
+                  to="/editor"
+                  className="mt-4 inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md text-white"
+                >
+                  Create Config
+                </Link>
+              </>
+            )}
           </div>
         )}
 
