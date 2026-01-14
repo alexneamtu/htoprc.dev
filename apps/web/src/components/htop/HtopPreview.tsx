@@ -51,6 +51,7 @@ export function HtopPreview({ config }: HtopPreviewProps) {
       className="font-mono text-sm rounded overflow-hidden border border-gray-700"
       style={
         {
+          backgroundColor: colorScheme?.bg,
           '--htop-bg': colorScheme?.bg,
           '--htop-fg': colorScheme?.fg,
           '--htop-header': colorScheme?.header,
