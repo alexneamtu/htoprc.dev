@@ -1,5 +1,6 @@
 import type { HtopConfig, Meter } from '@htoprc/parser'
 import { COLOR_SCHEMES } from './ColorSchemes'
+import { MeterRenderer } from './meters'
 
 interface HtopPreviewProps {
   config: HtopConfig
@@ -8,70 +9,21 @@ interface HtopPreviewProps {
 // Mock process data for the preview
 const MOCK_PROCESSES = [
   { pid: 1, user: 'root', cpu: 0.0, mem: 0.1, time: '0:03.21', command: '/sbin/init' },
-  { pid: 1234, user: 'aneamtu', cpu: 12.5, mem: 2.4, time: '1:23.45', command: 'node /usr/local/bin/vite' },
-  { pid: 2345, user: 'aneamtu', cpu: 8.2, mem: 5.1, time: '0:45.12', command: 'code --type=renderer' },
+  { pid: 1234, user: 'dev', cpu: 12.5, mem: 2.4, time: '1:23.45', command: 'node /usr/local/bin/vite' },
+  { pid: 2345, user: 'dev', cpu: 8.2, mem: 5.1, time: '0:45.12', command: 'code --type=renderer' },
   { pid: 3456, user: 'root', cpu: 2.1, mem: 1.2, time: '0:12.34', command: '/usr/lib/systemd/systemd-journald' },
-  { pid: 4567, user: 'aneamtu', cpu: 45.3, mem: 8.7, time: '2:34.56', command: 'chromium --type=gpu-process' },
-  { pid: 5678, user: 'aneamtu', cpu: 1.5, mem: 3.2, time: '0:08.90', command: 'htop' },
+  { pid: 4567, user: 'dev', cpu: 45.3, mem: 8.7, time: '2:34.56', command: 'chromium --type=gpu-process' },
+  { pid: 5678, user: 'dev', cpu: 1.5, mem: 3.2, time: '0:08.90', command: 'htop' },
   { pid: 6789, user: 'root', cpu: 0.3, mem: 0.5, time: '0:01.23', command: '/usr/bin/dbus-daemon --system' },
-  { pid: 7890, user: 'aneamtu', cpu: 3.7, mem: 4.1, time: '0:15.67', command: 'spotify --type=renderer' },
+  { pid: 7890, user: 'dev', cpu: 3.7, mem: 4.1, time: '0:15.67', command: 'spotify --type=renderer' },
 ]
 
-function MeterBar({ meter, value, max }: { meter: Meter; value: number; max: number }) {
-  const percentage = (value / max) * 100
-
-  if (meter.mode === 'text') {
-    return (
-      <span className="text-htop-meter-text">
-        {meter.type}: {value.toFixed(1)}/{max}
-      </span>
-    )
-  }
-
-  if (meter.mode === 'graph') {
-    // Simple graph representation
-    const bars = '▁▂▃▄▅▆▇█'
-    const barIndex = Math.min(Math.floor(percentage / 12.5), 7)
-    return (
-      <span className="text-htop-meter-graph">
-        {meter.type} {bars[barIndex]}
-      </span>
-    )
-  }
-
-  // Default: bar mode
-  return (
-    <div className="flex items-center gap-1">
-      <span className="text-htop-meter-label w-16 text-xs">{meter.type}</span>
-      <div className="flex-1 h-3 bg-gray-800 rounded overflow-hidden">
-        <div
-          className="h-full bg-htop-meter-bar transition-all"
-          style={{ width: `${percentage}%` }}
-        />
-      </div>
-      <span className="text-xs w-12 text-right">{percentage.toFixed(0)}%</span>
-    </div>
-  )
-}
-
 function HeaderMeters({ meters, side }: { meters: Meter[]; side: 'left' | 'right' }) {
-  // Mock values for meters
-  const meterValues: Record<string, { value: number; max: number }> = {
-    CPU: { value: 45, max: 100 },
-    AllCPUs: { value: 32, max: 100 },
-    Memory: { value: 6.2, max: 16 },
-    Swap: { value: 0.5, max: 8 },
-    Tasks: { value: 142, max: 300 },
-    LoadAverage: { value: 1.23, max: 8 },
-    Uptime: { value: 3600, max: 86400 },
-  }
-
   return (
     <div className={`flex-1 space-y-1 ${side === 'right' ? 'pl-2' : 'pr-2'}`}>
-      {meters.map((meter, i) => {
-        const values = meterValues[meter.type] ?? { value: 50, max: 100 }
-        return <MeterBar key={i} meter={meter} value={values.value} max={values.max} />
-      })}
+      {meters.map((meter, i) => (
+        <MeterRenderer key={i} meter={meter} />
+      ))}
     </div>
   )
 }
