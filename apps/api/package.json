@@ -10,9 +10,10 @@
     "test": "vitest",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts",
-    "db:migrate": "wrangler d1 migrations apply htoprc-db --local",
-    "db:migrate:prod": "wrangler d1 migrations apply htoprc-db --remote",
-    "db:seed": "wrangler d1 execute htoprc-db --local --file=./migrations/seed.sql"
+    "db:migrate": "wrangler d1 migrations apply DB --local",
+    "db:migrate:staging": "wrangler d1 migrations apply DB --env staging --remote",
+    "db:migrate:prod": "wrangler d1 migrations apply DB --env production --remote",
+    "db:seed": "wrangler d1 execute DB --local --file=./migrations/seed.sql"
   },
   "dependencies": {
     "@htoprc/parser": "workspace:*",
