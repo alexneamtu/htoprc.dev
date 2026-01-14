@@ -2,13 +2,20 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { HtopPreview } from '../components/htop/HtopPreview'
 import { parseHtoprc } from '@htoprc/parser'
-import { useConfigs, useTopConfigs, type ConfigSort } from '../hooks'
+import { useConfigs, useTopConfigs, useRecentConfigs, type ConfigSort, type CustomizationLevel } from '../hooks'
 
 const SORT_OPTIONS: { value: ConfigSort; label: string }[] = [
   { value: 'SCORE_DESC', label: 'Highest Score' },
   { value: 'LIKES_DESC', label: 'Most Liked' },
   { value: 'CREATED_DESC', label: 'Newest' },
   { value: 'CREATED_ASC', label: 'Oldest' },
+]
+
+const LEVEL_OPTIONS: { value: CustomizationLevel; label: string }[] = [
+  { value: 'ALL', label: 'All Levels' },
+  { value: 'MINIMAL', label: 'Minimal' },
+  { value: 'MODERATE', label: 'Moderate' },
+  { value: 'HEAVY', label: 'Heavy' },
 ]
 
 function HeroConfig() {
@@ -51,9 +58,49 @@ function HeroConfig() {
   )
 }
 
+function RecentlyAdded() {
+  const { data, fetching } = useRecentConfigs(6)
+
+  if (fetching || !data || data.recentConfigs.length === 0) {
+    return null
+  }
+
+  return (
+    <section className="mb-12">
+      <h2 className="text-2xl font-bold mb-6">Recently Added</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {data.recentConfigs.map((config) => {
+          const parsed = parseHtoprc(config.content)
+          return (
+            <Link
+              key={config.id}
+              to={`/config/${config.slug}`}
+              className="block bg-gray-100 dark:bg-gray-900 rounded-lg overflow-hidden hover:ring-2 hover:ring-blue-500 transition-all"
+            >
+              <div className="p-3">
+                <div className="aspect-video overflow-hidden rounded">
+                  <HtopPreview config={parsed.config} />
+                </div>
+              </div>
+              <div className="px-3 pb-3">
+                <h3 className="font-semibold text-lg truncate">{config.title}</h3>
+                <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  <span>Score: {config.score}</span>
+                  <span>Likes: {config.likesCount}</span>
+                </div>
+              </div>
+            </Link>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
 export function HomePage() {
   const [page, setPage] = useState(1)
   const [sort, setSort] = useState<ConfigSort>('SCORE_DESC')
+  const [level, setLevel] = useState<CustomizationLevel>('ALL')
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
 
@@ -66,7 +113,7 @@ export function HomePage() {
     return () => clearTimeout(timer)
   }, [search])
 
-  const { data, fetching, error } = useConfigs({ limit: 12, page, sort, search: debouncedSearch })
+  const { data, fetching, error } = useConfigs({ limit: 12, page, sort, search: debouncedSearch, level })
 
   return (
     <div>
@@ -78,6 +125,8 @@ export function HomePage() {
       </section>
 
       <HeroConfig />
+
+      <RecentlyAdded />
 
       <section>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
@@ -106,8 +155,28 @@ export function HomePage() {
               </svg>
             </div>
             <div className="flex items-center gap-2">
+              <label htmlFor="level" className="text-sm text-gray-500 dark:text-gray-400">
+                Level:
+              </label>
+              <select
+                id="level"
+                value={level}
+                onChange={(e) => {
+                  setLevel(e.target.value as CustomizationLevel)
+                  setPage(1)
+                }}
+                className="px-3 py-1.5 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {LEVEL_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
               <label htmlFor="sort" className="text-sm text-gray-500 dark:text-gray-400">
-                Sort by:
+                Sort:
               </label>
               <select
                 id="sort"

@@ -42,10 +42,18 @@ export const schema = createSchema<GraphQLContext>({
       CREATED_ASC
     }
 
+    enum CustomizationLevel {
+      ALL
+      MINIMAL
+      MODERATE
+      HEAVY
+    }
+
     type Query {
       health: Health!
-      configs(page: Int = 1, limit: Int = 20, sort: ConfigSort = SCORE_DESC, minScore: Int = 0, search: String): ConfigConnection!
+      configs(page: Int = 1, limit: Int = 20, sort: ConfigSort = SCORE_DESC, minScore: Int = 0, search: String, level: CustomizationLevel = ALL): ConfigConnection!
       config(id: ID, slug: String): Config
+      recentConfigs(limit: Int = 6): [Config!]!
     }
 
     type Mutation {
@@ -103,7 +111,8 @@ export const schema = createSchema<GraphQLContext>({
           sort = 'SCORE_DESC',
           minScore = 0,
           search,
-        }: { page?: number; limit?: number; sort?: string; minScore?: number; search?: string },
+          level = 'ALL',
+        }: { page?: number; limit?: number; sort?: string; minScore?: number; search?: string; level?: string },
         ctx: GraphQLContext
       ) => {
         const offset = (page - 1) * limit
@@ -124,6 +133,18 @@ export const schema = createSchema<GraphQLContext>({
         if (search && search.trim()) {
           conditions.push('title LIKE ?')
           params.push(`%${search.trim()}%`)
+        }
+
+        // Customization level filter (Minimal: 0-9, Moderate: 10-25, Heavy: 26+)
+        if (level === 'MINIMAL') {
+          conditions.push('score < ?')
+          params.push(10)
+        } else if (level === 'MODERATE') {
+          conditions.push('score >= ? AND score <= ?')
+          params.push(10, 25)
+        } else if (level === 'HEAVY') {
+          conditions.push('score > ?')
+          params.push(25)
         }
 
         const whereClause = conditions.join(' AND ')
@@ -199,6 +220,30 @@ export const schema = createSchema<GraphQLContext>({
           likesCount: row.likes_count,
           createdAt: row.created_at,
         }
+      },
+      recentConfigs: async (
+        _: unknown,
+        { limit = 6 }: { limit?: number },
+        ctx: GraphQLContext
+      ) => {
+        const result = await ctx.db
+          .prepare('SELECT * FROM configs WHERE status = ? ORDER BY created_at DESC LIMIT ?')
+          .bind('published', limit)
+          .all<ConfigRow>()
+
+        return (result.results ?? []).map((row) => ({
+          id: row.id,
+          slug: row.slug,
+          title: row.title,
+          content: row.content,
+          sourceType: row.source_type,
+          sourceUrl: row.source_url,
+          sourcePlatform: row.source_platform,
+          status: row.status,
+          score: row.score,
+          likesCount: row.likes_count,
+          createdAt: row.created_at,
+        }))
       },
     },
     Mutation: {

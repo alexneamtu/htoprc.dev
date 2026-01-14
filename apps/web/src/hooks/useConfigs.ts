@@ -1,8 +1,8 @@
 import { useQuery } from 'urql'
 
 const CONFIGS_QUERY = /* GraphQL */ `
-  query Configs($page: Int, $limit: Int, $sort: ConfigSort, $minScore: Int, $search: String) {
-    configs(page: $page, limit: $limit, sort: $sort, minScore: $minScore, search: $search) {
+  query Configs($page: Int, $limit: Int, $sort: ConfigSort, $minScore: Int, $search: String, $level: CustomizationLevel) {
+    configs(page: $page, limit: $limit, sort: $sort, minScore: $minScore, search: $search, level: $level) {
       nodes {
         id
         slug
@@ -57,6 +57,7 @@ export interface ConfigsData {
 }
 
 export type ConfigSort = 'SCORE_DESC' | 'LIKES_DESC' | 'CREATED_DESC' | 'CREATED_ASC'
+export type CustomizationLevel = 'ALL' | 'MINIMAL' | 'MODERATE' | 'HEAVY'
 
 export interface UseConfigsOptions {
   page?: number
@@ -64,14 +65,15 @@ export interface UseConfigsOptions {
   sort?: ConfigSort
   minScore?: number
   search?: string
+  level?: CustomizationLevel
 }
 
 export function useConfigs(options: UseConfigsOptions = {}) {
-  const { page = 1, limit = 20, sort = 'SCORE_DESC', minScore = 0, search } = options
+  const { page = 1, limit = 20, sort = 'SCORE_DESC', minScore = 0, search, level = 'ALL' } = options
 
   const [result] = useQuery<ConfigsData>({
     query: CONFIGS_QUERY,
-    variables: { page, limit, sort, minScore, search: search || undefined },
+    variables: { page, limit, sort, minScore, search: search || undefined, level },
   })
 
   return result
