@@ -108,7 +108,7 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: ./apps/api
-          command: d1 migrations apply htoprc-db-${{ env.DEPLOY_ENV }} --remote
+          command: d1 migrations apply DB --env ${{ env.DEPLOY_ENV }} --remote
           packageManager: pnpm
 
       - name: Deploy API to Cloudflare Workers
