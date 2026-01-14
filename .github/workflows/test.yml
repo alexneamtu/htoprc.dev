@@ -36,13 +36,13 @@ jobs:
         run: pnpm lint
 
       - name: Test Parser
-        run: pnpm --filter @htoprc/parser vitest run --reporter=verbose --reporter=github-actions --reporter=junit --outputFile=test-results/parser.xml
+        run: pnpm --filter @htoprc/parser exec vitest run --reporter=verbose --reporter=github-actions --reporter=junit --outputFile=test-results/parser.xml
 
       - name: Test API
-        run: pnpm --filter @htoprc/api vitest run --reporter=verbose --reporter=github-actions --reporter=junit --outputFile=test-results/api.xml
+        run: pnpm --filter @htoprc/api exec vitest run --reporter=verbose --reporter=github-actions --reporter=junit --outputFile=test-results/api.xml
 
       - name: Test Web
-        run: pnpm --filter @htoprc/web vitest run --reporter=verbose --reporter=github-actions --reporter=junit --outputFile=test-results/web.xml
+        run: pnpm --filter @htoprc/web exec vitest run --reporter=verbose --reporter=github-actions --reporter=junit --outputFile=test-results/web.xml
 
       - name: Test Report
         uses: dorny/test-reporter@v1
