@@ -62,7 +62,7 @@ app.get('/sitemap.xml', async (c) => {
 
   const configs = result.results ?? []
 
-  const urls = [
+  const urls: Array<{ loc: string; lastmod?: string; priority: string; changefreq: string }> = [
     { loc: baseUrl, priority: '1.0', changefreq: 'daily' },
     { loc: `${baseUrl}/editor`, priority: '0.8', changefreq: 'monthly' },
     ...configs.map((config) => ({
@@ -119,8 +119,8 @@ app.post('/api/admin/scrape', async (c) => {
     return c.json({ error: 'Forbidden: Admin access required' }, 403)
   }
 
-  const body = await c.req.json<{ platform?: Platform }>().catch(() => ({}))
-  const platform = body?.platform || 'github'
+  const body = await c.req.json<{ platform?: Platform }>().catch(() => ({ platform: undefined }))
+  const platform = body.platform || 'github'
 
   const ctx = {
     db: c.env.DB,

@@ -30,8 +30,8 @@ function extractHtoprcFromText(text: string): string | null {
   const matches = [...text.matchAll(codeBlockRegex)]
 
   for (const match of matches) {
-    const content = match[1].trim()
-    if (looksLikeHtoprc(content)) {
+    const content = match[1]?.trim()
+    if (content && looksLikeHtoprc(content)) {
       return content
     }
   }

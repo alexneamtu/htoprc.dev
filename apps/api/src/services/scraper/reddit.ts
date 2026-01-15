@@ -64,9 +64,9 @@ function extractHtoprcFromText(text: string): string | null {
   const matches = [...text.matchAll(codeBlockRegex)]
 
   for (const match of matches) {
-    const content = match[1].trim()
+    const content = match[1]?.trim()
     // Check if it looks like htoprc content
-    if (looksLikeHtoprc(content)) {
+    if (content && looksLikeHtoprc(content)) {
       return content
     }
   }
@@ -77,7 +77,9 @@ function extractHtoprcFromText(text: string): string | null {
   let lineMatch
 
   while ((lineMatch = indentedRegex.exec(text)) !== null) {
-    indentedLines.push(lineMatch[1])
+    if (lineMatch[1]) {
+      indentedLines.push(lineMatch[1])
+    }
   }
 
   if (indentedLines.length > 5) {

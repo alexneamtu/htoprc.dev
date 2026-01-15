@@ -28,7 +28,7 @@ export function shouldFlagConfig(
   if (parseResult.errors.length > 0) {
     return {
       shouldFlag: true,
-      reason: `Parse error: ${parseResult.errors[0].message}`,
+      reason: `Parse error: ${parseResult.errors[0]?.message ?? 'Unknown error'}`,
     }
   }
 

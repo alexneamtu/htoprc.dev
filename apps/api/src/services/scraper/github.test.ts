@@ -48,11 +48,12 @@ const createMockParseResult = (overrides: Partial<ParseResult> = {}): ParseResul
     showCpuFrequency: false,
     showCpuTemperature: false,
     degreeFahrenheit: false,
+    screens: [],
     unknownOptions: {},
   },
   warnings: [],
   errors: [],
-  detectedVersion: '3.x',
+  version: 'v3',
   score: 10,
   ...overrides,
 })
@@ -81,7 +82,7 @@ describe('github scraper', () => {
   describe('shouldFlagConfig', () => {
     it('flags config with parse errors', () => {
       const parseResult = createMockParseResult({
-        errors: [{ type: 'syntax', message: 'Invalid syntax', line: 1 }],
+        errors: [{ message: 'Invalid syntax', line: 1 }],
       })
       const result = shouldFlagConfig(parseResult, 10)
       expect(result.shouldFlag).toBe(true)
