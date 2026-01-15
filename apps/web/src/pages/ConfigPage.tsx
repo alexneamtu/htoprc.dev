@@ -1,6 +1,7 @@
 import { useParams, Link } from 'react-router-dom'
 import { HtopPreview } from '../components/htop/HtopPreview'
 import { LikeButton } from '../components/LikeButton'
+import { SEO } from '../components/SEO'
 import { parseHtoprc } from '@htoprc/parser'
 import { useConfig } from '../hooks'
 
@@ -47,6 +48,12 @@ export function ConfigPage() {
 
   return (
     <div className="max-w-4xl mx-auto">
+      <SEO
+        title={config.title}
+        description={`htop configuration: ${config.title}. Score: ${config.score}, ${config.likesCount} likes. Browse and customize this htop config.`}
+        url={`/config/${config.slug}`}
+        type="article"
+      />
       <div className="mb-6">
         <Link to="/" className="text-blue-600 dark:text-blue-400 hover:underline">
           &larr; Back to Gallery

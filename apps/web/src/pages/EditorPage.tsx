@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { HtopPreview } from '../components/htop/HtopPreview'
 import { HtoprcEditor } from '../components/editor'
+import { SEO } from '../components/SEO'
 import { parseHtoprc } from '@htoprc/parser'
 
 const STORAGE_KEY = 'htoprc-editor-content'
@@ -79,6 +80,11 @@ export function EditorPage() {
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-200px)]">
+      <SEO
+        title="Editor"
+        description="Create and customize your htop configuration with a live preview. Edit htoprc settings visually and see real-time changes."
+        url="/editor"
+      />
       {/* Editor Panel */}
       <div className="flex-1 flex flex-col">
         <h2 className="text-xl font-bold mb-2">htoprc Editor</h2>

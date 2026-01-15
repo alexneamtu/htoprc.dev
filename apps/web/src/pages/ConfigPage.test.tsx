@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { Provider } from 'urql'
+import { HelmetProvider } from 'react-helmet-async'
 import { fromValue, delay, pipe } from 'wonka'
 import { ConfigPage } from './ConfigPage'
 
@@ -23,13 +24,15 @@ function renderWithProviders(
   initialRoute: string
 ) {
   return render(
-    <Provider value={client as never}>
-      <MemoryRouter initialEntries={[initialRoute]}>
-        <Routes>
-          <Route path="/config/:slug" element={<ConfigPage />} />
-        </Routes>
-      </MemoryRouter>
-    </Provider>
+    <HelmetProvider>
+      <Provider value={client as never}>
+        <MemoryRouter initialEntries={[initialRoute]}>
+          <Routes>
+            <Route path="/config/:slug" element={<ConfigPage />} />
+          </Routes>
+        </MemoryRouter>
+      </Provider>
+    </HelmetProvider>
   )
 }
 

@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation } from 'urql'
 import { HtopPreview } from '../components/htop/HtopPreview'
+import { SEO } from '../components/SEO'
 import { parseHtoprc } from '@htoprc/parser'
 
 const UPLOAD_CONFIG_MUTATION = /* GraphQL */ `
@@ -84,6 +85,11 @@ export function UploadPage() {
 
   return (
     <div className="max-w-4xl mx-auto">
+      <SEO
+        title="Upload Config"
+        description="Share your htop configuration with the community. Upload your htoprc file and let others discover and use your setup."
+        url="/upload"
+      />
       <h1 className="text-3xl font-bold mb-6">Upload Config</h1>
 
       <form onSubmit={handleSubmit} className="space-y-6">

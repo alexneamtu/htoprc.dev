@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { HtopPreview } from '../components/htop/HtopPreview'
+import { SEO } from '../components/SEO'
 import { parseHtoprc } from '@htoprc/parser'
 import { useConfigs, useTopConfigs, useRecentConfigs, type ConfigSort, type CustomizationLevel } from '../hooks'
 
@@ -117,6 +118,7 @@ export function HomePage() {
 
   return (
     <div>
+      <SEO url="/" />
       <section className="mb-12 text-center">
         <h1 className="text-4xl font-bold mb-4">htoprc.dev</h1>
         <p className="text-xl text-gray-400 dark:text-gray-400 mb-8">

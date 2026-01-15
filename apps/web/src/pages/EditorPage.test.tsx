@@ -1,13 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+import { HelmetProvider } from 'react-helmet-async'
 import { EditorPage } from './EditorPage'
 
 function renderWithRouter(initialEntries = ['/editor']) {
   return render(
-    <MemoryRouter initialEntries={initialEntries}>
-      <EditorPage />
-    </MemoryRouter>
+    <HelmetProvider>
+      <MemoryRouter initialEntries={initialEntries}>
+        <EditorPage />
+      </MemoryRouter>
+    </HelmetProvider>
   )
 }
 
