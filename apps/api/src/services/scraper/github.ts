@@ -1,5 +1,6 @@
 import { parseHtoprc } from '@htoprc/parser'
 import type { ParseResult } from '@htoprc/parser'
+import { secureRandomString } from '../../utils/random'
 import type {
   ScrapedConfig,
   ProcessedConfig,
@@ -56,7 +57,7 @@ export function generateSlug(repoFullName: string, _fileName: string): string {
     .replace(/^-|-$/g, '')
     .slice(0, 50)
 
-  const randomSuffix = Math.random().toString(36).substring(2, 10)
+  const randomSuffix = secureRandomString(8)
   return `${sanitized}-${randomSuffix}`
 }
 

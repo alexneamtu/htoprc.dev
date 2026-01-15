@@ -1,4 +1,5 @@
 import type { Meter } from '@htoprc/parser'
+import { secureRandom } from '../../../utils/random'
 import { CpuMeter } from './CpuMeter'
 import { MemoryMeter } from './MemoryMeter'
 import { SwapMeter } from './SwapMeter'
@@ -145,7 +146,7 @@ function GenericMeter({ meter }: MeterRendererProps) {
   }
 
   // Bar mode fallback
-  const mockValue = Math.random() * 100
+  const mockValue = secureRandom() * 100
 
   return (
     <div className="flex items-center gap-1 text-xs">
