@@ -2,7 +2,7 @@
 
 A web-based htoprc visualizer and editor. Preview and edit htop configurations in real-time.
 
-[![Test](https://github.com/alexneamtu/htoprc.dev/actions/workflows/test.yml/badge.svg)](https://github.com/alexneamtu/htoprc.dev/actions/workflows/test.yml)
+[![CI](https://github.com/alexneamtu/htoprc.dev/actions/workflows/ci.yml/badge.svg)](https://github.com/alexneamtu/htoprc.dev/actions/workflows/ci.yml)
 [![Deploy](https://github.com/alexneamtu/htoprc.dev/actions/workflows/deploy.yml/badge.svg)](https://github.com/alexneamtu/htoprc.dev/actions/workflows/deploy.yml)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
@@ -126,13 +126,7 @@ pnpm deploy
 
 ## Contributing
 
-Contributions are welcome! Please read the design document in `docs/plans/` to understand the architecture.
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## License
 
