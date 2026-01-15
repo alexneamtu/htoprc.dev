@@ -8,6 +8,7 @@ import { HomePage } from './pages/HomePage'
 import { EditorPage } from './pages/EditorPage'
 import { ConfigPage } from './pages/ConfigPage'
 import { UploadPage } from './pages/UploadPage'
+import { AdminPage } from './pages/AdminPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { client } from './lib/graphql'
 
@@ -27,6 +28,14 @@ function AppContent() {
               element={
                 <ProtectedRoute>
                   <UploadPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute>
+                  <AdminPage />
                 </ProtectedRoute>
               }
             />

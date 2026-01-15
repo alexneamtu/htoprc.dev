@@ -65,12 +65,38 @@ export const schema = createSchema<GraphQLContext>({
       configs(page: Int = 1, limit: Int = 20, sort: ConfigSort = SCORE_DESC, minScore: Int = 0, search: String, level: CustomizationLevel = ALL): ConfigConnection!
       config(id: ID, slug: String): Config
       recentConfigs(limit: Int = 6): [Config!]!
+      adminStats: AdminStats!
+      pendingConfigs: [Config!]!
+      pendingComments: [PendingComment!]!
     }
 
     type Mutation {
       uploadConfig(input: UploadConfigInput!): Config!
       toggleLike(configId: ID!, userId: ID!): LikeResult!
       addComment(configId: ID!, userId: ID!, content: String!): Comment!
+      approveConfig(id: ID!): Config!
+      rejectConfig(id: ID!, reason: String!): Config!
+      approveComment(id: ID!): Comment!
+      rejectComment(id: ID!, reason: String!): Boolean!
+    }
+
+    type AdminStats {
+      totalConfigs: Int!
+      publishedConfigs: Int!
+      pendingConfigs: Int!
+      totalComments: Int!
+      pendingComments: Int!
+      totalLikes: Int!
+    }
+
+    type PendingComment {
+      id: ID!
+      content: String!
+      configId: ID!
+      configTitle: String!
+      authorId: ID!
+      authorUsername: String!
+      createdAt: String!
     }
 
     type LikeResult {
@@ -277,6 +303,79 @@ export const schema = createSchema<GraphQLContext>({
           createdAt: row.created_at,
         }))
       },
+      adminStats: async (_: unknown, _args: unknown, ctx: GraphQLContext) => {
+        const [totalConfigs, publishedConfigs, pendingConfigs, totalComments, pendingComments, totalLikes] =
+          await Promise.all([
+            ctx.db.prepare('SELECT COUNT(*) as count FROM configs').first<{ count: number }>(),
+            ctx.db.prepare('SELECT COUNT(*) as count FROM configs WHERE status = ?').bind('published').first<{ count: number }>(),
+            ctx.db.prepare('SELECT COUNT(*) as count FROM configs WHERE status = ?').bind('pending').first<{ count: number }>(),
+            ctx.db.prepare('SELECT COUNT(*) as count FROM comments').first<{ count: number }>(),
+            ctx.db.prepare('SELECT COUNT(*) as count FROM comments WHERE status = ?').bind('pending').first<{ count: number }>(),
+            ctx.db.prepare('SELECT COUNT(*) as count FROM likes').first<{ count: number }>(),
+          ])
+
+        return {
+          totalConfigs: totalConfigs?.count ?? 0,
+          publishedConfigs: publishedConfigs?.count ?? 0,
+          pendingConfigs: pendingConfigs?.count ?? 0,
+          totalComments: totalComments?.count ?? 0,
+          pendingComments: pendingComments?.count ?? 0,
+          totalLikes: totalLikes?.count ?? 0,
+        }
+      },
+      pendingConfigs: async (_: unknown, _args: unknown, ctx: GraphQLContext) => {
+        const result = await ctx.db
+          .prepare('SELECT * FROM configs WHERE status = ? ORDER BY created_at DESC')
+          .bind('pending')
+          .all<ConfigRow>()
+
+        return (result.results ?? []).map((row) => ({
+          id: row.id,
+          slug: row.slug,
+          title: row.title,
+          content: row.content,
+          sourceType: row.source_type,
+          sourceUrl: row.source_url,
+          sourcePlatform: row.source_platform,
+          status: row.status,
+          score: row.score,
+          likesCount: row.likes_count,
+          createdAt: row.created_at,
+        }))
+      },
+      pendingComments: async (_: unknown, _args: unknown, ctx: GraphQLContext) => {
+        const result = await ctx.db
+          .prepare(`
+            SELECT c.id, c.content, c.config_id, c.author_id, c.created_at,
+                   cfg.title as config_title,
+                   u.username as author_username
+            FROM comments c
+            LEFT JOIN configs cfg ON c.config_id = cfg.id
+            LEFT JOIN users u ON c.author_id = u.id
+            WHERE c.status = ?
+            ORDER BY c.created_at DESC
+          `)
+          .bind('pending')
+          .all<{
+            id: string
+            content: string
+            config_id: string
+            config_title: string
+            author_id: string
+            author_username: string
+            created_at: string
+          }>()
+
+        return (result.results ?? []).map((row) => ({
+          id: row.id,
+          content: row.content,
+          configId: row.config_id,
+          configTitle: row.config_title ?? 'Unknown',
+          authorId: row.author_id,
+          authorUsername: row.author_username ?? 'Anonymous',
+          createdAt: row.created_at,
+        }))
+      },
     },
     Mutation: {
       uploadConfig: async (
@@ -419,6 +518,128 @@ export const schema = createSchema<GraphQLContext>({
           },
           createdAt,
         }
+      },
+      approveConfig: async (
+        _: unknown,
+        { id }: { id: string },
+        ctx: GraphQLContext
+      ) => {
+        await ctx.db
+          .prepare('UPDATE configs SET status = ? WHERE id = ?')
+          .bind('published', id)
+          .run()
+
+        const row = await ctx.db
+          .prepare('SELECT * FROM configs WHERE id = ?')
+          .bind(id)
+          .first<ConfigRow>()
+
+        if (!row) throw new Error('Config not found')
+
+        return {
+          id: row.id,
+          slug: row.slug,
+          title: row.title,
+          content: row.content,
+          sourceType: row.source_type,
+          sourceUrl: row.source_url,
+          sourcePlatform: row.source_platform,
+          status: row.status,
+          score: row.score,
+          likesCount: row.likes_count,
+          createdAt: row.created_at,
+        }
+      },
+      rejectConfig: async (
+        _: unknown,
+        { id, reason }: { id: string; reason: string },
+        ctx: GraphQLContext
+      ) => {
+        await ctx.db
+          .prepare('UPDATE configs SET status = ?, rejection_reason = ? WHERE id = ?')
+          .bind('rejected', reason, id)
+          .run()
+
+        const row = await ctx.db
+          .prepare('SELECT * FROM configs WHERE id = ?')
+          .bind(id)
+          .first<ConfigRow>()
+
+        if (!row) throw new Error('Config not found')
+
+        return {
+          id: row.id,
+          slug: row.slug,
+          title: row.title,
+          content: row.content,
+          sourceType: row.source_type,
+          sourceUrl: row.source_url,
+          sourcePlatform: row.source_platform,
+          status: row.status,
+          score: row.score,
+          likesCount: row.likes_count,
+          createdAt: row.created_at,
+        }
+      },
+      approveComment: async (
+        _: unknown,
+        { id }: { id: string },
+        ctx: GraphQLContext
+      ) => {
+        // Update comment status
+        await ctx.db
+          .prepare('UPDATE comments SET status = ? WHERE id = ?')
+          .bind('published', id)
+          .run()
+
+        // Mark user as trusted after first approved comment
+        const comment = await ctx.db
+          .prepare('SELECT author_id FROM comments WHERE id = ?')
+          .bind(id)
+          .first<{ author_id: string }>()
+
+        if (comment) {
+          await ctx.db
+            .prepare('UPDATE users SET is_trusted = 1 WHERE id = ?')
+            .bind(comment.author_id)
+            .run()
+        }
+
+        const row = await ctx.db
+          .prepare(`
+            SELECT c.id, c.content, c.created_at, c.author_id,
+                   u.username as author_username, u.avatar_url as author_avatar_url
+            FROM comments c
+            LEFT JOIN users u ON c.author_id = u.id
+            WHERE c.id = ?
+          `)
+          .bind(id)
+          .first<CommentRow>()
+
+        if (!row) throw new Error('Comment not found')
+
+        return {
+          id: row.id,
+          content: row.content,
+          author: {
+            id: row.author_id,
+            username: row.author_username ?? 'Anonymous',
+            avatarUrl: row.author_avatar_url,
+          },
+          createdAt: row.created_at,
+        }
+      },
+      rejectComment: async (
+        _: unknown,
+        { id, reason }: { id: string; reason: string },
+        ctx: GraphQLContext
+      ) => {
+        await ctx.db
+          .prepare('UPDATE comments SET status = ?, rejection_reason = ? WHERE id = ?')
+          .bind('rejected', reason, id)
+          .run()
+
+        return true
       },
     },
     Config: {
