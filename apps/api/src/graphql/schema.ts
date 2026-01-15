@@ -9,6 +9,7 @@ import {
   validateComment,
   validateReason,
   validateSearch,
+  validateRequiredId,
 } from '../utils/validation'
 
 // SHA-256 hash using Web Crypto API (compatible with Cloudflare Workers)
@@ -828,6 +829,26 @@ export const schema = createSchema<GraphQLContext>({
           }
         }
 
+        // Validate forkedFromId if provided
+        let validatedForkedFromId: string | null = null
+        if (input.forkedFromId) {
+          validatedForkedFromId = validateRequiredId(input.forkedFromId, 'forkedFromId')
+          const forkedFrom = await ctx.db
+            .prepare('SELECT id, status FROM configs WHERE id = ?')
+            .bind(validatedForkedFromId)
+            .first<{ id: string; status: string }>()
+          if (!forkedFrom) {
+            throw new GraphQLError('The config you are trying to fork does not exist', {
+              extensions: { code: 'NOT_FOUND' },
+            })
+          }
+          if (forkedFrom.status !== 'published') {
+            throw new GraphQLError('Cannot fork a config that is not published', {
+              extensions: { code: 'FORBIDDEN' },
+            })
+          }
+        }
+
         // Parse the config to calculate score and detect version
         const parsed = parseHtoprc(validatedContent)
 
@@ -850,7 +871,7 @@ export const schema = createSchema<GraphQLContext>({
             contentHash,
             'uploaded',
             authedUserId,
-            input.forkedFromId || null,
+            validatedForkedFromId,
             parsed.score,
             parsed.config.htopVersion ?? null,
             status,
@@ -868,7 +889,7 @@ export const schema = createSchema<GraphQLContext>({
           sourceUrl: null,
           sourcePlatform: null,
           authorId: authedUserId,
-          forkedFromId: input.forkedFromId || null,
+          forkedFromId: validatedForkedFromId,
           status,
           score: parsed.score,
           likesCount: 0,
@@ -1045,6 +1066,7 @@ export const schema = createSchema<GraphQLContext>({
         ctx: GraphQLContext
       ) => {
         const authedUserId = requireAuthUser(ctx, userId)
+        const validatedConfigId = validateRequiredId(configId, 'configId')
         // Ensure user exists with proper info
         const userExists = await ctx.db
           .prepare('SELECT 1 FROM users WHERE id = ?')
@@ -1069,25 +1091,25 @@ export const schema = createSchema<GraphQLContext>({
         // Check if already liked
         const existing = await ctx.db
           .prepare('SELECT 1 FROM likes WHERE user_id = ? AND config_id = ?')
-          .bind(authedUserId, configId)
+          .bind(authedUserId, validatedConfigId)
           .first()
 
         if (existing) {
           // Unlike: remove the like
           await ctx.db
             .prepare('DELETE FROM likes WHERE user_id = ? AND config_id = ?')
-            .bind(authedUserId, configId)
+            .bind(authedUserId, validatedConfigId)
             .run()
 
           // Decrement likes count (prevent negative values)
           await ctx.db
             .prepare('UPDATE configs SET likes_count = MAX(likes_count - 1, 0) WHERE id = ?')
-            .bind(configId)
+            .bind(validatedConfigId)
             .run()
 
           const config = await ctx.db
             .prepare('SELECT likes_count FROM configs WHERE id = ?')
-            .bind(configId)
+            .bind(validatedConfigId)
             .first<{ likes_count: number }>()
 
           return {
@@ -1104,18 +1126,18 @@ export const schema = createSchema<GraphQLContext>({
           // Like: add the like
           await ctx.db
             .prepare('INSERT INTO likes (user_id, config_id) VALUES (?, ?)')
-            .bind(authedUserId, configId)
+            .bind(authedUserId, validatedConfigId)
             .run()
 
           // Increment likes count
           await ctx.db
             .prepare('UPDATE configs SET likes_count = likes_count + 1 WHERE id = ?')
-            .bind(configId)
+            .bind(validatedConfigId)
             .run()
 
           const config = await ctx.db
             .prepare('SELECT likes_count FROM configs WHERE id = ?')
-            .bind(configId)
+            .bind(validatedConfigId)
             .first<{ likes_count: number }>()
 
           return {
@@ -1130,6 +1152,7 @@ export const schema = createSchema<GraphQLContext>({
         ctx: GraphQLContext
       ) => {
         const authedUserId = requireAuthUser(ctx, userId)
+        const validatedConfigId = validateRequiredId(configId, 'configId')
         // Validate input
         const validatedContent = validateComment(content)
 
@@ -1175,7 +1198,7 @@ export const schema = createSchema<GraphQLContext>({
           .prepare(
             'INSERT INTO comments (id, config_id, author_id, content, status, created_at) VALUES (?, ?, ?, ?, ?, ?)'
           )
-          .bind(id, configId, authedUserId, validatedContent, status, createdAt)
+          .bind(id, validatedConfigId, authedUserId, validatedContent, status, createdAt)
           .run()
 
         return {
@@ -1361,6 +1384,7 @@ export const schema = createSchema<GraphQLContext>({
         ctx: GraphQLContext
       ) => {
         const authedUserId = requireAuthUser(ctx, userId)
+        const validatedContentId = validateRequiredId(contentId, 'contentId')
         // Validate contentType
         const validContentTypes = ['config', 'comment'] as const
         if (!validContentTypes.includes(contentType as typeof validContentTypes[number])) {
@@ -1376,7 +1400,7 @@ export const schema = createSchema<GraphQLContext>({
         if (contentType === 'config') {
           const config = await ctx.db
             .prepare('SELECT author_id FROM configs WHERE id = ?')
-            .bind(contentId)
+            .bind(validatedContentId)
             .first<{ author_id: string | null }>()
           if (config?.author_id === authedUserId) {
             throw new GraphQLError('You cannot report your own content', {
@@ -1386,7 +1410,7 @@ export const schema = createSchema<GraphQLContext>({
         } else if (contentType === 'comment') {
           const comment = await ctx.db
             .prepare('SELECT author_id FROM comments WHERE id = ?')
-            .bind(contentId)
+            .bind(validatedContentId)
             .first<{ author_id: string }>()
           if (comment?.author_id === authedUserId) {
             throw new GraphQLError('You cannot report your own content', {
@@ -1421,19 +1445,19 @@ export const schema = createSchema<GraphQLContext>({
           `INSERT INTO reports (id, content_type, content_id, reporter_id, reason, status)
              VALUES (?, ?, ?, ?, ?, 'pending')`
           )
-          .bind(id, contentType, contentId, authedUserId, validatedReason)
+          .bind(id, contentType, validatedContentId, authedUserId, validatedReason)
           .run()
 
         // Flag the content for review
         if (contentType === 'config') {
           await ctx.db
             .prepare('UPDATE configs SET status = ? WHERE id = ? AND status = ?')
-            .bind('flagged', contentId, 'published')
+            .bind('flagged', validatedContentId, 'published')
             .run()
         } else if (contentType === 'comment') {
           await ctx.db
             .prepare('UPDATE comments SET status = ? WHERE id = ? AND status = ?')
-            .bind('pending', contentId, 'published')
+            .bind('pending', validatedContentId, 'published')
             .run()
         }
 

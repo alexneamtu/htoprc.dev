@@ -1295,7 +1295,8 @@ describe('API', () => {
     })
 
     it('handles upload with forked from id', async () => {
-      const res = await app.request(
+      // First, create an original config to fork from
+      const originalRes = await app.request(
         '/api/graphql',
         {
           method: 'POST',
@@ -1304,9 +1305,42 @@ describe('API', () => {
             query: `
               mutation {
                 uploadConfig(input: {
+                  title: "Original Config",
+                  content: "htop_version=3.2.1"
+                }) {
+                  id
+                }
+              }
+            `,
+          }),
+        },
+        testEnv
+      )
+      const originalData = (await originalRes.json()) as GraphQLResponse<{ uploadConfig: { id: string } }>
+      const originalId = originalData.data.uploadConfig.id
+
+      // Update the original config to published status (required for forking)
+      // Direct manipulation of mock data since mock doesn't support UPDATE queries
+      const originalConfig = (mockDB as unknown as { _data: { configs: Array<{ id: string; status: string }> } })._data.configs.find(
+        (c) => c.id === originalId
+      )
+      if (originalConfig) {
+        originalConfig.status = 'published'
+      }
+
+      // Now create the forked config
+      const res = await app.request(
+        '/api/graphql',
+        {
+          method: 'POST',
+          headers: BASE_HEADERS,
+          body: JSON.stringify({
+            query: `
+              mutation($forkedFromId: ID!) {
+                uploadConfig(input: {
                   title: "Forked Config",
                   content: "htop_version=3.2.1",
-                  forkedFromId: "original-config-id"
+                  forkedFromId: $forkedFromId
                 }) {
                   id
                   title
@@ -1314,6 +1348,7 @@ describe('API', () => {
                 }
               }
             `,
+            variables: { forkedFromId: originalId },
           }),
         },
         testEnv
@@ -1330,7 +1365,7 @@ describe('API', () => {
       }
       const data = (await res.json()) as GraphQLResponse<UploadConfigResponse>
       expect(data.data.uploadConfig.title).toBe('Forked Config')
-      expect(data.data.uploadConfig.forkedFromId).toBe('original-config-id')
+      expect(data.data.uploadConfig.forkedFromId).toBe(originalId)
     })
 
     it('handles slug collision with unique slug generation', async () => {

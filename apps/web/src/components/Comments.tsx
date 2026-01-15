@@ -37,9 +37,11 @@ interface CommentsProps {
 }
 
 export function Comments({ configId, comments: initialComments, pendingComments = [] }: CommentsProps) {
-  const { user, isSignedIn } = CLERK_ENABLED
-    ? useAuth()
-    : { user: null, isSignedIn: false }
+  // Always call hooks unconditionally (Rules of Hooks)
+  const auth = useAuth()
+  // Only use auth values when Clerk is enabled
+  const user = CLERK_ENABLED ? auth.user : null
+  const isSignedIn = CLERK_ENABLED ? auth.isSignedIn : false
 
   const [comments] = useState(initialComments)
   const [localPendingComments, setLocalPendingComments] = useState<(Comment & { isPending?: boolean })[]>(
