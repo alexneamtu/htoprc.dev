@@ -24,24 +24,6 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           sync-labels: false
 
-      - name: Check for assignee
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const pr = context.payload.pull_request;
-
-            // Skip for Dependabot PRs
-            if (pr.user.login === 'dependabot[bot]') {
-              console.log('Skipping assignee check for Dependabot PR');
-              return;
-            }
-
-            if (!pr.assignees || pr.assignees.length === 0) {
-              core.setFailed('PR must have at least one assignee. Please assign someone to this PR.');
-            } else {
-              console.log(`PR has ${pr.assignees.length} assignee(s): ${pr.assignees.map(a => a.login).join(', ')}`);
-            }
-
       - name: Check for labels
         uses: actions/github-script@v7
         with:
