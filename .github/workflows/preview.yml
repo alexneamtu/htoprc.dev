@@ -15,7 +15,7 @@ jobs:
       deployments: write
     environment:
       name: preview
-      url: ${{ steps.deploy.outputs.deployment-url }}
+      url: ${{ steps.deploy-web.outputs.deployment-url }}
 
     steps:
       - name: Checkout
@@ -36,14 +36,24 @@ jobs:
       - name: Build parser
         run: pnpm --filter @htoprc/parser build
 
-      - name: Build web (staging config)
+      - name: Deploy Preview API Worker
+        id: deploy-api
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: ./apps/api
+          command: deploy --env preview --name htoprc-api-pr-${{ github.event.pull_request.number }} --var PREVIEW:true
+          packageManager: pnpm
+
+      - name: Build web (with preview API)
         run: pnpm --filter @htoprc/web build
         env:
-          VITE_API_URL: https://api.htoprc.staging.alexneamtu.top
+          VITE_API_URL: https://htoprc-api-pr-${{ github.event.pull_request.number }}.alexneamtu.workers.dev
           VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.VITE_CLERK_PUBLISHABLE_KEY_DEV }}
 
-      - name: Deploy Preview to Cloudflare Pages
-        id: deploy
+      - name: Deploy Preview Web to Cloudflare Pages
+        id: deploy-web
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -71,13 +81,14 @@ jobs:
 
             | App | URL |
             |-----|-----|
-            | Web | ${{ steps.deploy.outputs.deployment-url }} |
+            | Web | ${{ steps.deploy-web.outputs.deployment-url }} |
+            | API | https://htoprc-api-pr-${{ github.event.pull_request.number }}.alexneamtu.workers.dev |
 
             **Branch:** `${{ github.head_ref }}`
             **Commit:** `${{ github.sha }}`
             **Updated:** ${{ github.event.pull_request.updated_at }}
 
-            > This preview uses the **staging API**. Some features may behave differently than production.
+            > This preview uses its own API worker with the **staging database**.
 
       - name: Preview Summary
         run: |
@@ -87,4 +98,5 @@ jobs:
           echo "|---------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| PR | #${{ github.event.pull_request.number }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Branch | ${{ github.head_ref }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Preview URL | ${{ steps.deploy.outputs.deployment-url }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Web Preview | ${{ steps.deploy-web.outputs.deployment-url }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| API Preview | https://htoprc-api-pr-${{ github.event.pull_request.number }}.alexneamtu.workers.dev |" >> $GITHUB_STEP_SUMMARY

@@ -216,7 +216,7 @@ jobs:
       - name: Build Web
         run: pnpm --filter @htoprc/web build
         env:
-          VITE_API_URL: https://api.htoprc.dev.alexneamtu.top
+          VITE_API_URL: https://api.htoprc.dev
           VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.VITE_CLERK_PUBLISHABLE_KEY_PROD }}
 
       - name: Upload web build
