@@ -152,7 +152,18 @@ export function ConfigPage() {
       <div className="flex flex-wrap items-center gap-4 text-gray-500 dark:text-gray-400 mb-6">
         <span>Score: {config.score}</span>
         <LikeButton configId={config.id} initialLikesCount={config.likesCount} />
-        <span>Source: {config.sourceType}</span>
+        {config.sourceUrl ? (
+          <a
+            href={config.sourceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-500 hover:text-blue-400 hover:underline"
+          >
+            View original source
+          </a>
+        ) : (
+          <span>Source: {config.sourceType}</span>
+        )}
         {config.forkedFrom && (
           <Link to={`/config/${config.forkedFrom.slug}`} className="text-purple-500 hover:text-purple-400">
             Forked from "{config.forkedFrom.title}"
