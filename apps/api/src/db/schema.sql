@@ -81,6 +81,14 @@ CREATE TABLE IF NOT EXISTS rate_limits (
   PRIMARY KEY (user_id, action_type, action_date)
 );
 
+CREATE TABLE IF NOT EXISTS anon_rate_limits (
+  anon_key TEXT NOT NULL,
+  action_type TEXT NOT NULL,
+  action_date TEXT NOT NULL,
+  count INTEGER DEFAULT 0,
+  PRIMARY KEY (anon_key, action_type, action_date)
+);
+
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_configs_status ON configs(status);
 CREATE INDEX IF NOT EXISTS idx_configs_created_at ON configs(created_at DESC);
