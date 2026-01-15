@@ -13,8 +13,7 @@ export const verifyClerkToken: AuthVerifier = async (token, secretKey) => {
     const userId = payload.sub
     if (!userId) return null
     return { userId }
-  } catch (error) {
-    console.error('Clerk token verification failed:', error instanceof Error ? error.message : error)
+  } catch {
     return null
   }
 }
@@ -32,10 +31,7 @@ export async function getAuthFromRequest(
   verifyAuth: AuthVerifier = verifyClerkToken
 ): Promise<AuthContext | null> {
   const token = getBearerToken(request)
-  if (!token || !secretKey) {
-    console.log('Auth check:', { hasToken: !!token, hasSecretKey: !!secretKey })
-    return null
-  }
+  if (!token || !secretKey) return null
   return verifyAuth(token, secretKey)
 }
 

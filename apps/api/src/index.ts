@@ -18,7 +18,6 @@ type Bindings = {
   GITHUB_TOKEN?: string
   CLERK_SECRET_KEY?: string
   ANON_RATE_LIMIT_SALT?: string
-  PREVIEW?: string
 }
 
 type AppDependencies = {
@@ -85,19 +84,7 @@ export function createApp({ verifyAuth = verifyClerkToken }: AppDependencies = {
 
   // Health check
   app.get('/api/health', (c) => {
-    // Include debug info in preview environments
-    const isPreview = c.env.PREVIEW === 'true'
-    return c.json({
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      ...(isPreview && {
-        debug: {
-          hasClerkSecretKey: !!c.env.CLERK_SECRET_KEY,
-          clerkSecretKeyPrefix: c.env.CLERK_SECRET_KEY?.substring(0, 10) || 'not-set',
-          hasAnonRateLimitSalt: !!c.env.ANON_RATE_LIMIT_SALT,
-        },
-      }),
-    })
+    return c.json({ status: 'ok', timestamp: new Date().toISOString() })
   })
 
   // Sitemap.xml
