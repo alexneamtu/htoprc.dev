@@ -23,6 +23,9 @@ const allowedOrigins = [
   'https://htoprc-staging.pages.dev',
 ]
 
+// Pattern for Cloudflare Pages preview URLs (e.g., https://abc123.htoprc-staging.pages.dev)
+const previewUrlPattern = /^https:\/\/[a-z0-9]+\.htoprc-(staging|production)\.pages\.dev$/
+
 app.use(
   '*',
   cors({
@@ -30,6 +33,8 @@ app.use(
       if (!origin) return allowedOrigins[0]
       // Allow any localhost port for development
       if (origin.match(/^http:\/\/localhost:\d+$/)) return origin
+      // Allow Cloudflare Pages preview URLs
+      if (previewUrlPattern.test(origin)) return origin
       return allowedOrigins.includes(origin) ? origin : allowedOrigins[0]
     },
     credentials: true,
