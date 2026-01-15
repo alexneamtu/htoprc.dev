@@ -1,4 +1,4 @@
-import { useAuth, RedirectToSignIn } from '@clerk/clerk-react'
+import { useAuth as useClerkAuth, RedirectToSignIn } from '@clerk/clerk-react'
 import type { ReactNode } from 'react'
 
 interface ProtectedRouteProps {
@@ -8,9 +8,11 @@ interface ProtectedRouteProps {
 const CLERK_ENABLED = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { isLoaded, isSignedIn } = CLERK_ENABLED
-    ? useAuth()
-    : { isLoaded: true, isSignedIn: false }
+  // Always call hooks unconditionally (Rules of Hooks)
+  const clerkAuth = useClerkAuth()
+  // Only use auth values when Clerk is enabled
+  const isLoaded = CLERK_ENABLED ? clerkAuth.isLoaded : true
+  const isSignedIn = CLERK_ENABLED ? clerkAuth.isSignedIn : false
 
   if (!CLERK_ENABLED) {
     return (

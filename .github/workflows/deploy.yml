@@ -111,6 +111,24 @@ jobs:
             echo "| Custom Domain | [staging.htoprc.dev](https://staging.htoprc.dev) |" >> $GITHUB_STEP_SUMMARY
           fi
 
+      - name: Verify Web Deployment
+        run: |
+          if [ "${{ needs.determine-environment.outputs.environment }}" = "production" ]; then
+            URL="https://htoprc.dev"
+          else
+            URL="https://staging.htoprc.dev"
+          fi
+          echo "Verifying deployment at $URL..."
+          # Wait for deployment to propagate
+          sleep 10
+          # Check that the site returns 200
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "::error::Web deployment health check failed. Expected 200, got $HTTP_STATUS"
+            exit 1
+          fi
+          echo "Web deployment verified successfully (HTTP $HTTP_STATUS)"
+
   deploy-api:
     needs: determine-environment
     if: needs.determine-environment.outputs.should_deploy == 'true'
@@ -207,6 +225,25 @@ jobs:
             echo "| Worker | htoprc-api-staging |" >> $GITHUB_STEP_SUMMARY
             echo "| Custom Domain | [api-staging.htoprc.dev](https://api-staging.htoprc.dev) |" >> $GITHUB_STEP_SUMMARY
           fi
+
+      - name: Verify API Deployment
+        run: |
+          if [ "${{ needs.determine-environment.outputs.environment }}" = "production" ]; then
+            URL="https://api.htoprc.dev/api/health"
+          else
+            URL="https://api-staging.htoprc.dev/api/health"
+          fi
+          echo "Verifying API deployment at $URL..."
+          # Wait for deployment to propagate
+          sleep 5
+          # Check health endpoint returns status: ok
+          RESPONSE=$(curl -s "$URL")
+          if ! echo "$RESPONSE" | grep -q '"status":"ok"'; then
+            echo "::error::API deployment health check failed. Response: $RESPONSE"
+            exit 1
+          fi
+          echo "API deployment verified successfully"
+          echo "Response: $RESPONSE"
 
   notify-failure:
     needs: determine-environment

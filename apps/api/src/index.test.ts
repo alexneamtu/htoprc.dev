@@ -312,7 +312,8 @@ describe('API', () => {
           testEnv
         )
 
-      for (let i = 0; i < 5; i++) {
+      // Rate limit is 3 uploads per day for anonymous users
+      for (let i = 0; i < 3; i++) {
         const res = await upload()
         const data = (await res.json()) as GraphQLResponse<{ uploadConfig: { id: string } }>
         expect(data.errors).toBeUndefined()

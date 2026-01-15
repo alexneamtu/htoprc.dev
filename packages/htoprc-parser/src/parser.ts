@@ -53,6 +53,19 @@ const KNOWN_OPTIONS = new Set([
 ])
 
 /**
+ * Score weights for config "interestingness" calculation
+ * Higher scores indicate more customized/interesting configs
+ */
+const SCORE_WEIGHTS = {
+  CUSTOM_COLOR_SCHEME: 10,
+  TREE_VIEW_ENABLED: 5,
+  CUSTOM_METERS_PER_COLUMN: 5,
+  MANY_COLUMNS_THRESHOLD: 8,
+  MANY_COLUMNS_BONUS: 3,
+  CUSTOM_HEADER_LAYOUT: 3,
+} as const
+
+/**
  * Check if an option key is known (including dynamic patterns)
  */
 function isKnownOption(key: string): boolean {
@@ -163,32 +176,32 @@ function parseMeters(meterNames: string[], meterModes: number[]): Meter[] {
 function calculateScore(config: HtopConfig): number {
   let score = 0
 
-  // Custom color scheme: +10
+  // Custom color scheme
   if (config.colorScheme !== 0) {
-    score += 10
+    score += SCORE_WEIGHTS.CUSTOM_COLOR_SCHEME
   }
 
-  // Tree view enabled: +5
+  // Tree view enabled
   if (config.treeView) {
-    score += 5
+    score += SCORE_WEIGHTS.TREE_VIEW_ENABLED
   }
 
-  // Custom meters: +5 per non-empty meter column
+  // Custom meters per non-empty meter column
   if (config.leftMeters.length > 0) {
-    score += 5
+    score += SCORE_WEIGHTS.CUSTOM_METERS_PER_COLUMN
   }
   if (config.rightMeters.length > 0) {
-    score += 5
+    score += SCORE_WEIGHTS.CUSTOM_METERS_PER_COLUMN
   }
 
-  // Many columns: +3 if more than 8 columns
-  if (config.columns.length > 8) {
-    score += 3
+  // Many columns bonus
+  if (config.columns.length > SCORE_WEIGHTS.MANY_COLUMNS_THRESHOLD) {
+    score += SCORE_WEIGHTS.MANY_COLUMNS_BONUS
   }
 
-  // Custom header layout: +3
+  // Custom header layout
   if (config.headerLayout !== 'two_50_50') {
-    score += 3
+    score += SCORE_WEIGHTS.CUSTOM_HEADER_LAYOUT
   }
 
   return score

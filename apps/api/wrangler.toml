@@ -33,6 +33,9 @@ routes = [
   { pattern = "api-staging.htoprc.dev", custom_domain = true }
 ]
 
+[env.staging.vars]
+BASE_URL = "https://staging.htoprc.dev"
+
 [[env.staging.d1_databases]]
 binding = "DB"
 database_name = "htoprc-db-staging"
