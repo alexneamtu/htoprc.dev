@@ -75,6 +75,11 @@ export function createApp({ verifyAuth = verifyClerkToken }: AppDependencies = {
     c.header('X-Content-Type-Options', 'nosniff')
     c.header('X-Frame-Options', 'DENY')
     c.header('Referrer-Policy', 'strict-origin-when-cross-origin')
+    // Content Security Policy - restrict resource loading
+    c.header(
+      'Content-Security-Policy',
+      "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; font-src 'self' data:; connect-src 'self' https://api.htoprc.dev https://api-staging.htoprc.dev https://*.clerk.accounts.dev; frame-ancestors 'none'"
+    )
   })
 
   // Health check
@@ -129,11 +134,12 @@ ${urls
 
   // GraphQL endpoint
   app.on(['GET', 'POST'], '/api/graphql', async (c) => {
+    // Require dedicated salt for anonymous rate limiting - don't fallback to auth secret
+    if (!c.env.ANON_RATE_LIMIT_SALT) {
+      console.warn('ANON_RATE_LIMIT_SALT not configured - anonymous rate limiting disabled')
+    }
     const auth = await getAuthFromRequest(c.req.raw, c.env.CLERK_SECRET_KEY, verifyAuth)
-    const anonKey = await getAnonKeyFromRequest(
-      c.req.raw,
-      c.env.ANON_RATE_LIMIT_SALT ?? c.env.CLERK_SECRET_KEY
-    )
+    const anonKey = await getAnonKeyFromRequest(c.req.raw, c.env.ANON_RATE_LIMIT_SALT)
     const response = await yoga.handle(c.req.raw, { db: c.env.DB, auth, anonKey })
     return response
   })
@@ -207,16 +213,34 @@ ${urls
 
 const app = createApp()
 
-// Cron handler for scheduled scraping
+// Clean up old rate limit records (older than 7 days)
+async function cleanupRateLimits(db: D1Database): Promise<{ deleted: number }> {
+  const sevenDaysAgo = new Date()
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+  const cutoffDate = sevenDaysAgo.toISOString().split('T')[0]
+
+  const result = await db
+    .prepare('DELETE FROM anon_rate_limits WHERE action_date < ?')
+    .bind(cutoffDate)
+    .run()
+
+  return { deleted: result.meta.changes ?? 0 }
+}
+
+// Cron handler for scheduled scraping and maintenance
 const scheduled: ExportedHandler<Bindings>['scheduled'] = async (event, env) => {
   const ctx = {
     db: env.DB,
     githubToken: env.GITHUB_TOKEN,
   }
 
+  // Run scrapers
   const results = await runAllScrapers(ctx)
-
   console.log('Scraper run completed:', Object.fromEntries(results))
+
+  // Clean up old rate limit records
+  const cleanup = await cleanupRateLimits(env.DB)
+  console.log('Rate limit cleanup completed:', cleanup)
 }
 
 // Export app for testing
