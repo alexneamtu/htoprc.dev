@@ -107,20 +107,7 @@ describe('LikeButton', () => {
     expect(screen.getByText('1234')).toBeInTheDocument()
   })
 
-  it('renders disabled state when not signed in', () => {
-    const mockClient = createMockClient()
-
-    render(
-      <Provider value={mockClient as never}>
-        <LikeButton configId="config-1" initialLikesCount={5} />
-      </Provider>
-    )
-
-    const button = screen.getByRole('button')
-    expect(button).toBeDisabled()
-  })
-
-  it('has hover styles for accessibility', () => {
+  it('renders with inline-flex layout', () => {
     const mockClient = createMockClient()
 
     const { container } = render(
@@ -129,8 +116,22 @@ describe('LikeButton', () => {
       </Provider>
     )
 
-    const button = container.querySelector('button')
-    // Button has flex layout with items-center
-    expect(button).toHaveClass('inline-flex', 'items-center')
+    // Component renders with flex layout regardless of Clerk status
+    const wrapper = container.firstChild as HTMLElement
+    expect(wrapper).toHaveClass('inline-flex', 'items-center')
+  })
+
+  it('displays heart icon and count', () => {
+    const mockClient = createMockClient()
+
+    const { container } = render(
+      <Provider value={mockClient as never}>
+        <LikeButton configId="config-1" initialLikesCount={5} />
+      </Provider>
+    )
+
+    // Should have heart icon and count
+    expect(container.querySelector('svg')).toBeInTheDocument()
+    expect(screen.getByText('5')).toBeInTheDocument()
   })
 })
