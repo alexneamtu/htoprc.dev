@@ -101,7 +101,7 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: ./apps/web
-          command: pages deploy dist --project-name=htoprc-${{ needs.determine-environment.outputs.environment }}
+          command: pages deploy dist --project-name=htoprc-${{ needs.determine-environment.outputs.environment }} --branch=main
           packageManager: pnpm
 
       - name: Deployment Summary
