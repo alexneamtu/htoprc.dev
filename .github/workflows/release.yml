@@ -1,0 +1,87 @@
+name: Release
+
+on:
+  workflow_run:
+    workflows: ["Deploy"]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get latest tag
+        id: latest_tag
+        run: |
+          latest=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "tag=$latest" >> $GITHUB_OUTPUT
+
+      - name: Calculate next version
+        id: next_version
+        run: |
+          current="${{ steps.latest_tag.outputs.tag }}"
+          # Remove 'v' prefix
+          version="${current#v}"
+
+          # Split into parts
+          IFS='.' read -r major minor patch <<< "$version"
+
+          # Increment patch version
+          patch=$((patch + 1))
+
+          next="v${major}.${minor}.${patch}"
+          echo "version=$next" >> $GITHUB_OUTPUT
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          latest_tag="${{ steps.latest_tag.outputs.tag }}"
+
+          # Get commits since last tag
+          if [ "$latest_tag" = "v0.0.0" ]; then
+            commits=$(git log --oneline --no-merges -20)
+          else
+            commits=$(git log --oneline --no-merges "${latest_tag}..HEAD")
+          fi
+
+          # Format as markdown list
+          changelog=""
+          while IFS= read -r line; do
+            if [ -n "$line" ]; then
+              # Extract commit message (remove hash)
+              msg="${line#* }"
+              changelog="${changelog}- ${msg}\n"
+            fi
+          done <<< "$commits"
+
+          # Write to file for multiline output
+          echo -e "$changelog" > /tmp/changelog.md
+          echo "file=/tmp/changelog.md" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.next_version.outputs.version }}
+          name: ${{ steps.next_version.outputs.version }}
+          body_path: /tmp/changelog.md
+          generate_release_notes: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Release Summary
+        run: |
+          echo "## Release Created" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ steps.next_version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Changes:**" >> $GITHUB_STEP_SUMMARY
+          cat /tmp/changelog.md >> $GITHUB_STEP_SUMMARY
