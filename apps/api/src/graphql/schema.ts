@@ -25,6 +25,7 @@ interface ConfigRow {
   source_type: string
   source_url: string | null
   source_platform: string | null
+  forked_from_id: string | null
   status: string
   score: number
   likes_count: number
@@ -72,12 +73,14 @@ export const schema = createSchema<GraphQLContext>({
 
     type Mutation {
       uploadConfig(input: UploadConfigInput!): Config!
+      forkConfig(id: ID!, title: String!): Config!
       toggleLike(configId: ID!, userId: ID!): LikeResult!
       addComment(configId: ID!, userId: ID!, content: String!): Comment!
       approveConfig(id: ID!): Config!
       rejectConfig(id: ID!, reason: String!): Config!
       approveComment(id: ID!): Comment!
       rejectComment(id: ID!, reason: String!): Boolean!
+      reportContent(contentType: String!, contentId: ID!, reason: String!): Boolean!
     }
 
     type AdminStats {
@@ -117,6 +120,7 @@ export const schema = createSchema<GraphQLContext>({
       sourceType: String!
       sourceUrl: String
       sourcePlatform: String
+      forkedFromId: ID
       status: String!
       score: Int!
       likesCount: Int!
@@ -230,6 +234,7 @@ export const schema = createSchema<GraphQLContext>({
           sourceType: row.source_type,
           sourceUrl: row.source_url,
           sourcePlatform: row.source_platform,
+          forkedFromId: row.forked_from_id,
           status: row.status,
           score: row.score,
           likesCount: row.likes_count,
@@ -273,6 +278,7 @@ export const schema = createSchema<GraphQLContext>({
           sourceType: row.source_type,
           sourceUrl: row.source_url,
           sourcePlatform: row.source_platform,
+          forkedFromId: row.forked_from_id,
           status: row.status,
           score: row.score,
           likesCount: row.likes_count,
@@ -297,6 +303,7 @@ export const schema = createSchema<GraphQLContext>({
           sourceType: row.source_type,
           sourceUrl: row.source_url,
           sourcePlatform: row.source_platform,
+          forkedFromId: row.forked_from_id,
           status: row.status,
           score: row.score,
           likesCount: row.likes_count,
@@ -337,6 +344,7 @@ export const schema = createSchema<GraphQLContext>({
           sourceType: row.source_type,
           sourceUrl: row.source_url,
           sourcePlatform: row.source_platform,
+          forkedFromId: row.forked_from_id,
           status: row.status,
           score: row.score,
           likesCount: row.likes_count,
@@ -419,6 +427,66 @@ export const schema = createSchema<GraphQLContext>({
           sourceType: 'uploaded',
           sourceUrl: null,
           sourcePlatform: null,
+          forkedFromId: null,
+          status: 'published',
+          score: parsed.score,
+          likesCount: 0,
+          createdAt,
+        }
+      },
+      forkConfig: async (
+        _: unknown,
+        { id, title }: { id: string; title: string },
+        ctx: GraphQLContext
+      ) => {
+        // Get the original config
+        const original = await ctx.db
+          .prepare('SELECT * FROM configs WHERE id = ?')
+          .bind(id)
+          .first<ConfigRow>()
+
+        if (!original) {
+          throw new Error('Config not found')
+        }
+
+        // Parse the config to calculate score
+        const parsed = parseHtoprc(original.content)
+
+        const newId = crypto.randomUUID()
+        const slug = title.toLowerCase().replace(/\s+/g, '-') + '-' + Math.random().toString(36).substring(2, 8)
+        const contentHash = await sha256(original.content)
+        const createdAt = new Date().toISOString()
+
+        await ctx.db
+          .prepare(
+            `INSERT INTO configs (id, slug, title, content, content_hash, source_type, forked_from_id, score, htop_version, status, likes_count, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          )
+          .bind(
+            newId,
+            slug,
+            title,
+            original.content,
+            contentHash,
+            'uploaded',
+            id,
+            parsed.score,
+            parsed.config.htopVersion ?? null,
+            'published',
+            0,
+            createdAt
+          )
+          .run()
+
+        return {
+          id: newId,
+          slug,
+          title,
+          content: original.content,
+          sourceType: 'uploaded',
+          sourceUrl: null,
+          sourcePlatform: null,
+          forkedFromId: id,
           status: 'published',
           score: parsed.score,
           likesCount: 0,
@@ -544,6 +612,7 @@ export const schema = createSchema<GraphQLContext>({
           sourceType: row.source_type,
           sourceUrl: row.source_url,
           sourcePlatform: row.source_platform,
+          forkedFromId: row.forked_from_id,
           status: row.status,
           score: row.score,
           likesCount: row.likes_count,
@@ -575,6 +644,7 @@ export const schema = createSchema<GraphQLContext>({
           sourceType: row.source_type,
           sourceUrl: row.source_url,
           sourcePlatform: row.source_platform,
+          forkedFromId: row.forked_from_id,
           status: row.status,
           score: row.score,
           likesCount: row.likes_count,
@@ -638,6 +708,36 @@ export const schema = createSchema<GraphQLContext>({
           .prepare('UPDATE comments SET status = ?, rejection_reason = ? WHERE id = ?')
           .bind('rejected', reason, id)
           .run()
+
+        return true
+      },
+      reportContent: async (
+        _: unknown,
+        { contentType, contentId, reason }: { contentType: string; contentId: string; reason: string },
+        ctx: GraphQLContext
+      ) => {
+        const id = crypto.randomUUID()
+
+        await ctx.db
+          .prepare(
+            `INSERT INTO reports (id, content_type, content_id, reporter_id, reason, status)
+             VALUES (?, ?, ?, ?, ?, 'pending')`
+          )
+          .bind(id, contentType, contentId, 'anonymous', reason)
+          .run()
+
+        // Flag the content for review
+        if (contentType === 'config') {
+          await ctx.db
+            .prepare('UPDATE configs SET status = ? WHERE id = ? AND status = ?')
+            .bind('flagged', contentId, 'published')
+            .run()
+        } else if (contentType === 'comment') {
+          await ctx.db
+            .prepare('UPDATE comments SET status = ? WHERE id = ? AND status = ?')
+            .bind('pending', contentId, 'published')
+            .run()
+        }
 
         return true
       },

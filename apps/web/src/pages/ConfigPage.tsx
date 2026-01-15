@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { HtopPreview } from '../components/htop/HtopPreview'
 import { LikeButton } from '../components/LikeButton'
@@ -5,10 +6,33 @@ import { Comments } from '../components/Comments'
 import { SEO } from '../components/SEO'
 import { parseHtoprc } from '@htoprc/parser'
 import { useConfig } from '../hooks'
+import { useMutation } from 'urql'
+
+const REPORT_MUTATION = /* GraphQL */ `
+  mutation ReportContent($contentType: String!, $contentId: ID!, $reason: String!) {
+    reportContent(contentType: $contentType, contentId: $contentId, reason: $reason)
+  }
+`
 
 export function ConfigPage() {
   const { slug } = useParams<{ slug: string }>()
   const { data, fetching, error } = useConfig({ slug })
+  const [, reportContent] = useMutation(REPORT_MUTATION)
+  const [showReportDialog, setShowReportDialog] = useState(false)
+  const [reportReason, setReportReason] = useState('')
+  const [reportSubmitted, setReportSubmitted] = useState(false)
+
+  const handleReport = async () => {
+    if (!reportReason.trim() || !data?.config) return
+    await reportContent({
+      contentType: 'config',
+      contentId: data.config.id,
+      reason: reportReason,
+    })
+    setShowReportDialog(false)
+    setReportReason('')
+    setReportSubmitted(true)
+  }
 
   if (fetching) {
     return (
@@ -63,17 +87,22 @@ export function ConfigPage() {
 
       <h1 className="text-3xl font-bold mb-4">{config.title}</h1>
 
-      <div className="flex items-center gap-6 text-gray-500 dark:text-gray-400 mb-6">
+      <div className="flex flex-wrap items-center gap-4 text-gray-500 dark:text-gray-400 mb-6">
         <span>Score: {config.score}</span>
         <LikeButton configId={config.id} initialLikesCount={config.likesCount} />
         <span>Source: {config.sourceType}</span>
+        {config.forkedFromId && (
+          <span className="text-purple-500">
+            Forked from another config
+          </span>
+        )}
       </div>
 
       <div className="bg-gray-900 rounded-lg p-4 mb-6">
         <HtopPreview config={parsed.config} />
       </div>
 
-      <div className="flex gap-4 mb-8">
+      <div className="flex flex-wrap gap-4 mb-8">
         <Link
           to={`/editor?content=${encodeURIComponent(config.content)}`}
           className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md text-white"
@@ -92,7 +121,52 @@ export function ConfigPage() {
         >
           Copy Config
         </button>
+        {!reportSubmitted ? (
+          <button
+            onClick={() => setShowReportDialog(true)}
+            className="px-4 py-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+          >
+            Report
+          </button>
+        ) : (
+          <span className="px-4 py-2 text-green-600 dark:text-green-400">
+            Reported
+          </span>
+        )}
       </div>
+
+      {showReportDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-lg font-semibold mb-4">Report Config</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+              Please describe why you're reporting this config.
+            </p>
+            <textarea
+              value={reportReason}
+              onChange={(e) => setReportReason(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white mb-4"
+              rows={3}
+              placeholder="Reason for reporting..."
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowReportDialog(false)}
+                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleReport}
+                disabled={!reportReason.trim()}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-400 rounded-md text-white"
+              >
+                Submit Report
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <details className="bg-gray-100 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-transparent">
         <summary className="px-4 py-3 cursor-pointer font-semibold text-gray-900 dark:text-white">

@@ -11,6 +11,7 @@ const CONFIG_QUERY = /* GraphQL */ `
       sourceType
       sourceUrl
       sourcePlatform
+      forkedFromId
       status
       score
       likesCount

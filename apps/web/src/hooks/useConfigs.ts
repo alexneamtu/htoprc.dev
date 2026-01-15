@@ -35,6 +35,7 @@ export interface Config {
   sourceType: string
   sourceUrl: string | null
   sourcePlatform: string | null
+  forkedFromId: string | null
   status: string
   score: number
   likesCount: number
