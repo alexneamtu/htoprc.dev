@@ -1,16 +1,11 @@
 name: Release
 
 on:
-  workflow_run:
-    workflows: ["Deploy"]
-    types: [completed]
   workflow_dispatch:
 
 jobs:
   release:
     runs-on: ubuntu-latest
-    # Run if: Deploy succeeded OR manually triggered
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
     permissions:
       contents: write
 
@@ -140,50 +135,6 @@ jobs:
           # Write to file for multiline output
           echo -e "$changelog" > /tmp/changelog.md
           echo "file=/tmp/changelog.md" >> $GITHUB_OUTPUT
-
-      - name: Update CHANGELOG.md
-        if: steps.changelog.outputs.skip != 'true'
-        run: |
-          version="${{ steps.next_version.outputs.version }}"
-          date=$(date +%Y-%m-%d)
-
-          # Create new changelog entry in a temp file
-          {
-            echo "## [$version](https://github.com/${{ github.repository }}/releases/tag/$version) ($date)"
-            echo ""
-            cat /tmp/changelog.md
-          } > /tmp/new_entry.md
-
-          # Create or update CHANGELOG.md
-          if [ -f CHANGELOG.md ]; then
-            # Prepend new entry after the header
-            {
-              echo "# Changelog"
-              echo ""
-              cat /tmp/new_entry.md
-              echo ""
-              # Skip the first line (# Changelog) from existing file
-              tail -n +2 CHANGELOG.md
-            } > /tmp/changelog_new.md
-            mv /tmp/changelog_new.md CHANGELOG.md
-          else
-            {
-              echo "# Changelog"
-              echo ""
-              echo "All notable changes to this project will be documented in this file."
-              echo ""
-              cat /tmp/new_entry.md
-            } > CHANGELOG.md
-          fi
-
-      - name: Commit CHANGELOG.md
-        if: steps.changelog.outputs.skip != 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add CHANGELOG.md
-          git diff --staged --quiet || git commit -m "docs: update CHANGELOG.md for ${{ steps.next_version.outputs.version }}"
-          git push
 
       - name: Create Release
         if: steps.changelog.outputs.skip != 'true'
