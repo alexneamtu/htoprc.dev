@@ -2,13 +2,14 @@ import { useAuth as useClerkAuth, useSignIn as useClerkSignIn, useSignOut as use
 import type { AuthState } from './types'
 
 const CLERK_ENABLED = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
+const fallbackGetToken = async () => null
 
 // Wrapper hooks that handle Clerk being disabled
 // This allows components to call hooks unconditionally (React Rules of Hooks)
 export function useAuth(): AuthState {
   // When Clerk is disabled, return a static fallback
   if (!CLERK_ENABLED) {
-    return { user: null, isLoaded: true, isSignedIn: false }
+    return { user: null, isLoaded: true, isSignedIn: false, getToken: fallbackGetToken }
   }
   return useClerkAuth()
 }

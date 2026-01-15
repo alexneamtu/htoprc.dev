@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { Provider } from 'urql'
 import { ClerkProvider } from '@clerk/clerk-react'
@@ -14,14 +15,21 @@ import { AboutPage } from './pages/AboutPage'
 import { PrivacyPage } from './pages/PrivacyPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { LikesPage } from './pages/LikesPage'
-import { client } from './lib/graphql'
+import { createGraphqlClient } from './lib/graphql'
+import { useAuth } from './services/auth'
 
 const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
+
+function GraphqlProvider({ children }: { children: React.ReactNode }) {
+  const { getToken } = useAuth()
+  const client = useMemo(() => createGraphqlClient(getToken), [getToken])
+  return <Provider value={client}>{children}</Provider>
+}
 
 function AppContent() {
   return (
     <HelmetProvider>
-      <Provider value={client}>
+      <GraphqlProvider>
         <Layout>
           <Routes>
             <Route path="/" element={<HomePage />} />
@@ -57,7 +65,7 @@ function AppContent() {
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Layout>
-      </Provider>
+      </GraphqlProvider>
     </HelmetProvider>
   )
 }

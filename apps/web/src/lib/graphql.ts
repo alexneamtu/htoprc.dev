@@ -9,11 +9,18 @@ export function buildAuthHeaders(token: string | null | undefined) {
   }
 }
 
-export const client = createClient({
-  url: `${API_URL}/api/graphql`,
-  exchanges: [cacheExchange, fetchExchange],
-  preferGetMethod: false,
-  fetchOptions: {
-    headers: buildAuthHeaders(null),
-  },
-})
+export type GetToken = () => Promise<string | null>
+
+export function createGraphqlClient(getToken?: GetToken) {
+  return createClient({
+    url: `${API_URL}/api/graphql`,
+    exchanges: [cacheExchange, fetchExchange],
+    preferGetMethod: false,
+    fetchOptions: async () => {
+      const token = getToken ? await getToken() : null
+      return { headers: buildAuthHeaders(token) }
+    },
+  })
+}
+
+export const client = createGraphqlClient()

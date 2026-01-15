@@ -3,7 +3,7 @@ import type { AuthState, AuthService } from './types'
 
 function useAuth(): AuthState {
   const { user, isLoaded } = useUser()
-  const { isSignedIn } = useClerkAuth()
+  const { isSignedIn, getToken } = useClerkAuth()
 
   return {
     user: user
@@ -16,6 +16,7 @@ function useAuth(): AuthState {
       : null,
     isLoaded,
     isSignedIn: isSignedIn ?? false,
+    getToken,
   }
 }
 

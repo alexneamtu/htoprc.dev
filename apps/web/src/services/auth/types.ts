@@ -9,6 +9,7 @@ export interface AuthState {
   user: User | null
   isLoaded: boolean
   isSignedIn: boolean
+  getToken: () => Promise<string | null>
 }
 
 export interface AuthService {
