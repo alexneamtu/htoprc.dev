@@ -36,19 +36,56 @@ jobs:
           # Split into parts
           IFS='.' read -r major minor patch <<< "$version"
 
-          # Find next available version (in case of concurrent releases)
-          while true; do
-            patch=$((patch + 1))
-            next="v${major}.${minor}.${patch}"
+          # Get commit messages since last tag
+          if [ "$current" = "v0.0.0" ]; then
+            commits=$(git log --format="%s" --no-merges -20)
+          else
+            commits=$(git log --format="%s" --no-merges "${current}..HEAD")
+          fi
 
-            # Check if tag already exists
-            if ! git rev-parse "$next" >/dev/null 2>&1; then
+          # Determine version bump based on conventional commits
+          bump="patch"
+          while IFS= read -r msg; do
+            # Check for breaking changes (major bump)
+            if echo "$msg" | grep -qE "^[a-z]+(\(.+\))?!:|BREAKING CHANGE"; then
+              bump="major"
               break
             fi
-            echo "Tag $next already exists, trying next..."
+            # Check for features (minor bump)
+            if echo "$msg" | grep -qE "^feat(\(.+\))?:"; then
+              bump="minor"
+            fi
+          done <<< "$commits"
+
+          echo "Detected bump type: $bump"
+
+          # Apply version bump
+          case $bump in
+            major)
+              major=$((major + 1))
+              minor=0
+              patch=0
+              ;;
+            minor)
+              minor=$((minor + 1))
+              patch=0
+              ;;
+            patch)
+              patch=$((patch + 1))
+              ;;
+          esac
+
+          next="v${major}.${minor}.${patch}"
+
+          # Ensure tag doesn't already exist (concurrent releases)
+          while git rev-parse "$next" >/dev/null 2>&1; do
+            echo "Tag $next already exists, incrementing patch..."
+            patch=$((patch + 1))
+            next="v${major}.${minor}.${patch}"
           done
 
           echo "version=$next" >> $GITHUB_OUTPUT
+          echo "bump=$bump" >> $GITHUB_OUTPUT
 
       - name: Generate changelog
         id: changelog
@@ -57,9 +94,9 @@ jobs:
 
           # Get commits since last tag
           if [ "$latest_tag" = "v0.0.0" ]; then
-            commits=$(git log --oneline --no-merges -20)
+            commits=$(git log --format="%s" --no-merges -20)
           else
-            commits=$(git log --oneline --no-merges "${latest_tag}..HEAD")
+            commits=$(git log --format="%s" --no-merges "${latest_tag}..HEAD")
           fi
 
           # Check if there are any commits
@@ -71,15 +108,34 @@ jobs:
 
           echo "skip=false" >> $GITHUB_OUTPUT
 
-          # Format as markdown list
-          changelog=""
-          while IFS= read -r line; do
-            if [ -n "$line" ]; then
-              # Extract commit message (remove hash)
-              msg="${line#* }"
-              changelog="${changelog}- ${msg}\n"
+          # Group commits by type
+          features=""
+          fixes=""
+          other=""
+
+          while IFS= read -r msg; do
+            if [ -n "$msg" ]; then
+              if echo "$msg" | grep -qE "^feat(\(.+\))?:"; then
+                features="${features}- ${msg}\n"
+              elif echo "$msg" | grep -qE "^fix(\(.+\))?:"; then
+                fixes="${fixes}- ${msg}\n"
+              else
+                other="${other}- ${msg}\n"
+              fi
             fi
           done <<< "$commits"
+
+          # Build changelog
+          changelog=""
+          if [ -n "$features" ]; then
+            changelog="${changelog}### Features\n${features}\n"
+          fi
+          if [ -n "$fixes" ]; then
+            changelog="${changelog}### Bug Fixes\n${fixes}\n"
+          fi
+          if [ -n "$other" ]; then
+            changelog="${changelog}### Other Changes\n${other}\n"
+          fi
 
           # Write to file for multiline output
           echo -e "$changelog" > /tmp/changelog.md
@@ -101,9 +157,13 @@ jobs:
         run: |
           echo "## Release Created" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Version:** ${{ steps.next_version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "| Setting | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Version | ${{ steps.next_version.outputs.version }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Bump Type | ${{ steps.next_version.outputs.bump }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Previous | ${{ steps.latest_tag.outputs.tag }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Changes:**" >> $GITHUB_STEP_SUMMARY
+          echo "### Changelog" >> $GITHUB_STEP_SUMMARY
           cat /tmp/changelog.md >> $GITHUB_STEP_SUMMARY
 
       - name: Skip Summary

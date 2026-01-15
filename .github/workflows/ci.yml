@@ -76,8 +76,15 @@ jobs:
           name: parser-dist
           path: packages/htoprc-parser/dist
 
-      - name: Test Parser
-        run: pnpm --filter @htoprc/parser exec vitest run --reporter=verbose --reporter=github-actions
+      - name: Test Parser with Coverage
+        run: pnpm --filter @htoprc/parser exec vitest run --reporter=verbose --reporter=github-actions --coverage
+
+      - name: Upload Parser Coverage
+        uses: actions/upload-artifact@v6
+        with:
+          name: coverage-parser
+          path: packages/htoprc-parser/coverage
+          retention-days: 1
 
   test-api:
     needs: setup
@@ -104,8 +111,15 @@ jobs:
           name: parser-dist
           path: packages/htoprc-parser/dist
 
-      - name: Test API
-        run: pnpm --filter @htoprc/api exec vitest run --reporter=verbose --reporter=github-actions
+      - name: Test API with Coverage
+        run: pnpm --filter @htoprc/api exec vitest run --reporter=verbose --reporter=github-actions --coverage
+
+      - name: Upload API Coverage
+        uses: actions/upload-artifact@v6
+        with:
+          name: coverage-api
+          path: apps/api/coverage
+          retention-days: 1
 
   test-web:
     needs: setup
@@ -132,8 +146,15 @@ jobs:
           name: parser-dist
           path: packages/htoprc-parser/dist
 
-      - name: Test Web
-        run: pnpm --filter @htoprc/web exec vitest run --reporter=verbose --reporter=github-actions
+      - name: Test Web with Coverage
+        run: pnpm --filter @htoprc/web exec vitest run --reporter=verbose --reporter=github-actions --coverage
+
+      - name: Upload Web Coverage
+        uses: actions/upload-artifact@v6
+        with:
+          name: coverage-web
+          path: apps/web/coverage
+          retention-days: 1
 
   quality:
     needs: setup
@@ -204,6 +225,52 @@ jobs:
           name: web-dist
           path: apps/web/dist
           retention-days: 1
+
+  coverage:
+    needs: [test-parser, test-api, test-web]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Download Parser Coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-parser
+          path: coverage/parser
+
+      - name: Download API Coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-api
+          path: coverage/api
+
+      - name: Download Web Coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-web
+          path: coverage/web
+
+      - name: Coverage Report
+        uses: davelosert/vitest-coverage-report-action@v2
+        with:
+          json-summary-path: coverage/parser/coverage-summary.json
+          json-final-path: coverage/parser/coverage-final.json
+          name: Parser
+
+      - name: Coverage Report API
+        uses: davelosert/vitest-coverage-report-action@v2
+        with:
+          json-summary-path: coverage/api/coverage-summary.json
+          json-final-path: coverage/api/coverage-final.json
+          name: API
+
+      - name: Coverage Report Web
+        uses: davelosert/vitest-coverage-report-action@v2
+        with:
+          json-summary-path: coverage/web/coverage-summary.json
+          json-final-path: coverage/web/coverage-final.json
+          name: Web
 
   summary:
     needs: [test-parser, test-api, test-web, quality]
