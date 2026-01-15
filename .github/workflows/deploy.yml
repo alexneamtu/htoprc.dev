@@ -1,4 +1,5 @@
 name: Deploy
+run-name: Deploy ${{ github.event_name == 'release' && 'production' || github.event_name == 'workflow_dispatch' && inputs.environment || 'staging' }}
 
 on:
   workflow_run:
