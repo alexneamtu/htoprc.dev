@@ -6,6 +6,13 @@ import { HelmetProvider } from 'react-helmet-async'
 import { fromValue, delay, pipe } from 'wonka'
 import { ConfigPage } from './ConfigPage'
 
+// Mock Clerk hooks
+vi.mock('@clerk/clerk-react', () => ({
+  useUser: () => ({ user: null, isLoaded: true }),
+  useAuth: () => ({ isSignedIn: false }),
+  useClerk: () => ({ openSignIn: vi.fn(), signOut: vi.fn() }),
+}))
+
 function createMockClient(data: unknown) {
   return {
     executeQuery: vi.fn(() =>

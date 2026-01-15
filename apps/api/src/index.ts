@@ -21,6 +21,7 @@ app.use(
       'https://htoprc.dev',
       'https://htoprc.dev.alexneamtu.top',
       'https://htoprc.staging.alexneamtu.top',
+      'https://htoprc-production.pages.dev',
     ],
     credentials: true,
   })
