@@ -90,7 +90,7 @@ jobs:
       - name: Build web
         run: pnpm --filter @htoprc/web build
         env:
-          VITE_API_URL: ${{ needs.determine-environment.outputs.environment == 'production' && 'https://api.htoprc.dev.alexneamtu.top' || 'https://api.htoprc.staging.alexneamtu.top' }}
+          VITE_API_URL: ${{ needs.determine-environment.outputs.environment == 'production' && 'https://api.htoprc.dev' || 'https://api.staging.htoprc.dev' }}
           VITE_CLERK_PUBLISHABLE_KEY: ${{ needs.determine-environment.outputs.environment == 'production' && secrets.VITE_CLERK_PUBLISHABLE_KEY_PROD || secrets.VITE_CLERK_PUBLISHABLE_KEY_DEV }}
 
       - name: Deploy Web to Cloudflare Pages
@@ -116,7 +116,7 @@ jobs:
             echo "| Custom Domain | htoprc.dev |" >> $GITHUB_STEP_SUMMARY
             echo "| Release | ${{ github.event.release.tag_name }} |" >> $GITHUB_STEP_SUMMARY
           else
-            echo "| Custom Domain | htoprc.staging.alexneamtu.top |" >> $GITHUB_STEP_SUMMARY
+            echo "| Custom Domain | staging.htoprc.dev |" >> $GITHUB_STEP_SUMMARY
           fi
 
   deploy-api:
@@ -209,11 +209,11 @@ jobs:
           if [ "${{ needs.determine-environment.outputs.environment }}" = "production" ]; then
             echo "| DB Backup | d1-backup-${{ github.run_id }} (30 days retention) |" >> $GITHUB_STEP_SUMMARY
             echo "| Worker | htoprc-api-production |" >> $GITHUB_STEP_SUMMARY
-            echo "| Custom Domain | api.htoprc.dev.alexneamtu.top |" >> $GITHUB_STEP_SUMMARY
+            echo "| Custom Domain | api.htoprc.dev |" >> $GITHUB_STEP_SUMMARY
             echo "| Release | ${{ github.event.release.tag_name }} |" >> $GITHUB_STEP_SUMMARY
           else
             echo "| Worker | htoprc-api-staging |" >> $GITHUB_STEP_SUMMARY
-            echo "| Custom Domain | api.htoprc.staging.alexneamtu.top |" >> $GITHUB_STEP_SUMMARY
+            echo "| Custom Domain | api.staging.htoprc.dev |" >> $GITHUB_STEP_SUMMARY
           fi
 
   notify-failure:

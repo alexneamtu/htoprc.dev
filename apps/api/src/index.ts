@@ -47,8 +47,6 @@ export function createApp({ verifyAuth = verifyClerkToken }: AppDependencies = {
   const allowedOrigins = [
     'https://htoprc.dev',
     'https://staging.htoprc.dev',
-    'https://htoprc.dev.alexneamtu.top',
-    'https://htoprc.staging.alexneamtu.top',
     'https://htoprc-production.pages.dev',
     'https://htoprc-staging.pages.dev',
   ]

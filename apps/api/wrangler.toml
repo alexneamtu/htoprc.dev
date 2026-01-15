@@ -18,7 +18,7 @@ database_id = "local"
 [env.staging]
 name = "htoprc-api-staging"
 routes = [
-  { pattern = "api.htoprc.staging.alexneamtu.top", custom_domain = true }
+  { pattern = "api.staging.htoprc.dev", custom_domain = true }
 ]
 
 [[env.staging.d1_databases]]
@@ -32,7 +32,7 @@ database_id = "8b9b25a5-60bc-44f8-9645-b19c414cdc6e"
 [env.production]
 name = "htoprc-api-production"
 routes = [
-  { pattern = "api.htoprc.dev.alexneamtu.top", custom_domain = true }
+  { pattern = "api.htoprc.dev", custom_domain = true }
 ]
 
 [[env.production.d1_databases]]
