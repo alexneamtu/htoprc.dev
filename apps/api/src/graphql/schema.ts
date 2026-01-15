@@ -37,13 +37,15 @@ async function generateUniqueSlug(db: D1Database, title: string): Promise<string
     return baseSlug
   }
 
-  // Find next available number
+  // Find next available number, add random suffix to avoid race conditions
   let counter = 2
   while (existingSlugs.has(`${baseSlug}-${counter}`)) {
     counter++
   }
 
-  return `${baseSlug}-${counter}`
+  // Add a small random suffix to prevent race condition collisions
+  const randomSuffix = Math.random().toString(36).substring(2, 5)
+  return `${baseSlug}-${counter}-${randomSuffix}`
 }
 
 // GraphQL context type
