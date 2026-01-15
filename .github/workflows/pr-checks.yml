@@ -82,3 +82,53 @@ jobs:
             } else {
               console.log(`PR title is valid: "${title}"`);
             }
+
+  commit-lint:
+    name: Commit Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Check commit messages
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { execSync } = require('child_process');
+
+            // Skip for Dependabot PRs
+            const pr = context.payload.pull_request;
+            if (pr.user.login === 'dependabot[bot]') {
+              console.log('Skipping commit lint for Dependabot PR');
+              return;
+            }
+
+            // Get commits in the PR
+            const base = pr.base.sha;
+            const head = pr.head.sha;
+            const commits = execSync(`git log --format="%s" ${base}..${head}`).toString().trim().split('\n');
+
+            const conventionalPattern = /^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?!?:\s.+$/;
+            const invalidCommits = [];
+
+            for (const msg of commits) {
+              if (msg && !conventionalPattern.test(msg)) {
+                // Allow merge commits
+                if (!msg.startsWith('Merge ')) {
+                  invalidCommits.push(msg);
+                }
+              }
+            }
+
+            if (invalidCommits.length > 0) {
+              core.setFailed(
+                `Some commits don't follow conventional commit format:\n\n` +
+                invalidCommits.map(c => `  - "${c}"`).join('\n') +
+                `\n\nExpected: <type>: <description>\n` +
+                `Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert`
+              );
+            } else {
+              console.log(`All ${commits.length} commits follow conventional format`);
+            }

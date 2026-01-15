@@ -1,0 +1,27 @@
+# CODEOWNERS - Auto-assign reviewers based on file paths
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for everything
+* @alexneamtu
+
+# Frontend (React app)
+/apps/web/ @alexneamtu
+
+# API (Cloudflare Workers)
+/apps/api/ @alexneamtu
+
+# Parser library
+/packages/htoprc-parser/ @alexneamtu
+
+# CI/CD and GitHub configuration
+/.github/ @alexneamtu
+
+# Documentation
+/docs/ @alexneamtu
+*.md @alexneamtu
+
+# Configuration files
+*.json @alexneamtu
+*.yaml @alexneamtu
+*.yml @alexneamtu
+*.toml @alexneamtu
