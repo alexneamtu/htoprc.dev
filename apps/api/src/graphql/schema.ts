@@ -165,12 +165,14 @@ export const schema = createSchema<GraphQLContext>({
       config(id: ID, slug: String): Config
       recentConfigs(limit: Int = 6): [Config!]!
       myConfigs(userId: ID!): [Config!]!
+      likedConfigs(userId: ID!): [Config!]!
       adminStats(userId: ID!): AdminStats
       pendingConfigs(userId: ID!): [Config!]!
       pendingComments(userId: ID!): [PendingComment!]!
       pendingReports(userId: ID!): [Report!]!
       isAdmin(userId: ID!): Boolean!
       hasLiked(configId: ID!, userId: ID!): Boolean!
+      myPendingComments(configId: ID!, userId: ID!): [Comment!]!
     }
 
     type Mutation {
@@ -463,6 +465,37 @@ export const schema = createSchema<GraphQLContext>({
           createdAt: row.created_at,
         }))
       },
+      likedConfigs: async (
+        _: unknown,
+        { userId }: { userId: string },
+        ctx: GraphQLContext
+      ) => {
+        const result = await ctx.db
+          .prepare(`
+            SELECT c.* FROM configs c
+            INNER JOIN likes l ON c.id = l.config_id
+            WHERE l.user_id = ? AND c.status = ?
+            ORDER BY l.created_at DESC
+          `)
+          .bind(userId, 'published')
+          .all<ConfigRow>()
+
+        return (result.results ?? []).map((row) => ({
+          id: row.id,
+          slug: row.slug,
+          title: row.title,
+          content: row.content,
+          sourceType: row.source_type,
+          sourceUrl: row.source_url,
+          sourcePlatform: row.source_platform,
+          authorId: row.author_id,
+          forkedFromId: row.forked_from_id,
+          status: row.status,
+          score: row.score,
+          likesCount: row.likes_count,
+          createdAt: row.created_at,
+        }))
+      },
       isAdmin: async (
         _: unknown,
         { userId }: { userId: string },
@@ -480,6 +513,34 @@ export const schema = createSchema<GraphQLContext>({
           .bind(configId, userId)
           .first()
         return !!like
+      },
+      myPendingComments: async (
+        _: unknown,
+        { configId, userId }: { configId: string; userId: string },
+        ctx: GraphQLContext
+      ) => {
+        const result = await ctx.db
+          .prepare(`
+            SELECT c.id, c.content, c.created_at, c.author_id,
+                   u.username as author_username, u.avatar_url as author_avatar_url
+            FROM comments c
+            LEFT JOIN users u ON c.author_id = u.id
+            WHERE c.config_id = ? AND c.author_id = ? AND c.status = ?
+            ORDER BY c.created_at ASC
+          `)
+          .bind(configId, userId, 'pending')
+          .all<CommentRow>()
+
+        return (result.results ?? []).map((row) => ({
+          id: row.id,
+          content: row.content,
+          author: {
+            id: row.author_id,
+            username: row.author_username ?? 'Anonymous',
+            avatarUrl: row.author_avatar_url,
+          },
+          createdAt: row.created_at,
+        }))
       },
       adminStats: async (
         _: unknown,

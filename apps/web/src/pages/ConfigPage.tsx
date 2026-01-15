@@ -29,6 +29,21 @@ const IS_ADMIN_QUERY = /* GraphQL */ `
   }
 `
 
+const MY_PENDING_COMMENTS_QUERY = /* GraphQL */ `
+  query MyPendingComments($configId: ID!, $userId: ID!) {
+    myPendingComments(configId: $configId, userId: $userId) {
+      id
+      content
+      author {
+        id
+        username
+        avatarUrl
+      }
+      createdAt
+    }
+  }
+`
+
 export function ConfigPage() {
   const { slug } = useParams<{ slug: string }>()
   const { data, fetching, error } = useConfig({ slug })
@@ -47,7 +62,14 @@ export function ConfigPage() {
     pause: !auth.user?.id,
   })
 
+  const [{ data: pendingCommentsData }] = useQuery<{ myPendingComments: Array<{ id: string; content: string; author: { id: string; username: string; avatarUrl: string | null }; createdAt: string }> }>({
+    query: MY_PENDING_COMMENTS_QUERY,
+    variables: { configId: data?.config?.id, userId: auth.user?.id },
+    pause: !auth.user?.id || !data?.config?.id,
+  })
+
   const isAdmin = adminData?.isAdmin ?? false
+  const pendingComments = pendingCommentsData?.myPendingComments ?? []
 
   const handleReport = async () => {
     if (!reportReason.trim() || !data?.config || !auth.user?.id) return
@@ -315,7 +337,7 @@ export function ConfigPage() {
         </pre>
       </details>
 
-      <Comments configId={config.id} comments={config.comments} />
+      <Comments configId={config.id} comments={config.comments} pendingComments={pendingComments} />
     </div>
   )
 }

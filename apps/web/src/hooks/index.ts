@@ -8,3 +8,6 @@ export { useTopConfigs } from './useTopConfigs'
 
 export { useRecentConfigs } from './useRecentConfigs'
 export type { RecentConfigsData } from './useRecentConfigs'
+
+export { useLikedConfigs } from './useLikedConfigs'
+export type { LikedConfigsData } from './useLikedConfigs'

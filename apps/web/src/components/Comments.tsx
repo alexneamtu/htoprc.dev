@@ -33,14 +33,18 @@ interface Comment {
 interface CommentsProps {
   configId: string
   comments: Comment[]
+  pendingComments?: Comment[]
 }
 
-export function Comments({ configId, comments: initialComments }: CommentsProps) {
+export function Comments({ configId, comments: initialComments, pendingComments = [] }: CommentsProps) {
   const { user, isSignedIn } = CLERK_ENABLED
     ? useAuth()
     : { user: null, isSignedIn: false }
 
-  const [comments, setComments] = useState(initialComments)
+  const [comments] = useState(initialComments)
+  const [localPendingComments, setLocalPendingComments] = useState<(Comment & { isPending?: boolean })[]>(
+    pendingComments.map(c => ({ ...c, isPending: true }))
+  )
   const [newComment, setNewComment] = useState('')
   const [, addComment] = useMutation(ADD_COMMENT_MUTATION)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -69,10 +73,11 @@ export function Comments({ configId, comments: initialComments }: CommentsProps)
     }
 
     if (result.data?.addComment) {
-      setComments([...comments, result.data.addComment])
+      // Add to pending comments with pending flag (comments need approval for new users)
+      setLocalPendingComments([...localPendingComments, { ...result.data.addComment, isPending: true }])
       setNewComment('')
     }
-  }, [isSignedIn, user, newComment, configId, addComment, comments])
+  }, [isSignedIn, user, newComment, configId, addComment, localPendingComments])
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -83,20 +88,37 @@ export function Comments({ configId, comments: initialComments }: CommentsProps)
     })
   }
 
+  // Combine published comments with user's pending comments
+  const allComments = [
+    ...comments.map(c => ({ ...c, isPending: false })),
+    ...localPendingComments,
+  ]
+
   return (
     <div className="mt-8">
-      <h2 className="text-xl font-bold mb-4">Comments ({comments.length})</h2>
+      <h2 className="text-xl font-bold mb-4">
+        Comments ({comments.length})
+        {localPendingComments.length > 0 && (
+          <span className="text-sm font-normal text-gray-500 dark:text-gray-400 ml-2">
+            + {localPendingComments.length} pending
+          </span>
+        )}
+      </h2>
 
-      {comments.length === 0 ? (
+      {allComments.length === 0 ? (
         <p className="text-gray-500 dark:text-gray-400 mb-6">
           No comments yet. Be the first to comment!
         </p>
       ) : (
         <div className="space-y-4 mb-6">
-          {comments.map((comment) => (
+          {allComments.map((comment) => (
             <div
               key={comment.id}
-              className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4"
+              className={`rounded-lg p-4 ${
+                comment.isPending
+                  ? 'bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800'
+                  : 'bg-gray-100 dark:bg-gray-800'
+              }`}
             >
               <div className="flex items-center gap-3 mb-2">
                 {comment.author.avatarUrl ? (
@@ -110,14 +132,21 @@ export function Comments({ configId, comments: initialComments }: CommentsProps)
                     {comment.author.username.charAt(0).toUpperCase()}
                   </div>
                 )}
-                <div>
+                <div className="flex items-center gap-2">
                   <span className="font-medium">{comment.author.username}</span>
-                  <span className="text-gray-500 dark:text-gray-400 text-sm ml-2">
+                  <span className="text-gray-500 dark:text-gray-400 text-sm">
                     {formatDate(comment.createdAt)}
                   </span>
+                  {comment.isPending && (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200">
+                      Pending approval
+                    </span>
+                  )}
                 </div>
               </div>
-              <p className="text-gray-700 dark:text-gray-300">{comment.content}</p>
+              <p className={comment.isPending ? 'text-gray-600 dark:text-gray-400' : 'text-gray-700 dark:text-gray-300'}>
+                {comment.content}
+              </p>
             </div>
           ))}
         </div>

@@ -13,6 +13,7 @@ import { AdminPage } from './pages/AdminPage'
 import { AboutPage } from './pages/AboutPage'
 import { PrivacyPage } from './pages/PrivacyPage'
 import { NotFoundPage } from './pages/NotFoundPage'
+import { LikesPage } from './pages/LikesPage'
 import { client } from './lib/graphql'
 
 const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
@@ -40,6 +41,14 @@ function AppContent() {
               element={
                 <ProtectedRoute>
                   <AdminPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/likes"
+              element={
+                <ProtectedRoute>
+                  <LikesPage />
                 </ProtectedRoute>
               }
             />
