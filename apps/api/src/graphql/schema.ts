@@ -1071,10 +1071,34 @@ export const schema = createSchema<GraphQLContext>({
         { id }: { id: string },
         ctx: GraphQLContext
       ) => {
+        // Get the report to know what content to restore
+        const report = await ctx.db
+          .prepare('SELECT content_type, content_id FROM reports WHERE id = ?')
+          .bind(id)
+          .first<{ content_type: string; content_id: string }>()
+
+        if (!report) {
+          return false
+        }
+
+        // Mark report as dismissed
         await ctx.db
           .prepare('UPDATE reports SET status = ? WHERE id = ?')
           .bind('dismissed', id)
           .run()
+
+        // Restore content status to published
+        if (report.content_type === 'config') {
+          await ctx.db
+            .prepare('UPDATE configs SET status = ? WHERE id = ? AND status = ?')
+            .bind('published', report.content_id, 'flagged')
+            .run()
+        } else if (report.content_type === 'comment') {
+          await ctx.db
+            .prepare('UPDATE comments SET status = ? WHERE id = ? AND status = ?')
+            .bind('published', report.content_id, 'pending')
+            .run()
+        }
 
         return true
       },
