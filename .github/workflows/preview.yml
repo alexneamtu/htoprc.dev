@@ -43,13 +43,13 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: ./apps/api
-          command: deploy --env preview --name htoprc-api-pr-${{ github.event.pull_request.number }} --var PREVIEW:true
+          command: deploy --env preview --name api-pr-${{ github.event.pull_request.number }} --var PREVIEW:true
           packageManager: pnpm
 
       - name: Build web (with preview API)
         run: pnpm --filter @htoprc/web build
         env:
-          VITE_API_URL: https://htoprc-api-pr-${{ github.event.pull_request.number }}.alexneamtu.workers.dev
+          VITE_API_URL: https://api-pr-${{ github.event.pull_request.number }}.${{ vars.CLOUDFLARE_ACCOUNT_SUBDOMAIN }}.workers.dev
           VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.VITE_CLERK_PUBLISHABLE_KEY_DEV }}
 
       - name: Deploy Preview Web to Cloudflare Pages
@@ -59,7 +59,7 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: ./apps/web
-          command: pages deploy dist --project-name=htoprc-staging --branch=${{ github.head_ref }}
+          command: pages deploy dist --project-name=htoprc-staging --branch=pr-${{ github.event.pull_request.number }}
           packageManager: pnpm
 
       - name: Find existing comment
@@ -81,8 +81,8 @@ jobs:
 
             | App | URL |
             |-----|-----|
-            | Web | ${{ steps.deploy-web.outputs.deployment-url }} |
-            | API | https://htoprc-api-pr-${{ github.event.pull_request.number }}.alexneamtu.workers.dev |
+            | Web | https://pr-${{ github.event.pull_request.number }}.htoprc-staging.pages.dev |
+            | API | https://api-pr-${{ github.event.pull_request.number }}.${{ vars.CLOUDFLARE_ACCOUNT_SUBDOMAIN }}.workers.dev |
 
             **Branch:** `${{ github.head_ref }}`
             **Commit:** `${{ github.sha }}`
@@ -98,5 +98,5 @@ jobs:
           echo "|---------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| PR | #${{ github.event.pull_request.number }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Branch | ${{ github.head_ref }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Web Preview | ${{ steps.deploy-web.outputs.deployment-url }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| API Preview | https://htoprc-api-pr-${{ github.event.pull_request.number }}.alexneamtu.workers.dev |" >> $GITHUB_STEP_SUMMARY
+          echo "| Web Preview | https://pr-${{ github.event.pull_request.number }}.htoprc-staging.pages.dev |" >> $GITHUB_STEP_SUMMARY
+          echo "| API Preview | https://api-pr-${{ github.event.pull_request.number }}.${{ vars.CLOUDFLARE_ACCOUNT_SUBDOMAIN }}.workers.dev |" >> $GITHUB_STEP_SUMMARY

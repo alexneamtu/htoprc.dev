@@ -1,5 +1,5 @@
 name: Deploy
-run-name: Deploy ${{ github.event_name == 'release' && 'production' || github.event_name == 'workflow_dispatch' && inputs.environment || 'staging' }}
+run-name: Deploy ${{ github.event_name == 'release' && 'production' || 'staging' }}
 
 on:
   workflow_run:
@@ -9,15 +9,6 @@ on:
   release:
     types: [published]
   workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Deployment environment'
-        required: true
-        default: 'staging'
-        type: choice
-        options:
-          - staging
-          - production
 
 jobs:
   determine-environment:
@@ -33,7 +24,7 @@ jobs:
             echo "environment=production" >> $GITHUB_OUTPUT
             echo "should_deploy=true" >> $GITHUB_OUTPUT
           elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "environment=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+            echo "environment=staging" >> $GITHUB_OUTPUT
             echo "should_deploy=true" >> $GITHUB_OUTPUT
           elif [ "${{ github.event_name }}" = "workflow_run" ]; then
             if [ "${{ github.event.workflow_run.conclusion }}" = "success" ]; then
@@ -114,10 +105,10 @@ jobs:
           echo "| Project | htoprc-${{ needs.determine-environment.outputs.environment }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Trigger | ${{ github.event_name }} |" >> $GITHUB_STEP_SUMMARY
           if [ "${{ needs.determine-environment.outputs.environment }}" = "production" ]; then
-            echo "| Custom Domain | htoprc.dev |" >> $GITHUB_STEP_SUMMARY
+            echo "| Custom Domain | [htoprc.dev](https://htoprc.dev) |" >> $GITHUB_STEP_SUMMARY
             echo "| Release | ${{ github.event.release.tag_name }} |" >> $GITHUB_STEP_SUMMARY
           else
-            echo "| Custom Domain | staging.htoprc.dev |" >> $GITHUB_STEP_SUMMARY
+            echo "| Custom Domain | [staging.htoprc.dev](https://staging.htoprc.dev) |" >> $GITHUB_STEP_SUMMARY
           fi
 
   deploy-api:
@@ -210,11 +201,11 @@ jobs:
           if [ "${{ needs.determine-environment.outputs.environment }}" = "production" ]; then
             echo "| DB Backup | d1-backup-${{ github.run_id }} (30 days retention) |" >> $GITHUB_STEP_SUMMARY
             echo "| Worker | htoprc-api-production |" >> $GITHUB_STEP_SUMMARY
-            echo "| Custom Domain | api.htoprc.dev |" >> $GITHUB_STEP_SUMMARY
+            echo "| Custom Domain | [api.htoprc.dev](https://api.htoprc.dev) |" >> $GITHUB_STEP_SUMMARY
             echo "| Release | ${{ github.event.release.tag_name }} |" >> $GITHUB_STEP_SUMMARY
           else
             echo "| Worker | htoprc-api-staging |" >> $GITHUB_STEP_SUMMARY
-            echo "| Custom Domain | api-staging.htoprc.dev |" >> $GITHUB_STEP_SUMMARY
+            echo "| Custom Domain | [api-staging.htoprc.dev](https://api-staging.htoprc.dev) |" >> $GITHUB_STEP_SUMMARY
           fi
 
   notify-failure:

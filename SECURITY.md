@@ -6,7 +6,6 @@ If you discover a security vulnerability, please report it privately:
 
 1. **Do NOT** open a public GitHub issue
 2. Use [GitHub's private vulnerability reporting](https://github.com/alexneamtu/htoprc.dev/security/advisories/new)
-3. Or email: security@alexneamtu.top
 
 ### What to include
 

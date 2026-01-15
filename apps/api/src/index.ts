@@ -51,8 +51,8 @@ export function createApp({ verifyAuth = verifyClerkToken }: AppDependencies = {
     'https://htoprc-staging.pages.dev',
   ]
 
-  // Pattern for Cloudflare Pages preview URLs (e.g., https://abc123.htoprc-staging.pages.dev)
-  const previewUrlPattern = /^https:\/\/[a-z0-9]+\.htoprc-(staging|production)\.pages\.dev$/
+  // Pattern for Cloudflare Pages preview URLs (e.g., https://abc123.htoprc-staging.pages.dev or https://pr-21.htoprc-staging.pages.dev)
+  const previewUrlPattern = /^https:\/\/[a-z0-9-]+\.htoprc-(staging|production)\.pages\.dev$/
 
   app.use(
     '*',
