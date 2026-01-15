@@ -644,10 +644,13 @@ export const schema = createSchema<GraphQLContext>({
               .run()
           }
 
-          // Check rate limit
-          const rateLimit = await checkRateLimit(ctx.db, input.userId, 'upload')
-          if (!rateLimit.allowed) {
-            throw new RateLimitError('upload', RATE_LIMITS.upload.max)
+          // Check rate limit (skip for admins)
+          const userIsAdmin = await isUserAdmin(ctx.db, input.userId)
+          if (!userIsAdmin) {
+            const rateLimit = await checkRateLimit(ctx.db, input.userId, 'upload')
+            if (!rateLimit.allowed) {
+              throw new RateLimitError('upload', RATE_LIMITS.upload.max)
+            }
           }
         }
 
@@ -923,10 +926,13 @@ export const schema = createSchema<GraphQLContext>({
             .run()
         }
 
-        // Check rate limit (now safe since user exists)
-        const rateLimit = await checkRateLimit(ctx.db, userId, 'comment')
-        if (!rateLimit.allowed) {
-          throw new RateLimitError('comment', RATE_LIMITS.comment.max)
+        // Check rate limit (skip for admins)
+        const userIsAdmin = await isUserAdmin(ctx.db, userId)
+        if (!userIsAdmin) {
+          const rateLimit = await checkRateLimit(ctx.db, userId, 'comment')
+          if (!rateLimit.allowed) {
+            throw new RateLimitError('comment', RATE_LIMITS.comment.max)
+          }
         }
 
         const id = crypto.randomUUID()

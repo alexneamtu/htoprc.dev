@@ -70,7 +70,8 @@ export function ConfigPage() {
       userId: auth.user.id,
     })
     if (!result.error) {
-      navigate('/')
+      // Use window.location to force a full page reload and bypass urql cache
+      window.location.href = '/'
     }
   }
 
