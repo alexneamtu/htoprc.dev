@@ -43,10 +43,8 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: ./apps/api
-          command: deploy --name htoprc-api-pr-${{ github.event.pull_request.number }} --compatibility-date 2024-01-01 --var PREVIEW:true
+          command: deploy --env staging --name htoprc-api-pr-${{ github.event.pull_request.number }} --var PREVIEW:true
           packageManager: pnpm
-        env:
-          CLOUDFLARE_D1_DATABASE_ID: 8b9b25a5-60bc-44f8-9645-b19c414cdc6e
 
       - name: Build web (with preview API)
         run: pnpm --filter @htoprc/web build
