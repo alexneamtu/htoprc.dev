@@ -4,12 +4,13 @@ on:
   workflow_run:
     workflows: ["Deploy"]
     types: [completed]
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   release:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # Run if: Deploy succeeded OR manually triggered
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
     permissions:
       contents: write
 
