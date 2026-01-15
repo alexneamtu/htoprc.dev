@@ -45,6 +45,7 @@ function createConfig(overrides: Partial<HtopConfig> = {}): HtopConfig {
     showCpuFrequency: false,
     showCpuTemperature: false,
     degreeFahrenheit: false,
+    screens: [],
     unknownOptions: {},
     ...overrides,
   }
