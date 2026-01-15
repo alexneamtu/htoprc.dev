@@ -1,6 +1,7 @@
 import { useParams, Link } from 'react-router-dom'
 import { HtopPreview } from '../components/htop/HtopPreview'
 import { LikeButton } from '../components/LikeButton'
+import { Comments } from '../components/Comments'
 import { SEO } from '../components/SEO'
 import { parseHtoprc } from '@htoprc/parser'
 import { useConfig } from '../hooks'
@@ -101,6 +102,8 @@ export function ConfigPage() {
           {config.content}
         </pre>
       </details>
+
+      <Comments configId={config.id} comments={config.comments} />
     </div>
   )
 }

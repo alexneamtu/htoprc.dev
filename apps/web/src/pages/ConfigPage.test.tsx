@@ -51,6 +51,7 @@ describe('ConfigPage', () => {
         score: 25,
         likesCount: 10,
         createdAt: '2026-01-14T00:00:00Z',
+        comments: [],
       },
     }
 
@@ -97,6 +98,7 @@ describe('ConfigPage', () => {
         score: 15,
         likesCount: 5,
         createdAt: '2026-01-14T00:00:00Z',
+        comments: [],
       },
     }
 
@@ -122,6 +124,7 @@ describe('ConfigPage', () => {
         score: 15,
         likesCount: 5,
         createdAt: '2026-01-14T00:00:00Z',
+        comments: [],
       },
     }
 

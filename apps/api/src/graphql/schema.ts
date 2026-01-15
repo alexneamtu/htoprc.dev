@@ -15,7 +15,7 @@ interface GraphQLContext {
   db: D1Database
 }
 
-// Database row type
+// Database row types
 interface ConfigRow {
   id: string
   slug: string
@@ -29,6 +29,17 @@ interface ConfigRow {
   score: number
   likes_count: number
   htop_version: string | null
+  created_at: string
+}
+
+interface CommentRow {
+  id: string
+  config_id: string
+  author_id: string
+  author_username: string
+  author_avatar_url: string | null
+  content: string
+  status: string
   created_at: string
 }
 
@@ -59,6 +70,7 @@ export const schema = createSchema<GraphQLContext>({
     type Mutation {
       uploadConfig(input: UploadConfigInput!): Config!
       toggleLike(configId: ID!, userId: ID!): LikeResult!
+      addComment(configId: ID!, userId: ID!, content: String!): Comment!
     }
 
     type LikeResult {
@@ -83,6 +95,20 @@ export const schema = createSchema<GraphQLContext>({
       score: Int!
       likesCount: Int!
       createdAt: String!
+      comments: [Comment!]!
+    }
+
+    type Comment {
+      id: ID!
+      content: String!
+      author: CommentAuthor!
+      createdAt: String!
+    }
+
+    type CommentAuthor {
+      id: ID!
+      username: String!
+      avatarUrl: String
     }
 
     type ConfigConnection {
@@ -356,6 +382,69 @@ export const schema = createSchema<GraphQLContext>({
             likesCount: config?.likes_count ?? 0,
           }
         }
+      },
+      addComment: async (
+        _: unknown,
+        { configId, userId, content }: { configId: string; userId: string; content: string },
+        ctx: GraphQLContext
+      ) => {
+        const id = crypto.randomUUID()
+        const createdAt = new Date().toISOString()
+
+        // Check if user is trusted (auto-publish) or needs moderation
+        const user = await ctx.db
+          .prepare('SELECT is_trusted, username, avatar_url FROM users WHERE id = ?')
+          .bind(userId)
+          .first<{ is_trusted: number; username: string; avatar_url: string | null }>()
+
+        // If user doesn't exist, create them with basic info
+        const username = user?.username ?? 'Anonymous'
+        const avatarUrl = user?.avatar_url ?? null
+        const status = user?.is_trusted ? 'published' : 'pending'
+
+        await ctx.db
+          .prepare(
+            'INSERT INTO comments (id, config_id, author_id, content, status, created_at) VALUES (?, ?, ?, ?, ?, ?)'
+          )
+          .bind(id, configId, userId, content, status, createdAt)
+          .run()
+
+        return {
+          id,
+          content,
+          author: {
+            id: userId,
+            username,
+            avatarUrl,
+          },
+          createdAt,
+        }
+      },
+    },
+    Config: {
+      comments: async (parent: { id: string }, _args: unknown, ctx: GraphQLContext) => {
+        const result = await ctx.db
+          .prepare(`
+            SELECT c.id, c.content, c.created_at, c.author_id,
+                   u.username as author_username, u.avatar_url as author_avatar_url
+            FROM comments c
+            LEFT JOIN users u ON c.author_id = u.id
+            WHERE c.config_id = ? AND c.status = ?
+            ORDER BY c.created_at ASC
+          `)
+          .bind(parent.id, 'published')
+          .all<CommentRow>()
+
+        return (result.results ?? []).map((row) => ({
+          id: row.id,
+          content: row.content,
+          author: {
+            id: row.author_id,
+            username: row.author_username ?? 'Anonymous',
+            avatarUrl: row.author_avatar_url,
+          },
+          createdAt: row.created_at,
+        }))
       },
     },
   },

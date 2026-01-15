@@ -15,12 +15,37 @@ const CONFIG_QUERY = /* GraphQL */ `
       score
       likesCount
       createdAt
+      comments {
+        id
+        content
+        author {
+          id
+          username
+          avatarUrl
+        }
+        createdAt
+      }
     }
   }
 `
 
+export interface Comment {
+  id: string
+  content: string
+  author: {
+    id: string
+    username: string
+    avatarUrl: string | null
+  }
+  createdAt: string
+}
+
+export interface ConfigWithComments extends Config {
+  comments: Comment[]
+}
+
 export interface ConfigData {
-  config: Config | null
+  config: ConfigWithComments | null
 }
 
 export interface UseConfigOptions {
