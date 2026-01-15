@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react'
-import { useMutation } from 'urql'
+import { useState, useCallback, useEffect } from 'react'
+import { useMutation, useQuery } from 'urql'
 import { useAuth } from '../services/auth'
 
 const TOGGLE_LIKE_MUTATION = /* GraphQL */ `
@@ -8,6 +8,12 @@ const TOGGLE_LIKE_MUTATION = /* GraphQL */ `
       liked
       likesCount
     }
+  }
+`
+
+const CHECK_LIKE_QUERY = /* GraphQL */ `
+  query CheckLike($configId: ID!, $userId: ID!) {
+    hasLiked(configId: $configId, userId: $userId)
   }
 `
 
@@ -26,12 +32,29 @@ export function LikeButton({ configId, initialLikesCount, size = 'md' }: LikeBut
 
   const [likesCount, setLikesCount] = useState(initialLikesCount)
   const [liked, setLiked] = useState(false)
+  const [isPending, setIsPending] = useState(false)
   const [, toggleLike] = useMutation(TOGGLE_LIKE_MUTATION)
 
+  // Check if user has already liked this config
+  const [{ data: likeData }] = useQuery({
+    query: CHECK_LIKE_QUERY,
+    variables: { configId, userId: user?.id },
+    pause: !isSignedIn || !user?.id,
+  })
+
+  // Update liked state when query returns
+  useEffect(() => {
+    if (likeData?.hasLiked !== undefined) {
+      setLiked(likeData.hasLiked)
+    }
+  }, [likeData?.hasLiked])
+
   const handleClick = useCallback(async () => {
-    if (!isSignedIn || !user) {
+    if (!isSignedIn || !user || isPending) {
       return
     }
+
+    setIsPending(true)
 
     // Optimistic update
     setLiked(!liked)
@@ -52,7 +75,9 @@ export function LikeButton({ configId, initialLikesCount, size = 'md' }: LikeBut
       setLiked(result.data.toggleLike.liked)
       setLikesCount(result.data.toggleLike.likesCount)
     }
-  }, [isSignedIn, user, liked, likesCount, configId, toggleLike])
+
+    setIsPending(false)
+  }, [isSignedIn, user, liked, likesCount, configId, toggleLike, isPending])
 
   const sizeClasses = size === 'sm' ? 'px-2 py-1 text-xs' : 'px-3 py-1.5 text-sm'
 
@@ -68,12 +93,12 @@ export function LikeButton({ configId, initialLikesCount, size = 'md' }: LikeBut
   return (
     <button
       onClick={handleClick}
-      disabled={!isSignedIn}
+      disabled={!isSignedIn || isPending}
       className={`inline-flex items-center gap-1.5 ${sizeClasses} rounded-md transition-colors ${
         liked
           ? 'text-red-500 bg-red-50 dark:bg-red-900/20'
           : 'text-gray-500 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-800'
-      } ${!isSignedIn ? 'cursor-default opacity-75' : ''}`}
+      } ${!isSignedIn || isPending ? 'cursor-default opacity-75' : ''}`}
       title={isSignedIn ? (liked ? 'Unlike' : 'Like') : 'Sign in to like'}
     >
       <HeartIcon filled={liked} className={size === 'sm' ? 'w-4 h-4' : 'w-5 h-5'} />

@@ -166,6 +166,7 @@ export const schema = createSchema<GraphQLContext>({
       pendingComments(userId: ID!): [PendingComment!]!
       pendingReports(userId: ID!): [Report!]!
       isAdmin(userId: ID!): Boolean!
+      hasLiked(configId: ID!, userId: ID!): Boolean!
     }
 
     type Mutation {
@@ -464,6 +465,17 @@ export const schema = createSchema<GraphQLContext>({
         ctx: GraphQLContext
       ) => {
         return isUserAdmin(ctx.db, userId)
+      },
+      hasLiked: async (
+        _: unknown,
+        { configId, userId }: { configId: string; userId: string },
+        ctx: GraphQLContext
+      ) => {
+        const like = await ctx.db
+          .prepare('SELECT 1 FROM likes WHERE config_id = ? AND user_id = ?')
+          .bind(configId, userId)
+          .first()
+        return !!like
       },
       adminStats: async (
         _: unknown,
