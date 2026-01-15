@@ -12,6 +12,7 @@ import {
   NetworkIOMeter,
   PressureMeter,
   ZramMeter,
+  BlankMeter,
 } from './TextMeters'
 
 interface MeterRendererProps {
@@ -67,6 +68,9 @@ export function MeterRenderer({ meter }: MeterRendererProps) {
 
     case 'Zram':
       return <ZramMeter meter={meter} />
+
+    case 'Blank':
+      return <BlankMeter />
 
     default:
       // Generic fallback for unknown meters
@@ -135,4 +139,5 @@ export {
   NetworkIOMeter,
   PressureMeter,
   ZramMeter,
+  BlankMeter,
 } from './TextMeters'

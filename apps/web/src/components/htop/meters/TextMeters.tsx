@@ -305,3 +305,8 @@ export function ZramMeter({ meter }: TextMeterProps) {
     </div>
   )
 }
+
+export function BlankMeter() {
+  // Blank meter is just an empty space for visual separation
+  return <div className="h-4" />
+}
