@@ -21,6 +21,7 @@
     "deploy": "pnpm run -r deploy"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.2",
     "@typescript-eslint/eslint-plugin": "^8.22.0",
     "@typescript-eslint/parser": "^8.22.0",
     "@vitest/coverage-v8": "^4.0.17",
@@ -29,7 +30,7 @@
     "prettier": "^3.8.0",
     "typescript": "^5.7.0"
   },
-  "packageManager": "pnpm@9.15.0",
+  "packageManager": "pnpm@10.28.0",
   "engines": {
     "node": ">=24.0.0"
   }
