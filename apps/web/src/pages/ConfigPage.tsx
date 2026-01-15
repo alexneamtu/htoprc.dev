@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import { HtopPreview } from '../components/htop/HtopPreview'
 import { LikeButton } from '../components/LikeButton'
 import { Comments } from '../components/Comments'
@@ -31,7 +31,6 @@ const IS_ADMIN_QUERY = /* GraphQL */ `
 
 export function ConfigPage() {
   const { slug } = useParams<{ slug: string }>()
-  const navigate = useNavigate()
   const { data, fetching, error } = useConfig({ slug })
   const [, reportContent] = useMutation(REPORT_MUTATION)
   const [, deleteConfig] = useMutation(DELETE_CONFIG_MUTATION)
