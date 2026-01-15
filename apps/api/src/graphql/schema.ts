@@ -117,6 +117,7 @@ export const schema = createSchema<GraphQLContext>({
       adminStats: AdminStats!
       pendingConfigs: [Config!]!
       pendingComments: [PendingComment!]!
+      pendingReports: [Report!]!
     }
 
     type Mutation {
@@ -138,6 +139,15 @@ export const schema = createSchema<GraphQLContext>({
       totalComments: Int!
       pendingComments: Int!
       totalLikes: Int!
+      pendingReports: Int!
+    }
+
+    type Report {
+      id: ID!
+      contentType: String!
+      contentId: ID!
+      reason: String!
+      createdAt: String!
     }
 
     type PendingComment {
@@ -367,7 +377,7 @@ export const schema = createSchema<GraphQLContext>({
         }))
       },
       adminStats: async (_: unknown, _args: unknown, ctx: GraphQLContext) => {
-        const [totalConfigs, publishedConfigs, pendingConfigs, totalComments, pendingComments, totalLikes] =
+        const [totalConfigs, publishedConfigs, pendingConfigs, totalComments, pendingComments, totalLikes, pendingReports] =
           await Promise.all([
             ctx.db.prepare('SELECT COUNT(*) as count FROM configs').first<{ count: number }>(),
             ctx.db.prepare('SELECT COUNT(*) as count FROM configs WHERE status = ?').bind('published').first<{ count: number }>(),
@@ -375,6 +385,7 @@ export const schema = createSchema<GraphQLContext>({
             ctx.db.prepare('SELECT COUNT(*) as count FROM comments').first<{ count: number }>(),
             ctx.db.prepare('SELECT COUNT(*) as count FROM comments WHERE status = ?').bind('pending').first<{ count: number }>(),
             ctx.db.prepare('SELECT COUNT(*) as count FROM likes').first<{ count: number }>(),
+            ctx.db.prepare('SELECT COUNT(*) as count FROM reports WHERE status = ?').bind('pending').first<{ count: number }>(),
           ])
 
         return {
@@ -384,6 +395,7 @@ export const schema = createSchema<GraphQLContext>({
           totalComments: totalComments?.count ?? 0,
           pendingComments: pendingComments?.count ?? 0,
           totalLikes: totalLikes?.count ?? 0,
+          pendingReports: pendingReports?.count ?? 0,
         }
       },
       pendingConfigs: async (_: unknown, _args: unknown, ctx: GraphQLContext) => {
@@ -437,6 +449,31 @@ export const schema = createSchema<GraphQLContext>({
           configTitle: row.config_title ?? 'Unknown',
           authorId: row.author_id,
           authorUsername: row.author_username ?? 'Anonymous',
+          createdAt: row.created_at,
+        }))
+      },
+      pendingReports: async (_: unknown, _args: unknown, ctx: GraphQLContext) => {
+        const result = await ctx.db
+          .prepare(`
+            SELECT id, content_type, content_id, reason, created_at
+            FROM reports
+            WHERE status = ?
+            ORDER BY created_at DESC
+          `)
+          .bind('pending')
+          .all<{
+            id: string
+            content_type: string
+            content_id: string
+            reason: string
+            created_at: string
+          }>()
+
+        return (result.results ?? []).map((row) => ({
+          id: row.id,
+          contentType: row.content_type,
+          contentId: row.content_id,
+          reason: row.reason,
           createdAt: row.created_at,
         }))
       },
@@ -562,6 +599,19 @@ export const schema = createSchema<GraphQLContext>({
         { configId, userId }: { configId: string; userId: string },
         ctx: GraphQLContext
       ) => {
+        // Ensure user exists
+        const userExists = await ctx.db
+          .prepare('SELECT 1 FROM users WHERE id = ?')
+          .bind(userId)
+          .first()
+
+        if (!userExists) {
+          await ctx.db
+            .prepare('INSERT INTO users (id, username, is_trusted, is_admin) VALUES (?, ?, 0, 0)')
+            .bind(userId, 'User')
+            .run()
+        }
+
         // Check if already liked
         const existing = await ctx.db
           .prepare('SELECT 1 FROM likes WHERE user_id = ? AND config_id = ?')
@@ -619,7 +669,22 @@ export const schema = createSchema<GraphQLContext>({
         { configId, userId, content }: { configId: string; userId: string; content: string },
         ctx: GraphQLContext
       ) => {
-        // Check rate limit
+        // Check if user exists, create if not
+        let user = await ctx.db
+          .prepare('SELECT is_trusted, username, avatar_url FROM users WHERE id = ?')
+          .bind(userId)
+          .first<{ is_trusted: number; username: string; avatar_url: string | null }>()
+
+        if (!user) {
+          // Create user with basic info (will be updated from Clerk on next auth)
+          await ctx.db
+            .prepare('INSERT INTO users (id, username, is_trusted, is_admin) VALUES (?, ?, 0, 0)')
+            .bind(userId, 'User')
+            .run()
+          user = { is_trusted: 0, username: 'User', avatar_url: null }
+        }
+
+        // Check rate limit (now safe since user exists)
         const rateLimit = await checkRateLimit(ctx.db, userId, 'comment')
         if (!rateLimit.allowed) {
           throw new RateLimitError('comment', RATE_LIMITS.comment.max)
@@ -628,16 +693,9 @@ export const schema = createSchema<GraphQLContext>({
         const id = crypto.randomUUID()
         const createdAt = new Date().toISOString()
 
-        // Check if user is trusted (auto-publish) or needs moderation
-        const user = await ctx.db
-          .prepare('SELECT is_trusted, username, avatar_url FROM users WHERE id = ?')
-          .bind(userId)
-          .first<{ is_trusted: number; username: string; avatar_url: string | null }>()
-
-        // If user doesn't exist, create them with basic info
-        const username = user?.username ?? 'Anonymous'
-        const avatarUrl = user?.avatar_url ?? null
-        const status = user?.is_trusted ? 'published' : 'pending'
+        const username = user.username
+        const avatarUrl = user.avatar_url
+        const status = user.is_trusted ? 'published' : 'pending'
 
         await ctx.db
           .prepare(
