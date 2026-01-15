@@ -122,6 +122,14 @@ export function ConfigPage() {
         <p className="text-gray-500 dark:text-gray-400 mb-4">
           The config you're looking for doesn't exist or has been removed.
         </p>
+        {auth.isSignedIn && (
+          <p className="text-gray-500 dark:text-gray-400 mb-4">
+            If this is your first submission, it may be pending review.{' '}
+            <Link to="/admin" className="text-blue-500 hover:underline">
+              Check your configs
+            </Link>
+          </p>
+        )}
         <Link
           to="/"
           className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md text-white"
