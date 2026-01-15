@@ -18,6 +18,7 @@ app.use(
   cors({
     origin: [
       'http://localhost:5173',
+      'http://localhost:5174',
       'https://htoprc.dev',
       'https://staging.htoprc.dev',
       'https://htoprc.dev.alexneamtu.top',

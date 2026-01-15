@@ -65,4 +65,25 @@ export interface GitHubSearchItem {
 export interface ScraperContext {
   db: D1Database
   githubToken?: string
+  gitlabToken?: string
+}
+
+export interface GitLabSearchResult {
+  basename: string
+  data: string
+  path: string
+  filename: string
+  id: number | null
+  ref: string
+  startline: number
+  project_id: number
+}
+
+export interface GitLabProject {
+  id: number
+  path_with_namespace: string
+  web_url: string
+  namespace: {
+    path: string
+  }
 }
