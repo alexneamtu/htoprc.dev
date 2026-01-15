@@ -215,20 +215,20 @@ export function EditorPage() {
   }, [isEditing, editData?.config?.title, forkParam, forkData?.config?.title])
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-200px)]">
+    <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-200px)] overflow-hidden">
       <SEO
         title="Editor"
         description="Create and customize your htop configuration with a live preview. Edit htoprc settings visually and see real-time changes."
         url="/editor"
       />
       {/* Editor Panel */}
-      <div className="flex-1 flex flex-col">
-        <h2 className="text-xl font-bold mb-2">htoprc Editor</h2>
-        <div className="flex-1">
+      <div className="flex-1 flex flex-col min-h-0">
+        <h2 className="text-xl font-bold mb-2 shrink-0">htoprc Editor</h2>
+        <div className="flex-1 min-h-0 overflow-hidden">
           <HtoprcEditor value={content} onChange={setContent} />
         </div>
         {parsed.warnings.length > 0 && (
-          <div className="mt-2 p-2 bg-yellow-900/50 rounded text-yellow-300 text-sm">
+          <div className="mt-2 p-2 bg-yellow-900/50 rounded text-yellow-300 text-sm max-h-24 overflow-auto shrink-0">
             {parsed.warnings.map((w, i) => (
               <div key={i}>
                 Line {w.line}: {w.message}
@@ -239,17 +239,17 @@ export function EditorPage() {
       </div>
 
       {/* Preview Panel */}
-      <div className="flex-1 flex flex-col">
-        <div className="flex items-center justify-between mb-2">
+      <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex items-center justify-between mb-2 shrink-0">
           <h2 className="text-xl font-bold">Preview</h2>
           <span className="text-sm text-gray-500">
             Score: {parsed.score} | Version: {parsed.version}
           </span>
         </div>
-        <div className="flex-1 rounded-lg p-4 overflow-auto border border-gray-300 dark:border-gray-700 bg-black">
+        <div className="flex-1 min-h-0 rounded-lg p-4 overflow-auto border border-gray-300 dark:border-gray-700 bg-black">
           <HtopPreview config={parsed.config} />
         </div>
-        <div className="mt-4 space-y-3">
+        <div className="mt-4 space-y-3 shrink-0">
           <div className="flex gap-2 flex-wrap">
             <button
               onClick={openUploadModal}
