@@ -12,8 +12,8 @@ import { useAuth } from '../services/auth'
 const CLERK_ENABLED = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
 const REPORT_MUTATION = /* GraphQL */ `
-  mutation ReportContent($contentType: String!, $contentId: ID!, $reason: String!) {
-    reportContent(contentType: $contentType, contentId: $contentId, reason: $reason)
+  mutation ReportContent($contentType: String!, $contentId: ID!, $reason: String!, $userId: ID!) {
+    reportContent(contentType: $contentType, contentId: $contentId, reason: $reason, userId: $userId)
   }
 `
 
@@ -28,11 +28,12 @@ export function ConfigPage() {
   const auth = CLERK_ENABLED ? useAuth() : { user: null, isSignedIn: false }
 
   const handleReport = async () => {
-    if (!reportReason.trim() || !data?.config) return
+    if (!reportReason.trim() || !data?.config || !auth.user?.id) return
     await reportContent({
       contentType: 'config',
       contentId: data.config.id,
       reason: reportReason,
+      userId: auth.user.id,
     })
     setShowReportDialog(false)
     setReportReason('')
@@ -171,17 +172,19 @@ export function ConfigPage() {
         >
           Share
         </button>
-        {!reportSubmitted ? (
-          <button
-            onClick={() => setShowReportDialog(true)}
-            className="px-4 py-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-          >
-            Report
-          </button>
-        ) : (
-          <span className="px-4 py-2 text-green-600 dark:text-green-400">
-            Reported
-          </span>
+        {auth.isSignedIn && (
+          !reportSubmitted ? (
+            <button
+              onClick={() => setShowReportDialog(true)}
+              className="px-4 py-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+            >
+              Report
+            </button>
+          ) : (
+            <span className="px-4 py-2 text-green-600 dark:text-green-400">
+              Reported
+            </span>
+          )
         )}
       </div>
 

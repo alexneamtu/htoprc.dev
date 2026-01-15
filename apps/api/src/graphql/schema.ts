@@ -142,7 +142,7 @@ export const schema = createSchema<GraphQLContext>({
       rejectConfig(id: ID!, reason: String!): Config!
       approveComment(id: ID!): Comment!
       rejectComment(id: ID!, reason: String!): Boolean!
-      reportContent(contentType: String!, contentId: ID!, reason: String!): Boolean!
+      reportContent(contentType: String!, contentId: ID!, reason: String!, userId: ID!): Boolean!
       dismissReport(id: ID!): Boolean!
     }
 
@@ -1025,9 +1025,22 @@ export const schema = createSchema<GraphQLContext>({
       },
       reportContent: async (
         _: unknown,
-        { contentType, contentId, reason }: { contentType: string; contentId: string; reason: string },
+        { contentType, contentId, reason, userId }: { contentType: string; contentId: string; reason: string; userId: string },
         ctx: GraphQLContext
       ) => {
+        // Ensure user exists before inserting (reporter_id has FK to users)
+        const userExists = await ctx.db
+          .prepare('SELECT 1 FROM users WHERE id = ?')
+          .bind(userId)
+          .first()
+
+        if (!userExists) {
+          await ctx.db
+            .prepare('INSERT INTO users (id, username, is_trusted, is_admin) VALUES (?, ?, 0, 0)')
+            .bind(userId, 'User')
+            .run()
+        }
+
         const id = crypto.randomUUID()
 
         await ctx.db
@@ -1035,7 +1048,7 @@ export const schema = createSchema<GraphQLContext>({
             `INSERT INTO reports (id, content_type, content_id, reporter_id, reason, status)
              VALUES (?, ?, ?, ?, ?, 'pending')`
           )
-          .bind(id, contentType, contentId, 'anonymous', reason)
+          .bind(id, contentType, contentId, userId, reason)
           .run()
 
         // Flag the content for review
