@@ -5,7 +5,9 @@ import { createApp } from './index'
 function createMockDB() {
   const data = {
     configs: [] as unknown[],
+    anonRateLimits: new Map<string, number>(),
   }
+  const anonKey = (key: string, action: string, date: string) => `${key}:${action}:${date}`
 
   const mockPrepare = vi.fn((sql: string) => {
     return {
@@ -42,6 +44,10 @@ function createMockDB() {
           if (sql.includes('COUNT(*)')) {
             return { count: data.configs.length }
           }
+          if (sql.includes('FROM anon_rate_limits')) {
+            const key = anonKey(args[0] as string, args[1] as string, args[2] as string)
+            return { count: data.anonRateLimits.get(key) ?? 0 }
+          }
           if (sql.includes('SELECT') && sql.includes('FROM configs')) {
             const id = args[0] as string
             return (
@@ -55,6 +61,11 @@ function createMockDB() {
           return null
         }),
         run: vi.fn(async () => {
+          if (sql.includes('INSERT INTO anon_rate_limits')) {
+            const key = anonKey(args[0] as string, args[1] as string, args[2] as string)
+            data.anonRateLimits.set(key, (data.anonRateLimits.get(key) ?? 0) + 1)
+            return { success: true }
+          }
           if (sql.includes('INSERT INTO configs')) {
             // INSERT INTO configs (id, slug, title, content, content_hash, source_type, author_id, forked_from_id, score, htop_version, status, likes_count, created_at)
             const config = {
@@ -95,11 +106,12 @@ type GraphQLResponse<T> = { data: T; errors?: GraphQLErrorShape[] }
 
 const BASE_HEADERS = {
   'Content-Type': 'application/json',
+  'CF-Connecting-IP': '203.0.113.5',
 }
 
 let app: ReturnType<typeof createApp>
 let mockDB: ReturnType<typeof createMockDB>
-let testEnv: { DB: D1Database; CLERK_SECRET_KEY: string }
+let testEnv: { DB: D1Database; CLERK_SECRET_KEY: string; ANON_RATE_LIMIT_SALT: string }
 
 // Type helpers for test assertions
 type HealthResponse = { status: string; timestamp: string }
@@ -110,7 +122,7 @@ describe('API', () => {
       verifyAuth: async (token) => (token === 'valid-token' ? { userId: 'user_123' } : null),
     })
     mockDB = createMockDB()
-    testEnv = { DB: mockDB, CLERK_SECRET_KEY: 'test-secret' }
+    testEnv = { DB: mockDB, CLERK_SECRET_KEY: 'test-secret', ANON_RATE_LIMIT_SALT: 'test-salt' }
   })
 
   describe('GET /api/health', () => {
@@ -142,9 +154,7 @@ describe('API', () => {
         '/api/graphql',
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: BASE_HEADERS,
           body: JSON.stringify({
             query: '{ health { status timestamp } }',
           }),
@@ -164,9 +174,7 @@ describe('API', () => {
         '/api/graphql',
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: BASE_HEADERS,
           body: JSON.stringify({
             query: '{ configs { nodes { id } totalCount pageInfo { page } } }',
           }),
@@ -247,9 +255,7 @@ describe('API', () => {
         '/api/graphql',
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: BASE_HEADERS,
           body: JSON.stringify({
             query: `
               mutation {
@@ -290,14 +296,39 @@ describe('API', () => {
       expect(data.data.uploadConfig.status).toBe('pending')
     })
 
+    it('rate limits anonymous uploads by IP', async () => {
+      const upload = () =>
+        app.request(
+          '/api/graphql',
+          {
+            method: 'POST',
+            headers: BASE_HEADERS,
+            body: JSON.stringify({
+              query: `mutation {
+                uploadConfig(input: { title: "Anon", content: "htop_version=3.2.1" }) { id }
+              }`,
+            }),
+          },
+          testEnv
+        )
+
+      for (let i = 0; i < 5; i++) {
+        const res = await upload()
+        const data = (await res.json()) as GraphQLResponse<{ uploadConfig: { id: string } }>
+        expect(data.errors).toBeUndefined()
+      }
+
+      const blocked = await upload()
+      const blockedData = (await blocked.json()) as GraphQLResponse<{ uploadConfig: { id: string } }>
+      expect(blockedData.errors?.[0]?.extensions?.code).toBe('RATE_LIMIT_EXCEEDED')
+    })
+
     it('calculates score based on config content', async () => {
       const res = await app.request(
         '/api/graphql',
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: BASE_HEADERS,
           body: JSON.stringify({
             query: `
               mutation {
@@ -334,7 +365,7 @@ describe('API', () => {
         '/api/graphql',
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: BASE_HEADERS,
           body: JSON.stringify({
             query: `
               mutation {
@@ -359,7 +390,7 @@ describe('API', () => {
         '/api/graphql',
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: BASE_HEADERS,
           body: JSON.stringify({
             query: `query { config(id: "${uploadedId}") { id title slug } }`,
           }),
@@ -382,7 +413,7 @@ describe('API', () => {
         '/api/graphql',
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: BASE_HEADERS,
           body: JSON.stringify({
             query: `
               mutation {
@@ -407,7 +438,7 @@ describe('API', () => {
         '/api/graphql',
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: BASE_HEADERS,
           body: JSON.stringify({
             query: `query { config(slug: "${uploadedSlug}") { id title slug } }`,
           }),
@@ -430,9 +461,7 @@ describe('API', () => {
         '/api/graphql',
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: BASE_HEADERS,
           body: JSON.stringify({
             query: `
               mutation {
@@ -471,9 +500,7 @@ describe('API', () => {
         '/api/graphql',
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: BASE_HEADERS,
           body: JSON.stringify({
             query: '{ configs { nodes { id slug title } totalCount } }',
           }),

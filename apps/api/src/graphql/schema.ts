@@ -61,6 +61,7 @@ async function generateUniqueSlug(db: D1Database, title: string): Promise<string
 interface GraphQLContext {
   db: D1Database
   auth: AuthContext | null
+  anonKey: string | null
 }
 
 function requireAuthUser(ctx: GraphQLContext, userId: string): string {
@@ -145,6 +146,45 @@ async function checkRateLimit(
       DO UPDATE SET count = count + 1
     `)
     .bind(userId, actionType, today)
+    .run()
+
+  return { allowed: true, remaining: limit.max - currentCount - 1 }
+}
+
+async function checkAnonRateLimit(
+  db: D1Database,
+  anonKey: string | null,
+  actionType: keyof typeof RATE_LIMITS
+): Promise<{ allowed: boolean; remaining: number }> {
+  if (!anonKey) {
+    throw new GraphQLError('Unable to determine client IP for rate limiting', {
+      extensions: { code: 'BAD_REQUEST' },
+    })
+  }
+
+  const limit = RATE_LIMITS[actionType]
+  const today = new Date().toISOString().split('T')[0]
+
+  const result = await db
+    .prepare(
+      'SELECT count FROM anon_rate_limits WHERE anon_key = ? AND action_type = ? AND action_date = ?'
+    )
+    .bind(anonKey, actionType, today)
+    .first<{ count: number }>()
+
+  const currentCount = result?.count ?? 0
+  if (currentCount >= limit.max) {
+    return { allowed: false, remaining: 0 }
+  }
+
+  await db
+    .prepare(
+      `INSERT INTO anon_rate_limits (anon_key, action_type, action_date, count)
+       VALUES (?, ?, ?, 1)
+       ON CONFLICT (anon_key, action_type, action_date)
+       DO UPDATE SET count = count + 1`
+    )
+    .bind(anonKey, actionType, today)
     .run()
 
   return { allowed: true, remaining: limit.max - currentCount - 1 }
@@ -777,6 +817,13 @@ export const schema = createSchema<GraphQLContext>({
             if (!rateLimit.allowed) {
               throw new RateLimitError('upload', RATE_LIMITS.upload.max)
             }
+          }
+        }
+
+        if (!authedUserId) {
+          const rateLimit = await checkAnonRateLimit(ctx.db, ctx.anonKey, 'upload')
+          if (!rateLimit.allowed) {
+            throw new RateLimitError('upload', RATE_LIMITS.upload.max)
           }
         }
 

@@ -5,12 +5,19 @@ import { createYoga, maskError } from 'graphql-yoga'
 import { schema } from './graphql/schema'
 import { runScraper, runAllScrapers } from './services/scraper'
 import type { Platform } from './services/scraper'
-import { getAuthFromRequest, verifyClerkToken, type AuthVerifier, isUserAdmin } from './utils/auth'
+import {
+  getAnonKeyFromRequest,
+  getAuthFromRequest,
+  verifyClerkToken,
+  type AuthVerifier,
+  isUserAdmin,
+} from './utils/auth'
 
 type Bindings = {
   DB: D1Database
   GITHUB_TOKEN?: string
   CLERK_SECRET_KEY?: string
+  ANON_RATE_LIMIT_SALT?: string
 }
 
 type AppDependencies = {
@@ -125,7 +132,11 @@ ${urls
   // GraphQL endpoint
   app.on(['GET', 'POST'], '/api/graphql', async (c) => {
     const auth = await getAuthFromRequest(c.req.raw, c.env.CLERK_SECRET_KEY, verifyAuth)
-    const response = await yoga.handle(c.req.raw, { db: c.env.DB, auth })
+    const anonKey = await getAnonKeyFromRequest(
+      c.req.raw,
+      c.env.ANON_RATE_LIMIT_SALT ?? c.env.CLERK_SECRET_KEY
+    )
+    const response = await yoga.handle(c.req.raw, { db: c.env.DB, auth, anonKey })
     return response
   })
 

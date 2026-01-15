@@ -35,6 +35,31 @@ export async function getAuthFromRequest(
   return verifyAuth(token, secretKey)
 }
 
+function getClientIp(request: Request): string | null {
+  const cfIp = request.headers.get('cf-connecting-ip')
+  if (cfIp) return cfIp
+  const forwarded = request.headers.get('x-forwarded-for')
+  if (!forwarded) return null
+  return forwarded.split(',')[0]?.trim() || null
+}
+
+async function sha256Hex(value: string): Promise<string> {
+  const data = new TextEncoder().encode(value)
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+  return Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
+}
+
+export async function getAnonKeyFromRequest(
+  request: Request,
+  salt?: string
+): Promise<string | null> {
+  const ip = getClientIp(request)
+  if (!ip || !salt) return null
+  return sha256Hex(`${salt}:${ip}`)
+}
+
 /**
  * Check if a user has admin privileges
  */
