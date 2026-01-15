@@ -147,19 +147,33 @@ jobs:
           version="${{ steps.next_version.outputs.version }}"
           date=$(date +%Y-%m-%d)
 
-          # Create new changelog entry
-          entry="## [$version](https://github.com/${{ github.repository }}/releases/tag/$version) ($date)\n\n$(cat /tmp/changelog.md)"
+          # Create new changelog entry in a temp file
+          {
+            echo "## [$version](https://github.com/${{ github.repository }}/releases/tag/$version) ($date)"
+            echo ""
+            cat /tmp/changelog.md
+          } > /tmp/new_entry.md
 
           # Create or update CHANGELOG.md
           if [ -f CHANGELOG.md ]; then
-            # Insert after the header
-            if grep -q "^# Changelog" CHANGELOG.md; then
-              sed -i "s/^# Changelog$/# Changelog\n\n$entry/" CHANGELOG.md
-            else
-              echo -e "# Changelog\n\n$entry\n\n$(cat CHANGELOG.md)" > CHANGELOG.md
-            fi
+            # Prepend new entry after the header
+            {
+              echo "# Changelog"
+              echo ""
+              cat /tmp/new_entry.md
+              echo ""
+              # Skip the first line (# Changelog) from existing file
+              tail -n +2 CHANGELOG.md
+            } > /tmp/changelog_new.md
+            mv /tmp/changelog_new.md CHANGELOG.md
           else
-            echo -e "# Changelog\n\nAll notable changes to this project will be documented in this file.\n\n$entry" > CHANGELOG.md
+            {
+              echo "# Changelog"
+              echo ""
+              echo "All notable changes to this project will be documented in this file."
+              echo ""
+              cat /tmp/new_entry.md
+            } > CHANGELOG.md
           fi
 
       - name: Commit CHANGELOG.md
