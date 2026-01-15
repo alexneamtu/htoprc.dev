@@ -577,8 +577,21 @@ export const schema = createSchema<GraphQLContext>({
         { input }: { input: { title: string; content: string; userId?: string; forkedFromId?: string } },
         ctx: GraphQLContext
       ) => {
-        // Check rate limit if user is authenticated
+        // Ensure user exists before rate limiting (rate_limits has FK to users)
         if (input.userId) {
+          const userExists = await ctx.db
+            .prepare('SELECT 1 FROM users WHERE id = ?')
+            .bind(input.userId)
+            .first()
+
+          if (!userExists) {
+            await ctx.db
+              .prepare('INSERT INTO users (id, username, is_trusted, is_admin) VALUES (?, ?, 0, 0)')
+              .bind(input.userId, 'User')
+              .run()
+          }
+
+          // Check rate limit
           const rateLimit = await checkRateLimit(ctx.db, input.userId, 'upload')
           if (!rateLimit.allowed) {
             throw new RateLimitError('upload', RATE_LIMITS.upload.max)
