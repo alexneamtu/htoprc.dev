@@ -28,6 +28,12 @@ const MY_CONFIGS_QUERY = /* GraphQL */ `
   }
 `
 
+const DELETE_CONFIG_MUTATION = /* GraphQL */ `
+  mutation DeleteConfig($id: ID!, $userId: ID!) {
+    deleteConfig(id: $id, userId: $userId)
+  }
+`
+
 const ADMIN_STATS_QUERY = /* GraphQL */ `
   query AdminStats($userId: ID!) {
     adminStats(userId: $userId) {
@@ -175,11 +181,21 @@ export function AdminPage() {
   const isAdmin = adminData?.isAdmin ?? false
 
   // User's own configs (always shown)
-  const [myConfigsResult] = useQuery<{ myConfigs: PendingConfig[] }>({
+  const [myConfigsResult, refetchMyConfigs] = useQuery<{ myConfigs: PendingConfig[] }>({
     query: MY_CONFIGS_QUERY,
     variables: { userId },
     pause: !userId || activeTab !== 'myconfigs',
   })
+
+  const [, deleteConfig] = useMutation(DELETE_CONFIG_MUTATION)
+
+  const handleDeleteConfig = async (configId: string) => {
+    if (!confirm('Are you sure you want to delete this config?')) return
+    const result = await deleteConfig({ id: configId, userId })
+    if (!result.error) {
+      refetchMyConfigs({ requestPolicy: 'network-only' })
+    }
+  }
 
   // Admin-only queries
   const [statsResult] = useQuery<{ adminStats: AdminStats | null }>({
@@ -351,6 +367,12 @@ export function AdminPage() {
                     >
                       Edit
                     </a>
+                    <button
+                      onClick={() => handleDeleteConfig(config.id)}
+                      className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm"
+                    >
+                      Delete
+                    </button>
                   </div>
                 </div>
                 <div className="rounded-lg overflow-hidden bg-black p-2">
