@@ -1,0 +1,95 @@
+name: Lighthouse CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/web/**'
+      - 'packages/**'
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build parser
+        run: pnpm --filter @htoprc/parser build
+
+      - name: Build web
+        run: pnpm --filter @htoprc/web build
+        env:
+          VITE_API_URL: https://api.htoprc.staging.alexneamtu.top
+          VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.VITE_CLERK_PUBLISHABLE_KEY_DEV }}
+
+      - name: Run Lighthouse
+        id: lighthouse
+        uses: treosh/lighthouse-ci-action@v12
+        with:
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+          configPath: ./lighthouserc.json
+
+      - name: Format results
+        id: format
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const results = ${{ steps.lighthouse.outputs.manifest }};
+            const links = ${{ steps.lighthouse.outputs.links }};
+
+            if (!results || results.length === 0) {
+              core.setOutput('comment', 'No Lighthouse results available');
+              return;
+            }
+
+            const result = results[0];
+            const summary = result.summary;
+
+            const score = (val) => Math.round(val * 100);
+            const emoji = (val) => val >= 0.9 ? '🟢' : val >= 0.5 ? '🟡' : '🔴';
+
+            const comment = `## Lighthouse Report
+
+            | Category | Score |
+            |----------|-------|
+            | ${emoji(summary.performance)} Performance | ${score(summary.performance)} |
+            | ${emoji(summary.accessibility)} Accessibility | ${score(summary.accessibility)} |
+            | ${emoji(summary['best-practices'])} Best Practices | ${score(summary['best-practices'])} |
+            | ${emoji(summary.seo)} SEO | ${score(summary.seo)} |
+
+            [View full report](${Object.values(links)[0]})
+            `;
+
+            core.setOutput('comment', comment);
+
+      - name: Find existing comment
+        uses: peter-evans/find-comment@v3
+        id: find-comment
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: Lighthouse Report
+
+      - name: Create or update comment
+        uses: peter-evans/create-or-update-comment@v5
+        with:
+          comment-id: ${{ steps.find-comment.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
+          edit-mode: replace
+          body: ${{ steps.format.outputs.comment }}

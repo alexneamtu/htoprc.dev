@@ -4,12 +4,13 @@ on:
   workflow_run:
     workflows: ["Deploy"]
     types: [completed]
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   release:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # Run if: Deploy succeeded OR manually triggered
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
     permissions:
       contents: write
 
@@ -35,11 +36,56 @@ jobs:
           # Split into parts
           IFS='.' read -r major minor patch <<< "$version"
 
-          # Increment patch version
-          patch=$((patch + 1))
+          # Get commit messages since last tag
+          if [ "$current" = "v0.0.0" ]; then
+            commits=$(git log --format="%s" --no-merges -20)
+          else
+            commits=$(git log --format="%s" --no-merges "${current}..HEAD")
+          fi
+
+          # Determine version bump based on conventional commits
+          bump="patch"
+          while IFS= read -r msg; do
+            # Check for breaking changes (major bump)
+            if echo "$msg" | grep -qE "^[a-z]+(\(.+\))?!:|BREAKING CHANGE"; then
+              bump="major"
+              break
+            fi
+            # Check for features (minor bump)
+            if echo "$msg" | grep -qE "^feat(\(.+\))?:"; then
+              bump="minor"
+            fi
+          done <<< "$commits"
+
+          echo "Detected bump type: $bump"
+
+          # Apply version bump
+          case $bump in
+            major)
+              major=$((major + 1))
+              minor=0
+              patch=0
+              ;;
+            minor)
+              minor=$((minor + 1))
+              patch=0
+              ;;
+            patch)
+              patch=$((patch + 1))
+              ;;
+          esac
 
           next="v${major}.${minor}.${patch}"
+
+          # Ensure tag doesn't already exist (concurrent releases)
+          while git rev-parse "$next" >/dev/null 2>&1; do
+            echo "Tag $next already exists, incrementing patch..."
+            patch=$((patch + 1))
+            next="v${major}.${minor}.${patch}"
+          done
+
           echo "version=$next" >> $GITHUB_OUTPUT
+          echo "bump=$bump" >> $GITHUB_OUTPUT
 
       - name: Generate changelog
         id: changelog
@@ -48,26 +94,85 @@ jobs:
 
           # Get commits since last tag
           if [ "$latest_tag" = "v0.0.0" ]; then
-            commits=$(git log --oneline --no-merges -20)
+            commits=$(git log --format="%s" --no-merges -20)
           else
-            commits=$(git log --oneline --no-merges "${latest_tag}..HEAD")
+            commits=$(git log --format="%s" --no-merges "${latest_tag}..HEAD")
           fi
 
-          # Format as markdown list
-          changelog=""
-          while IFS= read -r line; do
-            if [ -n "$line" ]; then
-              # Extract commit message (remove hash)
-              msg="${line#* }"
-              changelog="${changelog}- ${msg}\n"
+          # Check if there are any commits
+          if [ -z "$commits" ]; then
+            echo "No new commits since $latest_tag"
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "skip=false" >> $GITHUB_OUTPUT
+
+          # Group commits by type
+          features=""
+          fixes=""
+          other=""
+
+          while IFS= read -r msg; do
+            if [ -n "$msg" ]; then
+              if echo "$msg" | grep -qE "^feat(\(.+\))?:"; then
+                features="${features}- ${msg}\n"
+              elif echo "$msg" | grep -qE "^fix(\(.+\))?:"; then
+                fixes="${fixes}- ${msg}\n"
+              else
+                other="${other}- ${msg}\n"
+              fi
             fi
           done <<< "$commits"
+
+          # Build changelog
+          changelog=""
+          if [ -n "$features" ]; then
+            changelog="${changelog}### Features\n${features}\n"
+          fi
+          if [ -n "$fixes" ]; then
+            changelog="${changelog}### Bug Fixes\n${fixes}\n"
+          fi
+          if [ -n "$other" ]; then
+            changelog="${changelog}### Other Changes\n${other}\n"
+          fi
 
           # Write to file for multiline output
           echo -e "$changelog" > /tmp/changelog.md
           echo "file=/tmp/changelog.md" >> $GITHUB_OUTPUT
 
+      - name: Update CHANGELOG.md
+        if: steps.changelog.outputs.skip != 'true'
+        run: |
+          version="${{ steps.next_version.outputs.version }}"
+          date=$(date +%Y-%m-%d)
+
+          # Create new changelog entry
+          entry="## [$version](https://github.com/${{ github.repository }}/releases/tag/$version) ($date)\n\n$(cat /tmp/changelog.md)"
+
+          # Create or update CHANGELOG.md
+          if [ -f CHANGELOG.md ]; then
+            # Insert after the header
+            if grep -q "^# Changelog" CHANGELOG.md; then
+              sed -i "s/^# Changelog$/# Changelog\n\n$entry/" CHANGELOG.md
+            else
+              echo -e "# Changelog\n\n$entry\n\n$(cat CHANGELOG.md)" > CHANGELOG.md
+            fi
+          else
+            echo -e "# Changelog\n\nAll notable changes to this project will be documented in this file.\n\n$entry" > CHANGELOG.md
+          fi
+
+      - name: Commit CHANGELOG.md
+        if: steps.changelog.outputs.skip != 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md
+          git diff --staged --quiet || git commit -m "docs: update CHANGELOG.md for ${{ steps.next_version.outputs.version }}"
+          git push
+
       - name: Create Release
+        if: steps.changelog.outputs.skip != 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.next_version.outputs.version }}
@@ -78,10 +183,22 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Release Summary
+        if: steps.changelog.outputs.skip != 'true'
         run: |
           echo "## Release Created" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Version:** ${{ steps.next_version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "| Setting | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Version | ${{ steps.next_version.outputs.version }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Bump Type | ${{ steps.next_version.outputs.bump }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Previous | ${{ steps.latest_tag.outputs.tag }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Changes:**" >> $GITHUB_STEP_SUMMARY
+          echo "### Changelog" >> $GITHUB_STEP_SUMMARY
           cat /tmp/changelog.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Skip Summary
+        if: steps.changelog.outputs.skip == 'true'
+        run: |
+          echo "## Release Skipped" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "No new commits since ${{ steps.latest_tag.outputs.tag }}" >> $GITHUB_STEP_SUMMARY

@@ -1,4 +1,5 @@
 import type { Meter } from '@htoprc/parser'
+import { secureRandom } from '../../../utils/random'
 
 interface CpuMeterProps {
   meter: Meter
@@ -8,12 +9,12 @@ interface CpuMeterProps {
 // Mock CPU data per core with frequency and temp
 function getMockCpuData(cpuCount: number) {
   return Array.from({ length: cpuCount }, () => ({
-    user: Math.random() * 30 + 5,
-    system: Math.random() * 15 + 2,
-    nice: Math.random() * 5,
-    iowait: Math.random() * 3,
-    frequency: 3400 + Math.floor(Math.random() * 400),
-    temp: 40 + Math.floor(Math.random() * 30),
+    user: secureRandom() * 30 + 5,
+    system: secureRandom() * 15 + 2,
+    nice: secureRandom() * 5,
+    iowait: secureRandom() * 3,
+    frequency: 3400 + Math.floor(secureRandom() * 400),
+    temp: 40 + Math.floor(secureRandom() * 30),
   }))
 }
 
@@ -88,7 +89,7 @@ export function CpuMeter({ meter, cpuCount = 4 }: CpuMeterProps) {
 
   if (meter.mode === 'graph') {
     // ASCII-style mini graph like real htop
-    const graphHistory = Array.from({ length: 20 }, () => Math.random() * 60 + 10)
+    const graphHistory = Array.from({ length: 20 }, () => secureRandom() * 60 + 10)
     const bars = '▁▂▃▄▅▆▇█'
 
     return (

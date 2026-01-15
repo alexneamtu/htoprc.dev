@@ -5,36 +5,62 @@ on:
     workflows: ["CI"]
     branches: [main]
     types: [completed]
+  release:
+    types: [published]
   workflow_dispatch:
     inputs:
       environment:
         description: 'Deployment environment'
         required: true
-        default: 'production'
+        default: 'staging'
         type: choice
         options:
           - staging
           - production
 
-env:
-  DEPLOY_ENV: ${{ github.event.inputs.environment || 'production' }}
-
 jobs:
-  deploy-web:
+  determine-environment:
     runs-on: ubuntu-latest
-    # Only deploy if CI succeeded, or if manually triggered
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    outputs:
+      environment: ${{ steps.set-env.outputs.environment }}
+      should_deploy: ${{ steps.set-env.outputs.should_deploy }}
+    steps:
+      - name: Determine environment
+        id: set-env
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "environment=production" >> $GITHUB_OUTPUT
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "environment=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "workflow_run" ]; then
+            if [ "${{ github.event.workflow_run.conclusion }}" = "success" ]; then
+              echo "environment=staging" >> $GITHUB_OUTPUT
+              echo "should_deploy=true" >> $GITHUB_OUTPUT
+            else
+              echo "environment=staging" >> $GITHUB_OUTPUT
+              echo "should_deploy=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+  deploy-web:
+    needs: determine-environment
+    if: needs.determine-environment.outputs.should_deploy == 'true'
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       deployments: write
       actions: read
     environment:
-      name: ${{ github.event.inputs.environment || 'production' }}
+      name: ${{ needs.determine-environment.outputs.environment }}
       url: ${{ steps.deploy.outputs.deployment-url }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.sha }}
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -57,25 +83,15 @@ jobs:
           name: parser-dist
           path: packages/htoprc-parser/dist
 
-      - name: Download web build from CI
-        if: github.event_name == 'workflow_run' && env.DEPLOY_ENV == 'production'
-        uses: dawidd6/action-download-artifact@v12
-        with:
-          workflow: ci.yml
-          run_id: ${{ github.event.workflow_run.id }}
-          name: web-dist
-          path: apps/web/dist
-
-      - name: Build parser (manual trigger only)
-        if: github.event_name == 'workflow_dispatch'
+      - name: Build parser
+        if: github.event_name != 'workflow_run'
         run: pnpm --filter @htoprc/parser build
 
-      - name: Build web (manual trigger or staging)
-        if: github.event_name == 'workflow_dispatch' || env.DEPLOY_ENV == 'staging'
+      - name: Build web
         run: pnpm --filter @htoprc/web build
         env:
-          VITE_API_URL: ${{ env.DEPLOY_ENV == 'production' && 'https://api.htoprc.dev.alexneamtu.top' || 'https://api.htoprc.staging.alexneamtu.top' }}
-          VITE_CLERK_PUBLISHABLE_KEY: ${{ env.DEPLOY_ENV == 'production' && secrets.VITE_CLERK_PUBLISHABLE_KEY_PROD || secrets.VITE_CLERK_PUBLISHABLE_KEY_DEV }}
+          VITE_API_URL: ${{ needs.determine-environment.outputs.environment == 'production' && 'https://api.htoprc.dev.alexneamtu.top' || 'https://api.htoprc.staging.alexneamtu.top' }}
+          VITE_CLERK_PUBLISHABLE_KEY: ${{ needs.determine-environment.outputs.environment == 'production' && secrets.VITE_CLERK_PUBLISHABLE_KEY_PROD || secrets.VITE_CLERK_PUBLISHABLE_KEY_DEV }}
 
       - name: Deploy Web to Cloudflare Pages
         id: deploy
@@ -84,7 +100,7 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: ./apps/web
-          command: pages deploy dist --project-name=htoprc-${{ env.DEPLOY_ENV }}
+          command: pages deploy dist --project-name=htoprc-${{ needs.determine-environment.outputs.environment }}
           packageManager: pnpm
 
       - name: Deployment Summary
@@ -93,29 +109,32 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Setting | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|---------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Environment | ${{ env.DEPLOY_ENV }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Project | htoprc-${{ env.DEPLOY_ENV }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Environment | ${{ needs.determine-environment.outputs.environment }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Project | htoprc-${{ needs.determine-environment.outputs.environment }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Trigger | ${{ github.event_name }} |" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ env.DEPLOY_ENV }}" = "production" ]; then
+          if [ "${{ needs.determine-environment.outputs.environment }}" = "production" ]; then
             echo "| Custom Domain | htoprc.dev |" >> $GITHUB_STEP_SUMMARY
+            echo "| Release | ${{ github.event.release.tag_name }} |" >> $GITHUB_STEP_SUMMARY
           else
             echo "| Custom Domain | htoprc.staging.alexneamtu.top |" >> $GITHUB_STEP_SUMMARY
           fi
 
   deploy-api:
+    needs: determine-environment
+    if: needs.determine-environment.outputs.should_deploy == 'true'
     runs-on: ubuntu-latest
-    # Only deploy if CI succeeded, or if manually triggered
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
     permissions:
       contents: read
       deployments: write
       actions: read
     environment:
-      name: ${{ github.event.inputs.environment || 'production' }}
+      name: ${{ needs.determine-environment.outputs.environment }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.sha }}
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -138,9 +157,27 @@ jobs:
           name: parser-dist
           path: packages/htoprc-parser/dist
 
-      - name: Build parser (manual trigger only)
-        if: github.event_name == 'workflow_dispatch'
+      - name: Build parser
+        if: github.event_name != 'workflow_run'
         run: pnpm --filter @htoprc/parser build
+
+      - name: Backup D1 Database (Production)
+        if: needs.determine-environment.outputs.environment == 'production'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: ./apps/api
+          command: d1 export DB --env production --remote --output=backup-${{ github.run_id }}.sql
+          packageManager: pnpm
+
+      - name: Upload D1 Backup
+        if: needs.determine-environment.outputs.environment == 'production'
+        uses: actions/upload-artifact@v6
+        with:
+          name: d1-backup-${{ github.run_id }}
+          path: apps/api/backup-${{ github.run_id }}.sql
+          retention-days: 30
 
       - name: Run D1 Migrations
         uses: cloudflare/wrangler-action@v3
@@ -148,7 +185,7 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: ./apps/api
-          command: d1 migrations apply DB --env ${{ env.DEPLOY_ENV }} --remote
+          command: d1 migrations apply DB --env ${{ needs.determine-environment.outputs.environment }} --remote
           packageManager: pnpm
 
       - name: Deploy API to Cloudflare Workers
@@ -157,7 +194,7 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: ./apps/api
-          command: deploy --env ${{ env.DEPLOY_ENV }}
+          command: deploy --env ${{ needs.determine-environment.outputs.environment }}
           packageManager: pnpm
 
       - name: API Deployment Summary
@@ -166,20 +203,23 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Setting | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|---------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Environment | ${{ env.DEPLOY_ENV }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Environment | ${{ needs.determine-environment.outputs.environment }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Migrations | Applied |" >> $GITHUB_STEP_SUMMARY
           echo "| Trigger | ${{ github.event_name }} |" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ env.DEPLOY_ENV }}" = "production" ]; then
+          if [ "${{ needs.determine-environment.outputs.environment }}" = "production" ]; then
+            echo "| DB Backup | d1-backup-${{ github.run_id }} (30 days retention) |" >> $GITHUB_STEP_SUMMARY
             echo "| Worker | htoprc-api-production |" >> $GITHUB_STEP_SUMMARY
             echo "| Custom Domain | api.htoprc.dev.alexneamtu.top |" >> $GITHUB_STEP_SUMMARY
+            echo "| Release | ${{ github.event.release.tag_name }} |" >> $GITHUB_STEP_SUMMARY
           else
             echo "| Worker | htoprc-api-staging |" >> $GITHUB_STEP_SUMMARY
             echo "| Custom Domain | api.htoprc.staging.alexneamtu.top |" >> $GITHUB_STEP_SUMMARY
           fi
 
   notify-failure:
+    needs: determine-environment
+    if: needs.determine-environment.outputs.should_deploy == 'false'
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
     steps:
       - name: CI Failed - Skip Deploy
         run: |

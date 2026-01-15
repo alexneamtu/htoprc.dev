@@ -2,6 +2,7 @@ import { createSchema } from 'graphql-yoga'
 import { GraphQLError } from 'graphql'
 import { parseHtoprc } from '@htoprc/parser'
 import { isUserAdmin, type AuthContext } from '../utils/auth'
+import { secureRandomString } from '../utils/random'
 import {
   validateTitle,
   validateContent,
@@ -53,7 +54,7 @@ async function generateUniqueSlug(db: D1Database, title: string): Promise<string
   }
 
   // Add a small random suffix to prevent race condition collisions
-  const randomSuffix = Math.random().toString(36).substring(2, 5)
+  const randomSuffix = secureRandomString(3)
   return `${baseSlug}-${counter}-${randomSuffix}`
 }
 
