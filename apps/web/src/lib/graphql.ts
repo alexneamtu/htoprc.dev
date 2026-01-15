@@ -1,4 +1,4 @@
-import { createClient, cacheExchange, fetchExchange } from 'urql'
+import { createClient, cacheExchange, fetchExchange, type Client } from 'urql'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787'
 
@@ -11,15 +11,15 @@ export function buildAuthHeaders(token: string | null | undefined) {
 
 export type GetToken = () => Promise<string | null>
 
-export function createGraphqlClient(getToken?: GetToken) {
+export function createGraphqlClient(getToken?: GetToken): Client {
   return createClient({
     url: `${API_URL}/api/graphql`,
     exchanges: [cacheExchange, fetchExchange],
     preferGetMethod: false,
-    fetchOptions: async () => {
+    fetchOptions: (async () => {
       const token = getToken ? await getToken() : null
       return { headers: buildAuthHeaders(token) }
-    },
+    }) as () => RequestInit,
   })
 }
 
