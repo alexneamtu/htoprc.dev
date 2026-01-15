@@ -58,6 +58,9 @@ export function Layout({ children }: LayoutProps) {
                 <Link to="/upload" className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">
                   Upload
                 </Link>
+                <Link to="/admin" className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">
+                  Dashboard
+                </Link>
               </SignedIn>
             )}
             <ThemeToggle />

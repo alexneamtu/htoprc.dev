@@ -30,9 +30,10 @@ const UPDATE_CONFIG_MUTATION = /* GraphQL */ `
 `
 
 const GET_CONFIG_QUERY = /* GraphQL */ `
-  query GetConfig($slug: String) {
-    config(slug: $slug) {
+  query GetConfig($id: ID, $slug: String) {
+    config(id: $id, slug: $slug) {
       id
+      slug
       title
       authorId
     }
@@ -96,26 +97,29 @@ export function EditorPage() {
   // Get auth if Clerk is enabled
   const auth = CLERK_ENABLED ? useAuth() : { user: null, isSignedIn: false }
 
-  // Fork and edit params
-  const forkSlug = searchParams.get('fork')
-  const editSlug = searchParams.get('edit')
+  // Fork and edit params (can be ID or slug)
+  const forkParam = searchParams.get('fork')
+  const editParam = searchParams.get('edit')
 
-  // Query for config info when forking or editing
+  // Helper to detect if a value is a UUID
+  const isUUID = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
+
+  // Query for config info when forking or editing (accepts ID or slug)
   const [{ data: forkData }] = useQuery({
     query: GET_CONFIG_QUERY,
-    variables: { slug: forkSlug },
-    pause: !forkSlug,
+    variables: forkParam ? (isUUID(forkParam) ? { id: forkParam } : { slug: forkParam }) : {},
+    pause: !forkParam,
   })
   const [{ data: editData }] = useQuery({
     query: GET_CONFIG_QUERY,
-    variables: { slug: editSlug },
-    pause: !editSlug,
+    variables: editParam ? (isUUID(editParam) ? { id: editParam } : { slug: editParam }) : {},
+    pause: !editParam,
   })
 
   const [, uploadConfig] = useMutation(UPLOAD_CONFIG_MUTATION)
   const [, updateConfig] = useMutation(UPDATE_CONFIG_MUTATION)
 
-  const isEditing = !!editSlug && !!editData?.config
+  const isEditing = !!editParam && !!editData?.config
   const canEdit = isEditing && auth.user?.id === editData?.config?.authorId
 
   // Load content from URL parameter if present
@@ -125,11 +129,11 @@ export function EditorPage() {
       setContent(urlContent)
       // Keep fork/edit params, clear content param
       const newParams = new URLSearchParams()
-      if (forkSlug) newParams.set('fork', forkSlug)
-      if (editSlug) newParams.set('edit', editSlug)
+      if (forkParam) newParams.set('fork', forkParam)
+      if (editParam) newParams.set('edit', editParam)
       setSearchParams(newParams, { replace: true })
     }
-  }, [searchParams, setContent, setSearchParams, forkSlug, editSlug])
+  }, [searchParams, setContent, setSearchParams, forkParam, editParam])
 
   // Debounce parsing for performance
   useEffect(() => {
@@ -201,14 +205,14 @@ export function EditorPage() {
     // Pre-fill title for editing or forking
     if (isEditing && editData?.config?.title) {
       setUploadTitle(editData.config.title)
-    } else if (forkSlug && forkData?.config?.title) {
+    } else if (forkParam && forkData?.config?.title) {
       setUploadTitle(`Fork of ${forkData.config.title}`)
     } else {
       setUploadTitle('')
     }
     setUploadError(null)
     setShowUploadModal(true)
-  }, [isEditing, editData?.config?.title, forkSlug, forkData?.config?.title])
+  }, [isEditing, editData?.config?.title, forkParam, forkData?.config?.title])
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-200px)]">
@@ -251,7 +255,7 @@ export function EditorPage() {
               onClick={openUploadModal}
               className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm text-white"
             >
-              {isEditing && canEdit ? 'Save Changes' : forkSlug ? 'Save Fork' : 'Upload to Gallery'}
+              {isEditing && canEdit ? 'Save Changes' : forkParam ? 'Save Fork' : 'Upload to Gallery'}
             </button>
             <button
               onClick={() => navigator.clipboard.writeText(content)}
@@ -302,11 +306,11 @@ export function EditorPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full">
             <h3 className="text-lg font-semibold mb-4">
-              {isEditing && canEdit ? 'Save Changes' : forkSlug ? 'Save Fork to Gallery' : 'Upload to Gallery'}
+              {isEditing && canEdit ? 'Save Changes' : forkParam ? 'Save Fork to Gallery' : 'Upload to Gallery'}
             </h3>
-            {forkSlug && !isEditing && (
+            {forkParam && !isEditing && (
               <p className="text-sm text-purple-500 mb-4">
-                Forking from: {forkData?.config?.title || forkSlug}
+                Forking from: {forkData?.config?.title || forkParam}
               </p>
             )}
             <input
