@@ -1,4 +1,5 @@
 import { createSchema } from 'graphql-yoga'
+import { GraphQLError } from 'graphql'
 import { parseHtoprc } from '@htoprc/parser'
 
 // SHA-256 hash using Web Crypto API (compatible with Cloudflare Workers)
@@ -124,10 +125,11 @@ async function checkRateLimit(
   return { allowed: true, remaining: limit.max - currentCount - 1 }
 }
 
-class RateLimitError extends Error {
+class RateLimitError extends GraphQLError {
   constructor(actionType: string, max: number) {
-    super(`Rate limit exceeded: You can only perform ${max} ${actionType}(s) per day`)
-    this.name = 'RateLimitError'
+    super(`Rate limit exceeded: You can only perform ${max} ${actionType}(s) per day`, {
+      extensions: { code: 'RATE_LIMIT_EXCEEDED' }
+    })
   }
 }
 
