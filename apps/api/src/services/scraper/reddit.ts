@@ -175,14 +175,16 @@ export async function scrapeReddit(ctx: ScraperContext): Promise<ScraperResult> 
 
           const slug = generateSlug(`reddit-${subreddit}`, postData.id)
 
+          const id = crypto.randomUUID()
           await ctx.db
             .prepare(
               `INSERT INTO configs (
-                slug, title, content, content_hash, source_type, source_url,
+                id, slug, title, content, content_hash, source_type, source_url,
                 source_platform, status, score
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
             )
             .bind(
+              id,
               slug,
               scrapedConfig.title || slug,
               scrapedConfig.content,
