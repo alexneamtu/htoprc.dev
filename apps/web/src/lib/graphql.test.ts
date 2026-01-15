@@ -16,16 +16,16 @@ describe('buildAuthHeaders', () => {
     })
   })
 
-  it('createGraphqlClient includes Authorization when getToken returns a token', async () => {
+  it('createGraphqlClient sets up client with correct base fetchOptions', () => {
     const client = createGraphqlClient(async () => 'token-abc')
     const request = createRequest(gql`query { __typename }`, {})
     const operation = client.createRequestOperation('query', request, {})
     const fetchOptions = operation.context.fetchOptions
-    const options = typeof fetchOptions === 'function' ? await fetchOptions() : fetchOptions
+    const options = typeof fetchOptions === 'function' ? fetchOptions() : fetchOptions
+    // Auth is handled by authExchange, fetchOptions only has Content-Type
     expect(options).toEqual({
       headers: {
         'Content-Type': 'application/json',
-        Authorization: 'Bearer token-abc',
       },
     })
   })

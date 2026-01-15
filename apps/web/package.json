@@ -24,6 +24,7 @@
     "@codemirror/view": "^6.39.11",
     "@htoprc/parser": "workspace:*",
     "@urql/core": "^6.0.1",
+    "@urql/exchange-auth": "^3.0.0",
     "graphql": "^16.10.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

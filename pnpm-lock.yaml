@@ -99,6 +99,9 @@ importers:
       '@urql/core':
         specifier: ^6.0.1
         version: 6.0.1(graphql@16.12.0)
+      '@urql/exchange-auth':
+        specifier: ^3.0.0
+        version: 3.0.0(@urql/core@6.0.1(graphql@16.12.0))
       graphql:
         specifier: ^16.10.0
         version: 16.12.0
@@ -1500,6 +1503,11 @@ packages:
 
   '@urql/core@6.0.1':
     resolution: {integrity: sha512-FZDiQk6jxbj5hixf2rEPv0jI+IZz0EqqGW8mJBEug68/zHTtT+f34guZDmyjJZyiWbj0vL165LoMr/TkeDHaug==}
+
+  '@urql/exchange-auth@3.0.0':
+    resolution: {integrity: sha512-tj09xiOR2f1J2h8TE9uZWjRZipCdmDoTewEytOacDQ+0Teo+yIZxm3ppHxolQtiA51OHrGYiNTkMte8HtfvaBw==}
+    peerDependencies:
+      '@urql/core': ^6.0.0
 
   '@vitejs/plugin-react@5.1.2':
     resolution: {integrity: sha512-EcA07pHJouywpzsoTUqNh5NwGayl2PPVEJKUSinGGSxFGYn+shYbqMGBg6FXDqgXum9Ou/ecb+411ssw8HImJQ==}
@@ -4011,6 +4019,11 @@ snapshots:
       wonka: 6.3.5
     transitivePeerDependencies:
       - graphql
+
+  '@urql/exchange-auth@3.0.0(@urql/core@6.0.1(graphql@16.12.0))':
+    dependencies:
+      '@urql/core': 6.0.1(graphql@16.12.0)
+      wonka: 6.3.5
 
   '@vitejs/plugin-react@5.1.2(vite@7.3.1(jiti@1.21.7))':
     dependencies:
