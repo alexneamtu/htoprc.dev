@@ -257,6 +257,7 @@ jobs:
           json-summary-path: coverage/parser/coverage-summary.json
           json-final-path: coverage/parser/coverage-final.json
           name: Parser
+          comment-on-pr: false
 
       - name: Coverage Report API
         uses: davelosert/vitest-coverage-report-action@v2
@@ -264,6 +265,7 @@ jobs:
           json-summary-path: coverage/api/coverage-summary.json
           json-final-path: coverage/api/coverage-final.json
           name: API
+          comment-on-pr: false
 
       - name: Coverage Report Web
         uses: davelosert/vitest-coverage-report-action@v2
@@ -271,6 +273,7 @@ jobs:
           json-summary-path: coverage/web/coverage-summary.json
           json-final-path: coverage/web/coverage-final.json
           name: Web
+          comment-on-pr: false
 
   summary:
     needs: [test-parser, test-api, test-web, quality]
