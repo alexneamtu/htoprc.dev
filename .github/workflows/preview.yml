@@ -39,7 +39,7 @@ jobs:
       - name: Build web (staging config)
         run: pnpm --filter @htoprc/web build
         env:
-          VITE_API_URL: https://api.staging.htoprc.dev
+          VITE_API_URL: https://api-staging.htoprc.dev
           VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.VITE_CLERK_PUBLISHABLE_KEY_DEV }}
 
       - name: Deploy Preview to Cloudflare Pages

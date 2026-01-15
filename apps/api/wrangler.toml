@@ -18,7 +18,7 @@ database_id = "local"
 [env.staging]
 name = "htoprc-api-staging"
 routes = [
-  { pattern = "api.staging.htoprc.dev", custom_domain = true }
+  { pattern = "api-staging.htoprc.dev", custom_domain = true }
 ]
 
 [[env.staging.d1_databases]]
