@@ -44,6 +44,54 @@ interface CommentRow {
   created_at: string
 }
 
+// Rate limit configuration
+const RATE_LIMITS = {
+  upload: { max: 5, window: 'day' },
+  comment: { max: 20, window: 'day' },
+} as const
+
+// Rate limiting helper
+async function checkRateLimit(
+  db: D1Database,
+  userId: string,
+  actionType: keyof typeof RATE_LIMITS
+): Promise<{ allowed: boolean; remaining: number }> {
+  const limit = RATE_LIMITS[actionType]
+  const today = new Date().toISOString().split('T')[0]
+
+  // Get current count
+  const result = await db
+    .prepare('SELECT count FROM rate_limits WHERE user_id = ? AND action_type = ? AND action_date = ?')
+    .bind(userId, actionType, today)
+    .first<{ count: number }>()
+
+  const currentCount = result?.count ?? 0
+
+  if (currentCount >= limit.max) {
+    return { allowed: false, remaining: 0 }
+  }
+
+  // Increment count
+  await db
+    .prepare(`
+      INSERT INTO rate_limits (user_id, action_type, action_date, count)
+      VALUES (?, ?, ?, 1)
+      ON CONFLICT (user_id, action_type, action_date)
+      DO UPDATE SET count = count + 1
+    `)
+    .bind(userId, actionType, today)
+    .run()
+
+  return { allowed: true, remaining: limit.max - currentCount - 1 }
+}
+
+class RateLimitError extends Error {
+  constructor(actionType: string, max: number) {
+    super(`Rate limit exceeded: You can only perform ${max} ${actionType}(s) per day`)
+    this.name = 'RateLimitError'
+  }
+}
+
 // Simple initial schema - will be expanded with Pothos later
 export const schema = createSchema<GraphQLContext>({
   typeDefs: /* GraphQL */ `
@@ -121,11 +169,18 @@ export const schema = createSchema<GraphQLContext>({
       sourceUrl: String
       sourcePlatform: String
       forkedFromId: ID
+      forkedFrom: ForkedFromConfig
       status: String!
       score: Int!
       likesCount: Int!
       createdAt: String!
       comments: [Comment!]!
+    }
+
+    type ForkedFromConfig {
+      id: ID!
+      slug: String!
+      title: String!
     }
 
     type Comment {
@@ -157,6 +212,7 @@ export const schema = createSchema<GraphQLContext>({
     input UploadConfigInput {
       title: String!
       content: String!
+      userId: ID
     }
   `,
   resolvers: {
@@ -388,9 +444,17 @@ export const schema = createSchema<GraphQLContext>({
     Mutation: {
       uploadConfig: async (
         _: unknown,
-        { input }: { input: { title: string; content: string } },
+        { input }: { input: { title: string; content: string; userId?: string } },
         ctx: GraphQLContext
       ) => {
+        // Check rate limit if user is authenticated
+        if (input.userId) {
+          const rateLimit = await checkRateLimit(ctx.db, input.userId, 'upload')
+          if (!rateLimit.allowed) {
+            throw new RateLimitError('upload', RATE_LIMITS.upload.max)
+          }
+        }
+
         // Parse the config to calculate score and detect version
         const parsed = parseHtoprc(input.content)
 
@@ -555,6 +619,12 @@ export const schema = createSchema<GraphQLContext>({
         { configId, userId, content }: { configId: string; userId: string; content: string },
         ctx: GraphQLContext
       ) => {
+        // Check rate limit
+        const rateLimit = await checkRateLimit(ctx.db, userId, 'comment')
+        if (!rateLimit.allowed) {
+          throw new RateLimitError('comment', RATE_LIMITS.comment.max)
+        }
+
         const id = crypto.randomUUID()
         const createdAt = new Date().toISOString()
 
@@ -766,6 +836,16 @@ export const schema = createSchema<GraphQLContext>({
           },
           createdAt: row.created_at,
         }))
+      },
+      forkedFrom: async (parent: { forked_from_id: string | null }, _args: unknown, ctx: GraphQLContext) => {
+        if (!parent.forked_from_id) return null
+
+        const result = await ctx.db
+          .prepare('SELECT id, slug, title FROM configs WHERE id = ?')
+          .bind(parent.forked_from_id)
+          .first<{ id: string; slug: string; title: string }>()
+
+        return result || null
       },
     },
   },

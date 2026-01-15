@@ -83,7 +83,18 @@ export function Layout({ children }: LayoutProps) {
             GitHub
           </a>
         </div>
-        <p>Open source project for the htop community</p>
+        <p className="mb-2">Open source project for the htop community</p>
+        <p>
+          Built with love by{' '}
+          <a
+            href="https://github.com/alexneamtu"
+            className="text-blue-500 hover:text-blue-400"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Alex Neamtu
+          </a>
+        </p>
       </footer>
     </div>
   )

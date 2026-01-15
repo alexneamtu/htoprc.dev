@@ -9,9 +9,7 @@
     }
   },
   "scripts": {
-    "dev": "pnpm run --parallel dev:*",
-    "dev:web": "pnpm --filter @htoprc/web dev",
-    "dev:api": "pnpm --filter @htoprc/api dev",
+    "dev": "pnpm --filter @htoprc/web --filter @htoprc/api run --parallel dev",
     "build": "pnpm run -r build",
     "test": "pnpm run -r test",
     "test:parser": "pnpm --filter @htoprc/parser test",

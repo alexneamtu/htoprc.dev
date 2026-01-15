@@ -12,6 +12,11 @@ const CONFIG_QUERY = /* GraphQL */ `
       sourceUrl
       sourcePlatform
       forkedFromId
+      forkedFrom {
+        id
+        slug
+        title
+      }
       status
       score
       likesCount
@@ -41,7 +46,14 @@ export interface Comment {
   createdAt: string
 }
 
+export interface ForkedFromConfig {
+  id: string
+  slug: string
+  title: string
+}
+
 export interface ConfigWithComments extends Config {
+  forkedFrom: ForkedFromConfig | null
   comments: Comment[]
 }
 

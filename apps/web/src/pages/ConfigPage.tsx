@@ -71,6 +71,25 @@ export function ConfigPage() {
   const config = data.config
   const parsed = parseHtoprc(config.content)
 
+  // JSON-LD structured data for this config
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareSourceCode',
+    name: config.title,
+    description: `htop configuration: ${config.title}. Score: ${config.score}, ${config.likesCount} likes.`,
+    codeRepository: config.sourceUrl || undefined,
+    programmingLanguage: 'htoprc',
+    aggregateRating: {
+      '@type': 'AggregateRating',
+      ratingValue: config.score,
+      ratingCount: config.likesCount || 1,
+      bestRating: 100,
+      worstRating: 0,
+    },
+    datePublished: config.createdAt,
+    url: `https://htoprc.dev/config/${config.slug}`,
+  }
+
   return (
     <div className="max-w-4xl mx-auto">
       <SEO
@@ -78,6 +97,7 @@ export function ConfigPage() {
         description={`htop configuration: ${config.title}. Score: ${config.score}, ${config.likesCount} likes. Browse and customize this htop config.`}
         url={`/config/${config.slug}`}
         type="article"
+        jsonLd={jsonLd}
       />
       <div className="mb-6">
         <Link to="/" className="text-blue-600 dark:text-blue-400 hover:underline">
@@ -91,10 +111,10 @@ export function ConfigPage() {
         <span>Score: {config.score}</span>
         <LikeButton configId={config.id} initialLikesCount={config.likesCount} />
         <span>Source: {config.sourceType}</span>
-        {config.forkedFromId && (
-          <span className="text-purple-500">
-            Forked from another config
-          </span>
+        {config.forkedFrom && (
+          <Link to={`/config/${config.forkedFrom.slug}`} className="text-purple-500 hover:text-purple-400">
+            Forked from "{config.forkedFrom.title}"
+          </Link>
         )}
       </div>
 
