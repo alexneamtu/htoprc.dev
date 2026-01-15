@@ -13,19 +13,24 @@ type Bindings = {
 const app = new Hono<{ Bindings: Bindings }>()
 
 // CORS configuration
+const allowedOrigins = [
+  'https://htoprc.dev',
+  'https://staging.htoprc.dev',
+  'https://htoprc.dev.alexneamtu.top',
+  'https://htoprc.staging.alexneamtu.top',
+  'https://htoprc-production.pages.dev',
+  'https://htoprc-staging.pages.dev',
+]
+
 app.use(
   '*',
   cors({
-    origin: [
-      'http://localhost:5173',
-      'http://localhost:5174',
-      'https://htoprc.dev',
-      'https://staging.htoprc.dev',
-      'https://htoprc.dev.alexneamtu.top',
-      'https://htoprc.staging.alexneamtu.top',
-      'https://htoprc-production.pages.dev',
-      'https://htoprc-staging.pages.dev',
-    ],
+    origin: (origin) => {
+      if (!origin) return allowedOrigins[0]
+      // Allow any localhost port for development
+      if (origin.match(/^http:\/\/localhost:\d+$/)) return origin
+      return allowedOrigins.includes(origin) ? origin : allowedOrigins[0]
+    },
     credentials: true,
   })
 )
