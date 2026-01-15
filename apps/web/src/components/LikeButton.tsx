@@ -3,8 +3,8 @@ import { useMutation } from 'urql'
 import { useAuth } from '../services/auth'
 
 const TOGGLE_LIKE_MUTATION = /* GraphQL */ `
-  mutation ToggleLike($configId: ID!, $userId: ID!) {
-    toggleLike(configId: $configId, userId: $userId) {
+  mutation ToggleLike($configId: ID!, $userId: ID!, $username: String, $avatarUrl: String) {
+    toggleLike(configId: $configId, userId: $userId, username: $username, avatarUrl: $avatarUrl) {
       liked
       likesCount
     }
@@ -37,7 +37,12 @@ export function LikeButton({ configId, initialLikesCount, size = 'md' }: LikeBut
     setLiked(!liked)
     setLikesCount(liked ? likesCount - 1 : likesCount + 1)
 
-    const result = await toggleLike({ configId, userId: user.id })
+    const result = await toggleLike({
+      configId,
+      userId: user.id,
+      username: user.username || user.email?.split('@')[0] || 'User',
+      avatarUrl: user.avatarUrl,
+    })
 
     if (result.error) {
       // Revert on error

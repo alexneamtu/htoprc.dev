@@ -5,8 +5,8 @@ import { useAuth } from '../services/auth'
 const CLERK_ENABLED = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
 const ADD_COMMENT_MUTATION = /* GraphQL */ `
-  mutation AddComment($configId: ID!, $userId: ID!, $content: String!) {
-    addComment(configId: $configId, userId: $userId, content: $content) {
+  mutation AddComment($configId: ID!, $userId: ID!, $content: String!, $username: String, $avatarUrl: String) {
+    addComment(configId: $configId, userId: $userId, content: $content, username: $username, avatarUrl: $avatarUrl) {
       id
       content
       author {
@@ -57,6 +57,8 @@ export function Comments({ configId, comments: initialComments }: CommentsProps)
       configId,
       userId: user.id,
       content: newComment.trim(),
+      username: user.username || user.email?.split('@')[0] || 'User',
+      avatarUrl: user.avatarUrl,
     })
 
     setIsSubmitting(false)

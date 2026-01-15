@@ -123,13 +123,14 @@ export const schema = createSchema<GraphQLContext>({
     type Mutation {
       uploadConfig(input: UploadConfigInput!): Config!
       forkConfig(id: ID!, title: String!): Config!
-      toggleLike(configId: ID!, userId: ID!): LikeResult!
-      addComment(configId: ID!, userId: ID!, content: String!): Comment!
+      toggleLike(configId: ID!, userId: ID!, username: String, avatarUrl: String): LikeResult!
+      addComment(configId: ID!, userId: ID!, content: String!, username: String, avatarUrl: String): Comment!
       approveConfig(id: ID!): Config!
       rejectConfig(id: ID!, reason: String!): Config!
       approveComment(id: ID!): Comment!
       rejectComment(id: ID!, reason: String!): Boolean!
       reportContent(contentType: String!, contentId: ID!, reason: String!): Boolean!
+      dismissReport(id: ID!): Boolean!
     }
 
     type AdminStats {
@@ -596,19 +597,27 @@ export const schema = createSchema<GraphQLContext>({
       },
       toggleLike: async (
         _: unknown,
-        { configId, userId }: { configId: string; userId: string },
+        { configId, userId, username, avatarUrl }: { configId: string; userId: string; username?: string; avatarUrl?: string },
         ctx: GraphQLContext
       ) => {
-        // Ensure user exists
+        // Ensure user exists with proper info
         const userExists = await ctx.db
           .prepare('SELECT 1 FROM users WHERE id = ?')
           .bind(userId)
           .first()
 
+        const finalUsername = username || 'User'
+
         if (!userExists) {
           await ctx.db
-            .prepare('INSERT INTO users (id, username, is_trusted, is_admin) VALUES (?, ?, 0, 0)')
-            .bind(userId, 'User')
+            .prepare('INSERT INTO users (id, username, avatar_url, is_trusted, is_admin) VALUES (?, ?, ?, 0, 0)')
+            .bind(userId, finalUsername, avatarUrl || null)
+            .run()
+        } else if (username || avatarUrl) {
+          // Update user info if provided
+          await ctx.db
+            .prepare('UPDATE users SET username = COALESCE(?, username), avatar_url = COALESCE(?, avatar_url) WHERE id = ?')
+            .bind(username || null, avatarUrl || null, userId)
             .run()
         }
 
@@ -666,22 +675,31 @@ export const schema = createSchema<GraphQLContext>({
       },
       addComment: async (
         _: unknown,
-        { configId, userId, content }: { configId: string; userId: string; content: string },
+        { configId, userId, content, username: inputUsername, avatarUrl: inputAvatarUrl }: { configId: string; userId: string; content: string; username?: string; avatarUrl?: string },
         ctx: GraphQLContext
       ) => {
-        // Check if user exists, create if not
+        // Check if user exists, create or update with provided info
         let user = await ctx.db
           .prepare('SELECT is_trusted, username, avatar_url FROM users WHERE id = ?')
           .bind(userId)
           .first<{ is_trusted: number; username: string; avatar_url: string | null }>()
 
+        const finalUsername = inputUsername || user?.username || 'User'
+        const finalAvatarUrl = inputAvatarUrl || user?.avatar_url || null
+
         if (!user) {
-          // Create user with basic info (will be updated from Clerk on next auth)
+          // Create user with info from Clerk
           await ctx.db
-            .prepare('INSERT INTO users (id, username, is_trusted, is_admin) VALUES (?, ?, 0, 0)')
-            .bind(userId, 'User')
+            .prepare('INSERT INTO users (id, username, avatar_url, is_trusted, is_admin) VALUES (?, ?, ?, 0, 0)')
+            .bind(userId, finalUsername, finalAvatarUrl)
             .run()
-          user = { is_trusted: 0, username: 'User', avatar_url: null }
+          user = { is_trusted: 0, username: finalUsername, avatar_url: finalAvatarUrl }
+        } else if (inputUsername || inputAvatarUrl) {
+          // Update user info if provided
+          await ctx.db
+            .prepare('UPDATE users SET username = ?, avatar_url = ? WHERE id = ?')
+            .bind(finalUsername, finalAvatarUrl, userId)
+            .run()
         }
 
         // Check rate limit (now safe since user exists)
@@ -693,8 +711,6 @@ export const schema = createSchema<GraphQLContext>({
         const id = crypto.randomUUID()
         const createdAt = new Date().toISOString()
 
-        const username = user.username
-        const avatarUrl = user.avatar_url
         const status = user.is_trusted ? 'published' : 'pending'
 
         await ctx.db
@@ -709,8 +725,8 @@ export const schema = createSchema<GraphQLContext>({
           content,
           author: {
             id: userId,
-            username,
-            avatarUrl,
+            username: finalUsername,
+            avatarUrl: finalAvatarUrl,
           },
           createdAt,
         }
@@ -866,6 +882,18 @@ export const schema = createSchema<GraphQLContext>({
             .bind('pending', contentId, 'published')
             .run()
         }
+
+        return true
+      },
+      dismissReport: async (
+        _: unknown,
+        { id }: { id: string },
+        ctx: GraphQLContext
+      ) => {
+        await ctx.db
+          .prepare('UPDATE reports SET status = ? WHERE id = ?')
+          .bind('dismissed', id)
+          .run()
 
         return true
       },

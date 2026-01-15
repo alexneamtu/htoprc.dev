@@ -17,6 +17,7 @@ const ADMIN_STATS_QUERY = /* GraphQL */ `
       totalComments
       pendingComments
       totalLikes
+      pendingReports
     }
   }
 `
@@ -80,6 +81,24 @@ const REJECT_COMMENT_MUTATION = /* GraphQL */ `
   }
 `
 
+const PENDING_REPORTS_QUERY = /* GraphQL */ `
+  query PendingReports {
+    pendingReports {
+      id
+      contentType
+      contentId
+      reason
+      createdAt
+    }
+  }
+`
+
+const DISMISS_REPORT_MUTATION = /* GraphQL */ `
+  mutation DismissReport($id: ID!) {
+    dismissReport(id: $id)
+  }
+`
+
 interface AdminStats {
   totalConfigs: number
   publishedConfigs: number
@@ -87,6 +106,7 @@ interface AdminStats {
   totalComments: number
   pendingComments: number
   totalLikes: number
+  pendingReports: number
 }
 
 interface PendingConfig {
@@ -108,7 +128,15 @@ interface PendingComment {
   createdAt: string
 }
 
-type Tab = 'stats' | 'configs' | 'comments'
+interface Report {
+  id: string
+  contentType: string
+  contentId: string
+  reason: string
+  createdAt: string
+}
+
+type Tab = 'stats' | 'configs' | 'comments' | 'reports'
 
 export function AdminPage() {
   const auth = CLERK_ENABLED ? useAuth() : { isSignedIn: false, isLoaded: true, user: null }
@@ -123,11 +151,16 @@ export function AdminPage() {
     query: PENDING_COMMENTS_QUERY,
     pause: activeTab !== 'comments',
   })
+  const [reportsResult, refetchReports] = useQuery<{ pendingReports: Report[] }>({
+    query: PENDING_REPORTS_QUERY,
+    pause: activeTab !== 'reports',
+  })
 
   const [, approveConfig] = useMutation(APPROVE_CONFIG_MUTATION)
   const [, rejectConfig] = useMutation(REJECT_CONFIG_MUTATION)
   const [, approveComment] = useMutation(APPROVE_COMMENT_MUTATION)
   const [, rejectComment] = useMutation(REJECT_COMMENT_MUTATION)
+  const [, dismissReport] = useMutation(DISMISS_REPORT_MUTATION)
 
   // In production, check if user is admin
   // For now, just require authentication
@@ -171,6 +204,11 @@ export function AdminPage() {
     }
   }
 
+  const handleDismissReport = async (id: string) => {
+    await dismissReport({ id })
+    refetchReports({ requestPolicy: 'network-only' })
+  }
+
   return (
     <div className="max-w-6xl mx-auto">
       <SEO title="Admin Dashboard" url="/admin" />
@@ -208,6 +246,16 @@ export function AdminPage() {
         >
           Pending Comments ({stats?.pendingComments ?? 0})
         </button>
+        <button
+          onClick={() => setActiveTab('reports')}
+          className={`px-4 py-2 -mb-px ${
+            activeTab === 'reports'
+              ? 'border-b-2 border-blue-500 text-blue-600'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Reports ({stats?.pendingReports ?? 0})
+        </button>
       </div>
 
       {/* Stats Tab */}
@@ -219,6 +267,7 @@ export function AdminPage() {
           <StatCard label="Total Comments" value={stats?.totalComments ?? 0} />
           <StatCard label="Pending Comments" value={stats?.pendingComments ?? 0} color="yellow" />
           <StatCard label="Total Likes" value={stats?.totalLikes ?? 0} color="red" />
+          <StatCard label="Reports" value={stats?.pendingReports ?? 0} color="red" />
         </div>
       )}
 
@@ -299,6 +348,45 @@ export function AdminPage() {
                     className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-sm"
                   >
                     Reject
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Reports Tab */}
+      {activeTab === 'reports' && (
+        <div className="space-y-4">
+          {reportsResult.fetching && <p>Loading...</p>}
+          {reportsResult.data?.pendingReports.length === 0 && (
+            <p className="text-gray-500">No pending reports.</p>
+          )}
+          {reportsResult.data?.pendingReports.map((report) => (
+            <div
+              key={report.id}
+              className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4"
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm text-gray-500 mb-2">
+                    <span className="font-medium capitalize">{report.contentType}</span>{' '}
+                    <span className="text-xs font-mono bg-gray-200 dark:bg-gray-700 px-1 rounded">
+                      {report.contentId}
+                    </span>
+                  </p>
+                  <p className="text-gray-700 dark:text-gray-300 mb-2">{report.reason}</p>
+                  <p className="text-xs text-gray-400">
+                    {new Date(report.createdAt).toLocaleString()}
+                  </p>
+                </div>
+                <div className="flex gap-2 ml-4">
+                  <button
+                    onClick={() => handleDismissReport(report.id)}
+                    className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded text-sm"
+                  >
+                    Dismiss
                   </button>
                 </div>
               </div>
