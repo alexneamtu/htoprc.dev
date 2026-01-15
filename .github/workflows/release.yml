@@ -145,7 +145,9 @@ jobs:
           body_path: /tmp/changelog.md
           generate_release_notes: false
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Use PAT instead of GITHUB_TOKEN to trigger the deploy workflow
+          # (GITHUB_TOKEN actions don't trigger other workflows to prevent infinite loops)
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
 
       - name: Release Summary
         if: steps.changelog.outputs.skip != 'true'
