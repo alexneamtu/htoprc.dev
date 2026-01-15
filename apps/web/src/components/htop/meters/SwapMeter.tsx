@@ -1,4 +1,5 @@
 import type { Meter } from '@htoprc/parser'
+import { secureRandom } from '../../../utils/random'
 
 interface SwapMeterProps {
   meter: Meter
@@ -12,7 +13,7 @@ function formatSize(gb: number): string {
 
 export function SwapMeter({ meter, totalGb = 4 }: SwapMeterProps) {
   // Usually swap is mostly unused (0-10%)
-  const used = totalGb * (Math.random() * 0.1)
+  const used = totalGb * (secureRandom() * 0.1)
 
   if (meter.mode === 'text') {
     return (
@@ -28,7 +29,7 @@ export function SwapMeter({ meter, totalGb = 4 }: SwapMeterProps) {
   if (meter.mode === 'graph') {
     const bars = '▁▂▃▄▅▆▇█'
     const graphHistory = Array.from({ length: 20 }, () =>
-      (Math.random() * 0.1) * 100
+      (secureRandom() * 0.1) * 100
     )
     return (
       <div className="text-xs font-mono flex items-center">

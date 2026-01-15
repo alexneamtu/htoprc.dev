@@ -1,13 +1,14 @@
 import type { Meter } from '@htoprc/parser'
+import { secureRandom } from '../../../utils/random'
 
 interface TextMeterProps {
   meter: Meter
 }
 
 export function TasksMeter({ meter }: TextMeterProps) {
-  const running = Math.floor(Math.random() * 5) + 1
-  const total = Math.floor(Math.random() * 200) + 100
-  const threads = total + Math.floor(Math.random() * 300)
+  const running = Math.floor(secureRandom() * 5) + 1
+  const total = Math.floor(secureRandom() * 200) + 100
+  const threads = total + Math.floor(secureRandom() * 300)
 
   if (meter.mode === 'bar') {
     return (
@@ -31,9 +32,9 @@ export function TasksMeter({ meter }: TextMeterProps) {
 }
 
 export function LoadAverageMeter({ meter }: TextMeterProps) {
-  const load1 = (3 + Math.random() * 3).toFixed(2)
-  const load5 = (2.5 + Math.random() * 2.5).toFixed(2)
-  const load15 = (2 + Math.random() * 2).toFixed(2)
+  const load1 = (3 + secureRandom() * 3).toFixed(2)
+  const load5 = (2.5 + secureRandom() * 2.5).toFixed(2)
+  const load15 = (2 + secureRandom() * 2).toFixed(2)
 
   if (meter.mode === 'bar') {
     return (
@@ -53,9 +54,9 @@ export function LoadAverageMeter({ meter }: TextMeterProps) {
 }
 
 export function UptimeMeter({ meter }: TextMeterProps) {
-  const days = Math.floor(Math.random() * 30)
-  const hours = Math.floor(Math.random() * 24)
-  const mins = Math.floor(Math.random() * 60)
+  const days = Math.floor(secureRandom() * 30)
+  const hours = Math.floor(secureRandom() * 24)
+  const mins = Math.floor(secureRandom() * 60)
 
   const uptimeStr =
     days > 0
@@ -119,8 +120,8 @@ export function HostnameMeter({ meter }: TextMeterProps) {
 }
 
 export function DiskIOMeter({ meter }: TextMeterProps) {
-  const readKb = Math.floor(Math.random() * 5000)
-  const writeKb = Math.floor(Math.random() * 2000)
+  const readKb = Math.floor(secureRandom() * 5000)
+  const writeKb = Math.floor(secureRandom() * 2000)
 
   const formatRate = (kb: number) => {
     if (kb >= 1024) return `${(kb / 1024).toFixed(1)}M`
@@ -129,7 +130,7 @@ export function DiskIOMeter({ meter }: TextMeterProps) {
 
   if (meter.mode === 'graph') {
     const bars = '▁▂▃▄▅▆▇█'
-    const graphHistory = Array.from({ length: 15 }, () => Math.random() * 100)
+    const graphHistory = Array.from({ length: 15 }, () => secureRandom() * 100)
     return (
       <div className="text-xs font-mono flex items-center">
         <span className="text-gray-400">Dis</span>
@@ -180,8 +181,8 @@ export function DiskIOMeter({ meter }: TextMeterProps) {
 }
 
 export function NetworkIOMeter({ meter }: TextMeterProps) {
-  const rxKb = Math.floor(Math.random() * 100)
-  const txKb = Math.floor(Math.random() * 50)
+  const rxKb = Math.floor(secureRandom() * 100)
+  const txKb = Math.floor(secureRandom() * 50)
 
   const formatRate = (kb: number) => {
     if (kb >= 1024) return `${(kb / 1024).toFixed(1)}M`
@@ -190,7 +191,7 @@ export function NetworkIOMeter({ meter }: TextMeterProps) {
 
   if (meter.mode === 'graph') {
     const bars = '▁▂▃▄▅▆▇█'
-    const graphHistory = Array.from({ length: 15 }, () => Math.random() * 60)
+    const graphHistory = Array.from({ length: 15 }, () => secureRandom() * 60)
     return (
       <div className="text-xs font-mono flex items-center">
         <span className="text-gray-400">Net</span>
@@ -242,7 +243,7 @@ export function NetworkIOMeter({ meter }: TextMeterProps) {
 
 export function PressureMeter({ meter }: TextMeterProps) {
   // Pressure Stall Information - often disabled on systems
-  const isAvailable = Math.random() > 0.5
+  const isAvailable = secureRandom() > 0.5
 
   if (!isAvailable) {
     return (
@@ -252,7 +253,7 @@ export function PressureMeter({ meter }: TextMeterProps) {
     )
   }
 
-  const someAvg = (Math.random() * 30).toFixed(2)
+  const someAvg = (secureRandom() * 30).toFixed(2)
 
   if (meter.mode === 'bar') {
     const barWidth = 20
@@ -278,7 +279,7 @@ export function PressureMeter({ meter }: TextMeterProps) {
 }
 
 export function ZramMeter({ meter }: TextMeterProps) {
-  const usedMb = Math.floor(Math.random() * 500)
+  const usedMb = Math.floor(secureRandom() * 500)
   const totalMb = 2048
   const percent = (usedMb / totalMb) * 100
 
@@ -339,8 +340,8 @@ export function DateTimeMeter() {
 }
 
 export function BatteryMeter({ meter }: { meter: { mode: string } }) {
-  const percent = Math.floor(Math.random() * 60) + 40
-  const isCharging = Math.random() > 0.5
+  const percent = Math.floor(secureRandom() * 60) + 40
+  const isCharging = secureRandom() > 0.5
 
   if (meter.mode === 'bar') {
     const barWidth = 20
@@ -379,7 +380,7 @@ export function SysArchMeter() {
 }
 
 export function FileDescriptorMeter({ meter }: { meter: { mode: string } }) {
-  const used = Math.floor(Math.random() * 5000) + 1000
+  const used = Math.floor(secureRandom() * 5000) + 1000
   const max = 65536
   const percent = (used / max) * 100
 
@@ -408,7 +409,7 @@ export function FileDescriptorMeter({ meter }: { meter: { mode: string } }) {
 }
 
 export function SELinuxMeter() {
-  const status = Math.random() > 0.5 ? 'Enforcing' : 'Permissive'
+  const status = secureRandom() > 0.5 ? 'Enforcing' : 'Permissive'
   return (
     <div className="text-xs font-mono">
       <span className="text-gray-400">SELinux: </span>
@@ -418,8 +419,8 @@ export function SELinuxMeter() {
 }
 
 export function SystemdMeter() {
-  const running = Math.floor(Math.random() * 50) + 150
-  const failed = Math.floor(Math.random() * 3)
+  const running = Math.floor(secureRandom() * 50) + 150
+  const failed = Math.floor(secureRandom() * 3)
   return (
     <div className="text-xs font-mono">
       <span className="text-gray-400">Systemd: </span>
@@ -430,9 +431,9 @@ export function SystemdMeter() {
 }
 
 export function GPUMeter({ meter }: { meter: { mode: string } }) {
-  const usage = Math.floor(Math.random() * 80) + 10
-  const memory = Math.floor(Math.random() * 60) + 20
-  const temp = Math.floor(Math.random() * 30) + 50
+  const usage = Math.floor(secureRandom() * 80) + 10
+  const memory = Math.floor(secureRandom() * 60) + 20
+  const temp = Math.floor(secureRandom() * 30) + 50
 
   if (meter.mode === 'bar') {
     const barWidth = 15

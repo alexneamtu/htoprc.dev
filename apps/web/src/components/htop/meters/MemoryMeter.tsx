@@ -1,4 +1,5 @@
 import type { Meter } from '@htoprc/parser'
+import { secureRandom } from '../../../utils/random'
 
 interface MemoryMeterProps {
   meter: Meter
@@ -7,9 +8,9 @@ interface MemoryMeterProps {
 
 // Mock memory data
 function getMockMemoryData(totalGb: number) {
-  const used = totalGb * (0.2 + Math.random() * 0.25)
-  const buffers = totalGb * (0.02 + Math.random() * 0.03)
-  const cache = totalGb * (0.1 + Math.random() * 0.15)
+  const used = totalGb * (0.2 + secureRandom() * 0.25)
+  const buffers = totalGb * (0.02 + secureRandom() * 0.03)
+  const cache = totalGb * (0.1 + secureRandom() * 0.15)
   return { used, buffers, cache, total: totalGb }
 }
 
@@ -35,7 +36,7 @@ export function MemoryMeter({ meter, totalGb = 15.5 }: MemoryMeterProps) {
   if (meter.mode === 'graph') {
     const bars = '▁▂▃▄▅▆▇█'
     const graphHistory = Array.from({ length: 20 }, () =>
-      ((mem.used + Math.random() * 2) / mem.total) * 100
+      ((mem.used + secureRandom() * 2) / mem.total) * 100
     )
     return (
       <div className="text-xs font-mono flex items-center">
