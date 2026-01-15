@@ -220,4 +220,63 @@ config_reader_min_version=2`
       expect(result.version).toBe('unknown')
     })
   })
+
+  describe('screen definitions (htop 3.x)', () => {
+    it('parses screen definitions', () => {
+      const input = `screen:Main=PID USER PERCENT_CPU PERCENT_MEM Command`
+
+      const result = parseHtoprc(input)
+
+      expect(result.config.screens).toHaveLength(1)
+      expect(result.config.screens[0].name).toBe('Main')
+      expect(result.config.screens[0].columns).toEqual(['PID', 'USER', 'PERCENT_CPU', 'PERCENT_MEM', 'Command'])
+    })
+
+    it('parses multiple screen definitions', () => {
+      const input = `screen:Main=PID USER Command
+screen:I/O=PID USER IO_RATE COMM`
+
+      const result = parseHtoprc(input)
+
+      expect(result.config.screens).toHaveLength(2)
+      expect(result.config.screens[0].name).toBe('Main')
+      expect(result.config.screens[1].name).toBe('I/O')
+    })
+
+    it('parses screen-specific options', () => {
+      const input = `screen:Main=PID USER Command
+.sort_key=PERCENT_CPU
+.sort_direction=-1
+.tree_view=0`
+
+      const result = parseHtoprc(input)
+
+      expect(result.config.screens[0].sortKey).toBe('PERCENT_CPU')
+      expect(result.config.screens[0].sortDirection).toBe('desc')
+      expect(result.config.screens[0].treeView).toBe(false)
+    })
+
+    it('associates options with correct screen', () => {
+      const input = `screen:Main=PID USER Command
+.sort_key=PERCENT_CPU
+screen:I/O=PID USER IO_RATE
+.sort_key=IO_RATE
+.tree_view=1`
+
+      const result = parseHtoprc(input)
+
+      expect(result.config.screens[0].sortKey).toBe('PERCENT_CPU')
+      expect(result.config.screens[0].treeView).toBeUndefined()
+      expect(result.config.screens[1].sortKey).toBe('IO_RATE')
+      expect(result.config.screens[1].treeView).toBe(true)
+    })
+
+    it('returns empty screens array when none defined', () => {
+      const input = `color_scheme=1`
+
+      const result = parseHtoprc(input)
+
+      expect(result.config.screens).toEqual([])
+    })
+  })
 })

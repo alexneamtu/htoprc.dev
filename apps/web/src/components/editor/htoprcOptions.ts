@@ -279,6 +279,30 @@ export const HTOPRC_OPTIONS: HtoprcOption[] = [
     type: 'boolean',
     values: ['0', '1'],
   },
+  {
+    name: 'hide_running_in_container',
+    description: 'Hide processes running in containers',
+    type: 'boolean',
+    values: ['0', '1'],
+  },
+  {
+    name: 'shadow_distribution_path_prefix',
+    description: 'Shadow distribution path prefix in command display',
+    type: 'boolean',
+    values: ['0', '1'],
+  },
+  {
+    name: 'show_cached_memory',
+    description: 'Show cached memory in memory meter',
+    type: 'boolean',
+    values: ['0', '1'],
+  },
+  {
+    name: 'topology_affinity',
+    description: 'Show CPU topology affinity',
+    type: 'boolean',
+    values: ['0', '1'],
+  },
 
   // Command display
   {
@@ -302,36 +326,56 @@ export const HTOPRC_OPTIONS: HtoprcOption[] = [
 ]
 
 export const METER_TYPES = [
+  // CPU meters
+  'CPU',
   'AllCPUs',
   'AllCPUs2',
   'AllCPUs4',
   'AllCPUs8',
-  'CPU',
+  'LeftCPUs',
+  'LeftCPUs2',
+  'LeftCPUs4',
+  'LeftCPUs8',
+  'RightCPUs',
+  'RightCPUs2',
+  'RightCPUs4',
+  'RightCPUs8',
   'CPUFrequency',
   'CPUTemperature',
+  // Memory meters
   'Memory',
   'Swap',
+  'Zram',
+  'ZFSARC',
+  'ZFSCARC',
+  // System info meters
   'Tasks',
   'LoadAverage',
   'Uptime',
   'Clock',
+  'Date',
   'DateTime',
   'Hostname',
-  'Blank',
+  'SysArch',
+  'Battery',
+  // I/O meters
   'DiskIO',
   'NetworkIO',
-  'SELinux',
-  'Systemd',
+  'FileDescriptors',
+  // Pressure meters
+  'Pressure',
   'PressureStallCPUSome',
   'PressureStallIOSome',
   'PressureStallMemorySome',
   'PressureStallCPUFull',
   'PressureStallIOFull',
   'PressureStallMemoryFull',
-  'ZFSARC',
-  'ZFSCARC',
-  'FileDescriptors',
+  // Security/System meters
+  'SELinux',
+  'Systemd',
   'GPU',
+  // Utility
+  'Blank',
 ]
 
 export const OPTION_MAP = new Map(HTOPRC_OPTIONS.map((opt) => [opt.name, opt]))

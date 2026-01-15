@@ -12,6 +12,17 @@ export interface Meter {
 }
 
 /**
+ * Screen definition for htop 3.x (Main, I/O, etc.)
+ */
+export interface ScreenDefinition {
+  name: string
+  columns: string[]
+  sortKey?: string
+  sortDirection?: 'asc' | 'desc'
+  treeView?: boolean
+}
+
+/**
  * Header layout options
  */
 export type HeaderLayout =
@@ -80,6 +91,9 @@ export interface HtopConfig {
   findCommInCmdline: boolean
   stripExeFromCmdline: boolean
   showMergedCommand: boolean
+
+  // Screen definitions (htop 3.x)
+  screens: ScreenDefinition[]
 
   // Unknown options (preserved for forward compatibility)
   unknownOptions: Record<string, string>

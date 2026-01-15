@@ -1,4 +1,4 @@
-import type { ParseResult, HtopConfig, Meter, ParseWarning, MeterMode } from './types'
+import type { ParseResult, HtopConfig, Meter, ParseWarning, MeterMode, ScreenDefinition } from './types'
 
 /**
  * Known htoprc option names
@@ -125,6 +125,7 @@ export const DEFAULT_CONFIG: HtopConfig = {
   findCommInCmdline: true,
   stripExeFromCmdline: true,
   showMergedCommand: false,
+  screens: [],
   unknownOptions: {},
 }
 
@@ -197,7 +198,7 @@ function calculateScore(config: HtopConfig): number {
  * Parse an htoprc configuration string
  */
 export function parseHtoprc(input: string): ParseResult {
-  const config: HtopConfig = { ...DEFAULT_CONFIG, unknownOptions: {} }
+  const config: HtopConfig = { ...DEFAULT_CONFIG, unknownOptions: {}, screens: [] }
   const warnings: ParseWarning[] = []
   const errors: never[] = []
   let version: 'v2' | 'v3' | 'unknown' = 'unknown'
@@ -205,6 +206,9 @@ export function parseHtoprc(input: string): ParseResult {
   // Temporary storage for meter parsing
   const meterColumns: Record<number, string[]> = {}
   const meterModes: Record<number, number[]> = {}
+
+  // Current screen being parsed (for dot-prefixed options)
+  let currentScreen: ScreenDefinition | null = null
 
   const lines = input.split('\n')
 
@@ -224,6 +228,34 @@ export function parseHtoprc(input: string): ParseResult {
 
     const key = line.slice(0, equalsIndex).trim()
     const value = line.slice(equalsIndex + 1).trim()
+
+    // Handle screen definitions (screen:Name=columns)
+    if (key.startsWith('screen:')) {
+      const screenName = key.slice(7) // Remove 'screen:' prefix
+      currentScreen = {
+        name: screenName,
+        columns: value.split(' ').filter((s) => s !== ''),
+      }
+      config.screens.push(currentScreen)
+      continue
+    }
+
+    // Handle screen-specific options (dot-prefixed, applies to current screen)
+    if (key.startsWith('.') && currentScreen) {
+      const optionName = key.slice(1) // Remove '.' prefix
+      switch (optionName) {
+        case 'sort_key':
+          currentScreen.sortKey = value
+          break
+        case 'sort_direction':
+          currentScreen.sortDirection = value === '1' ? 'asc' : 'desc'
+          break
+        case 'tree_view':
+          currentScreen.treeView = value === '1'
+          break
+      }
+      continue
+    }
 
     // Check for unknown options
     if (!isKnownOption(key)) {
