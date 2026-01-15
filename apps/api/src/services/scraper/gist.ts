@@ -1,6 +1,5 @@
 import type { ScrapedConfig, ScraperResult, ScraperContext } from './types'
 import {
-  createContentHash,
   processScrapedConfig,
   generateSlug,
 } from './github'

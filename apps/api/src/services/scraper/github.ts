@@ -49,7 +49,7 @@ export function shouldFlagConfig(
   return { shouldFlag: false }
 }
 
-export function generateSlug(repoFullName: string, fileName: string): string {
+export function generateSlug(repoFullName: string, _fileName: string): string {
   const sanitized = repoFullName
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')

@@ -6,9 +6,7 @@ import type {
   GitLabProject,
 } from './types'
 import {
-  createContentHash,
   processScrapedConfig,
-  shouldFlagConfig,
   generateSlug,
 } from './github'
 
