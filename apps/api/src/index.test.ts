@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { app } from './index'
+import { createApp } from './index'
 
 // Create a mock D1 database
 function createMockDB() {
@@ -90,18 +90,27 @@ function createMockDB() {
   } as unknown as D1Database & { _data: typeof data }
 }
 
+type GraphQLErrorShape = { message: string; extensions?: { code?: string } }
+type GraphQLResponse<T> = { data: T; errors?: GraphQLErrorShape[] }
+
+const BASE_HEADERS = {
+  'Content-Type': 'application/json',
+}
+
+let app: ReturnType<typeof createApp>
 let mockDB: ReturnType<typeof createMockDB>
-let testEnv: { DB: D1Database }
+let testEnv: { DB: D1Database; CLERK_SECRET_KEY: string }
 
 // Type helpers for test assertions
 type HealthResponse = { status: string; timestamp: string }
 type ErrorResponse = { error: string }
-type GraphQLResponse<T> = { data: T }
-
 describe('API', () => {
   beforeEach(() => {
+    app = createApp({
+      verifyAuth: async (token) => (token === 'valid-token' ? { userId: 'user_123' } : null),
+    })
     mockDB = createMockDB()
-    testEnv = { DB: mockDB }
+    testEnv = { DB: mockDB, CLERK_SECRET_KEY: 'test-secret' }
   })
 
   describe('GET /api/health', () => {
@@ -185,9 +194,7 @@ describe('API', () => {
         '/api/graphql',
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: BASE_HEADERS,
           body: JSON.stringify({
             query: '{ config(id: "non-existent") { id } }',
           }),
@@ -199,6 +206,40 @@ describe('API', () => {
 
       const data = (await res.json()) as GraphQLResponse<{ config: unknown }>
       expect(data.data.config).toBeNull()
+    })
+
+    it('rejects user-scoped queries without auth', async () => {
+      const res = await app.request(
+        '/api/graphql',
+        {
+          method: 'POST',
+          headers: BASE_HEADERS,
+          body: JSON.stringify({
+            query: 'query { myConfigs(userId: "user_123") { id } }',
+          }),
+        },
+        testEnv
+      )
+
+      const data = (await res.json()) as GraphQLResponse<{ myConfigs: unknown }>
+      expect(data.errors?.[0]?.extensions?.code).toBe('UNAUTHENTICATED')
+    })
+
+    it('rejects user-scoped queries when auth mismatches', async () => {
+      const res = await app.request(
+        '/api/graphql',
+        {
+          method: 'POST',
+          headers: { ...BASE_HEADERS, Authorization: 'Bearer valid-token' },
+          body: JSON.stringify({
+            query: 'query { myConfigs(userId: "user_999") { id } }',
+          }),
+        },
+        testEnv
+      )
+
+      const data = (await res.json()) as GraphQLResponse<{ myConfigs: unknown }>
+      expect(data.errors?.[0]?.extensions?.code).toBe('FORBIDDEN')
     })
 
     it('handles uploadConfig mutation', async () => {
@@ -455,6 +496,13 @@ describe('API', () => {
       expect(found).toBeDefined()
       expect(found?.title).toBe('Persisted Config')
       expect(found?.slug).toBe('persisted-config')
+    })
+  })
+
+  describe('Admin endpoints', () => {
+    it('rejects admin scrape without auth', async () => {
+      const res = await app.request('/api/admin/scrape', { method: 'POST' }, testEnv)
+      expect(res.status).toBe(401)
     })
   })
 })

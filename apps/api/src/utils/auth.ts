@@ -1,6 +1,39 @@
+import { verifyToken } from '@clerk/backend'
+
 /**
  * Authentication and authorization utilities
  */
+
+export type AuthContext = { userId: string }
+export type AuthVerifier = (token: string, secretKey: string) => Promise<AuthContext | null>
+
+export const verifyClerkToken: AuthVerifier = async (token, secretKey) => {
+  try {
+    const payload = await verifyToken(token, { secretKey })
+    const userId = payload.sub
+    if (!userId) return null
+    return { userId }
+  } catch {
+    return null
+  }
+}
+
+function getBearerToken(request: Request): string | null {
+  const header = request.headers.get('authorization')
+  if (!header) return null
+  const match = header.match(/^Bearer\s+(.+)$/i)
+  return match ? match[1]?.trim() : null
+}
+
+export async function getAuthFromRequest(
+  request: Request,
+  secretKey?: string,
+  verifyAuth: AuthVerifier = verifyClerkToken
+): Promise<AuthContext | null> {
+  const token = getBearerToken(request)
+  if (!token || !secretKey) return null
+  return verifyAuth(token, secretKey)
+}
 
 /**
  * Check if a user has admin privileges
