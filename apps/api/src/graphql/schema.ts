@@ -10,6 +10,42 @@ async function sha256(content: string): Promise<string> {
   return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
 }
 
+// Generate a unique slug from a title
+async function generateUniqueSlug(db: D1Database, title: string): Promise<string> {
+  const baseSlug = title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/-+/g, '-') // Replace multiple hyphens with single
+    .replace(/^-|-$/g, '') // Remove leading/trailing hyphens
+    || 'config' // Fallback if title becomes empty
+
+  // Check if base slug exists
+  const existing = await db
+    .prepare('SELECT slug FROM configs WHERE slug = ? OR slug LIKE ?')
+    .bind(baseSlug, `${baseSlug}-%`)
+    .all<{ slug: string }>()
+
+  if (!existing.results || existing.results.length === 0) {
+    return baseSlug
+  }
+
+  // Find the highest suffix number
+  const existingSlugs = new Set(existing.results.map(r => r.slug))
+
+  if (!existingSlugs.has(baseSlug)) {
+    return baseSlug
+  }
+
+  // Find next available number
+  let counter = 2
+  while (existingSlugs.has(`${baseSlug}-${counter}`)) {
+    counter++
+  }
+
+  return `${baseSlug}-${counter}`
+}
+
 // GraphQL context type
 interface GraphQLContext {
   db: D1Database
@@ -603,7 +639,7 @@ export const schema = createSchema<GraphQLContext>({
         const parsed = parseHtoprc(input.content)
 
         const id = crypto.randomUUID()
-        const slug = input.title.toLowerCase().replace(/\s+/g, '-')
+        const slug = await generateUniqueSlug(ctx.db, input.title)
         const contentHash = await sha256(input.content)
         const createdAt = new Date().toISOString()
 
@@ -724,7 +760,7 @@ export const schema = createSchema<GraphQLContext>({
         const parsed = parseHtoprc(original.content)
 
         const newId = crypto.randomUUID()
-        const slug = title.toLowerCase().replace(/\s+/g, '-') + '-' + Math.random().toString(36).substring(2, 8)
+        const slug = await generateUniqueSlug(ctx.db, title)
         const contentHash = await sha256(original.content)
         const createdAt = new Date().toISOString()
 
