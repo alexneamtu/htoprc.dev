@@ -5,6 +5,7 @@ import { HelmetProvider } from 'react-helmet-async'
 import { Layout } from './components/Layout'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { HomePage } from './pages/HomePage'
+import { GalleryPage } from './pages/GalleryPage'
 import { EditorPage } from './pages/EditorPage'
 import { ConfigPage } from './pages/ConfigPage'
 import { UploadPage } from './pages/UploadPage'
@@ -23,6 +24,7 @@ function AppContent() {
         <Layout>
           <Routes>
             <Route path="/" element={<HomePage />} />
+            <Route path="/gallery" element={<GalleryPage />} />
             <Route path="/editor" element={<EditorPage />} />
             <Route path="/config/:slug" element={<ConfigPage />} />
             <Route

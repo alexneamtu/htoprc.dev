@@ -47,7 +47,7 @@ export function Layout({ children }: LayoutProps) {
             htoprc.dev
           </Link>
           <div className="flex items-center gap-4">
-            <Link to="/" className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">
+            <Link to="/gallery" className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">
               Gallery
             </Link>
             <Link to="/editor" className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">
