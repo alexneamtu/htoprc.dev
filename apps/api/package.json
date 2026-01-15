@@ -22,7 +22,7 @@
     "hono": "^4.11.0"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20250109.0",
+    "@cloudflare/workers-types": "^4.20260115.0",
     "@vitest/coverage-v8": "^4.0.17",
     "vitest": "^4.0.17",
     "wrangler": "^4.59.1"
