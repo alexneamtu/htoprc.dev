@@ -402,8 +402,8 @@ export const schema = createSchema<GraphQLContext>({
         ctx: GraphQLContext
       ) => {
         const result = await ctx.db
-          .prepare('SELECT * FROM configs WHERE author_id = ? ORDER BY created_at DESC')
-          .bind(userId)
+          .prepare('SELECT * FROM configs WHERE author_id = ? AND status != ? ORDER BY created_at DESC')
+          .bind(userId, 'deleted')
           .all<ConfigRow>()
 
         return (result.results ?? []).map((row) => ({
