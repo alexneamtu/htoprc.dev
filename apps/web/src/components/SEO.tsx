@@ -6,6 +6,7 @@ interface SEOProps {
   image?: string
   url?: string
   type?: 'website' | 'article'
+  jsonLd?: Record<string, unknown>
 }
 
 const SITE_NAME = 'htoprc.dev'
@@ -21,10 +22,28 @@ export function SEO({
   image = DEFAULT_IMAGE,
   url,
   type = 'website',
+  jsonLd,
 }: SEOProps) {
   const fullTitle = title ? `${title} | ${SITE_NAME}` : DEFAULT_TITLE
   const fullUrl = url ? `${BASE_URL}${url}` : BASE_URL
   const fullImage = image.startsWith('http') ? image : `${BASE_URL}${image}`
+
+  // Default JSON-LD for website
+  const defaultJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': type === 'article' ? 'Article' : 'WebSite',
+    name: fullTitle,
+    description,
+    url: fullUrl,
+    image: fullImage,
+    publisher: {
+      '@type': 'Organization',
+      name: SITE_NAME,
+      url: BASE_URL,
+    },
+  }
+
+  const structuredData = jsonLd || defaultJsonLd
 
   return (
     <Helmet>
@@ -47,6 +66,9 @@ export function SEO({
 
       {/* Additional meta */}
       <link rel="canonical" href={fullUrl} />
+
+      {/* JSON-LD Structured Data */}
+      <script type="application/ld+json">{JSON.stringify(structuredData)}</script>
     </Helmet>
   )
 }
