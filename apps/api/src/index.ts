@@ -2,9 +2,12 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { createYoga } from 'graphql-yoga'
 import { schema } from './graphql/schema'
+import { runScraper, runAllScrapers } from './services/scraper'
+import type { Platform } from './services/scraper'
 
 type Bindings = {
   DB: D1Database
+  GITHUB_TOKEN?: string
 }
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -85,9 +88,66 @@ app.on(['GET', 'POST'], '/api/graphql', async (c) => {
   return response
 })
 
+// Admin endpoint to trigger scraper manually
+app.post('/api/admin/scrape', async (c) => {
+  const body = await c.req.json<{ platform?: Platform }>().catch(() => ({}))
+  const platform = body?.platform || 'github'
+
+  const ctx = {
+    db: c.env.DB,
+    githubToken: c.env.GITHUB_TOKEN,
+  }
+
+  const result = await runScraper(platform as Platform, ctx)
+
+  return c.json(result)
+})
+
+// Get scraper run history
+app.get('/api/admin/scraper-logs', async (c) => {
+  const limit = parseInt(c.req.query('limit') || '10', 10)
+
+  const result = await c.env.DB.prepare(
+    'SELECT * FROM scraper_runs ORDER BY started_at DESC LIMIT ?'
+  )
+    .bind(limit)
+    .all<{
+      id: string
+      platform: string
+      status: string
+      started_at: string
+      completed_at: string | null
+      configs_found: number
+      configs_added: number
+      error_message: string | null
+    }>()
+
+  return c.json({
+    runs: result.results ?? [],
+  })
+})
+
 // Fallback
 app.notFound((c) => {
   return c.json({ error: 'Not found' }, 404)
 })
 
-export default app
+// Cron handler for scheduled scraping
+const scheduled: ExportedHandler<Bindings>['scheduled'] = async (event, env) => {
+  const ctx = {
+    db: env.DB,
+    githubToken: env.GITHUB_TOKEN,
+  }
+
+  const results = await runAllScrapers(ctx)
+
+  console.log('Scraper run completed:', Object.fromEntries(results))
+}
+
+// Export app for testing
+export { app }
+
+export default {
+  fetch: app.fetch,
+  scheduled,
+}

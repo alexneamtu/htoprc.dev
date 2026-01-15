@@ -63,10 +63,12 @@ describe('HtopPreview', () => {
       const config = createConfig({ hideFunctionBar: 0 })
       render(<HtopPreview config={config} />)
 
-      expect(screen.getByText('F1')).toBeInTheDocument()
-      expect(screen.getByText('Help')).toBeInTheDocument()
-      expect(screen.getByText('F10')).toBeInTheDocument()
-      expect(screen.getByText('Quit')).toBeInTheDocument()
+      // Both desktop and mobile views are rendered (one hidden via CSS)
+      // so we use getAllByText to handle multiple elements
+      expect(screen.getAllByText('F1').length).toBeGreaterThan(0)
+      expect(screen.getAllByText('Help').length).toBeGreaterThan(0)
+      expect(screen.getAllByText('F10').length).toBeGreaterThan(0)
+      expect(screen.getAllByText('Quit').length).toBeGreaterThan(0)
     })
 
     it('hides function bar when hideFunctionBar is not 0', () => {
@@ -88,8 +90,9 @@ describe('HtopPreview', () => {
       })
       render(<HtopPreview config={config} />)
 
-      expect(screen.getByText('CPU')).toBeInTheDocument()
-      expect(screen.getByText('Mem')).toBeInTheDocument()
+      // Both desktop and mobile views are rendered (one hidden via CSS)
+      expect(screen.getAllByText('CPU').length).toBeGreaterThan(0)
+      expect(screen.getAllByText('Mem').length).toBeGreaterThan(0)
     })
 
     it('renders right meters', () => {
@@ -101,8 +104,9 @@ describe('HtopPreview', () => {
       })
       render(<HtopPreview config={config} />)
 
-      expect(screen.getByText('Tasks:')).toBeInTheDocument()
-      expect(screen.getByText(/Load average:/)).toBeInTheDocument()
+      // Both desktop and mobile views are rendered (one hidden via CSS)
+      expect(screen.getAllByText('Tasks:').length).toBeGreaterThan(0)
+      expect(screen.getAllByText(/Load average:/).length).toBeGreaterThan(0)
     })
   })
 
@@ -141,9 +145,10 @@ describe('HtopPreview', () => {
       const config = createConfig()
       render(<HtopPreview config={config} />)
 
-      expect(screen.getByText('PID')).toBeInTheDocument()
-      expect(screen.getByText('USER')).toBeInTheDocument()
-      expect(screen.getByText('Command')).toBeInTheDocument()
+      // Both desktop and mobile views are rendered (one hidden via CSS)
+      expect(screen.getAllByText('PID').length).toBeGreaterThan(0)
+      expect(screen.getAllByText('USER').length).toBeGreaterThan(0)
+      expect(screen.getAllByText('Command').length).toBeGreaterThan(0)
     })
 
     it('renders process list with tree view when enabled', () => {
@@ -153,6 +158,32 @@ describe('HtopPreview', () => {
       // Tree characters should be present
       const treeChars = screen.getAllByText(/[├└│─]/)
       expect(treeChars.length).toBeGreaterThan(0)
+    })
+  })
+
+  describe('compact mode', () => {
+    it('renders compact view when compact prop is true', () => {
+      const config = createConfig({
+        leftMeters: [{ type: 'CPU', mode: 'bar' }],
+        rightMeters: [{ type: 'Memory', mode: 'bar' }],
+      })
+      render(<HtopPreview config={config} compact />)
+
+      // Compact view shows limited meters and "Tap to expand" text
+      expect(screen.getByText('Tap to expand')).toBeInTheDocument()
+      // Should not show process list headers in compact mode
+      expect(screen.queryByText('PID')).not.toBeInTheDocument()
+    })
+
+    it('shows meters in compact view', () => {
+      const config = createConfig({
+        leftMeters: [{ type: 'CPU', mode: 'bar' }],
+        rightMeters: [{ type: 'Memory', mode: 'bar' }],
+      })
+      render(<HtopPreview config={config} compact />)
+
+      expect(screen.getByText('CPU')).toBeInTheDocument()
+      expect(screen.getByText('Mem')).toBeInTheDocument()
     })
   })
 })

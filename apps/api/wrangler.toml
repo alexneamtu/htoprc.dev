@@ -34,13 +34,13 @@ binding = "DB"
 database_name = "htoprc-db-production"
 database_id = "d8bb5f13-2042-458a-a8e6-75cd4cd587d6"
 
+# Cron trigger for scheduled scraping (daily at 3am UTC)
+[env.production.triggers]
+crons = ["0 3 * * *"]
+
 # ============================================
 # Shared Configuration Notes
 # ============================================
 # Environment variables (set via wrangler secret)
 # CLERK_SECRET_KEY
-# GITHUB_TOKEN
-
-# Cron triggers for scraper (will enable later)
-# [triggers]
-# crons = ["0 3 * * *"]  # Daily at 3am UTC
+# GITHUB_TOKEN (required for GitHub scraper)

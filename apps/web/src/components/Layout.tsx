@@ -66,18 +66,24 @@ export function Layout({ children }: LayoutProps) {
         </nav>
       </header>
       <main className="flex-1 container mx-auto px-4 py-8">{children}</main>
-      <footer className="border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-transparent py-4 text-center text-gray-500 dark:text-gray-500 text-sm">
-        <p>
-          Open source on{' '}
+      <footer className="border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-transparent py-6 text-center text-gray-500 dark:text-gray-500 text-sm">
+        <div className="flex flex-wrap justify-center gap-4 mb-3">
+          <Link to="/about" className="hover:text-gray-700 dark:hover:text-gray-300">
+            About
+          </Link>
+          <Link to="/privacy" className="hover:text-gray-700 dark:hover:text-gray-300">
+            Privacy
+          </Link>
           <a
             href="https://github.com/alexneamtu/htoprc.dev"
-            className="text-blue-600 dark:text-blue-400 hover:underline"
+            className="hover:text-gray-700 dark:hover:text-gray-300"
             target="_blank"
             rel="noopener noreferrer"
           >
             GitHub
           </a>
-        </p>
+        </div>
+        <p>Open source project for the htop community</p>
       </footer>
     </div>
   )
