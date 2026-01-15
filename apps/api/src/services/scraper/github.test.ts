@@ -14,7 +14,7 @@ import type { ScraperContext, GitHubSearchItem } from './types'
 
 // Mock fetch globally
 const mockFetch = vi.fn()
-global.fetch = mockFetch
+vi.stubGlobal('fetch', mockFetch)
 
 const createMockParseResult = (overrides: Partial<ParseResult> = {}): ParseResult => ({
   config: {
@@ -381,9 +381,12 @@ all_branches_collapsed=0`
         name: 'htoprc',
         path: '.config/htop/htoprc',
         sha: 'abc123',
+        url: 'https://api.github.com/repos/user/dotfiles/contents/.config/htop/htoprc',
         html_url: 'https://github.com/user/dotfiles/blob/main/.config/htop/htoprc',
         repository: {
+          id: 12345,
           full_name: 'user/dotfiles',
+          html_url: 'https://github.com/user/dotfiles',
           owner: { login: 'user' },
         },
       }

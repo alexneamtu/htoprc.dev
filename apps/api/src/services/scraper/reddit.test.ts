@@ -4,7 +4,7 @@ import type { ScraperContext } from './types'
 
 // Mock fetch globally
 const mockFetch = vi.fn()
-global.fetch = mockFetch
+vi.stubGlobal('fetch', mockFetch)
 
 // Helper functions mirroring reddit.ts logic for testing
 function looksLikeHtoprc(content: string): boolean {
