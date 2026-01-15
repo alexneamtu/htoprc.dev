@@ -43,7 +43,7 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: ./apps/api
-          command: deploy --env staging --name htoprc-api-pr-${{ github.event.pull_request.number }} --var PREVIEW:true
+          command: deploy --env preview --name htoprc-api-pr-${{ github.event.pull_request.number }} --var PREVIEW:true
           packageManager: pnpm
 
       - name: Build web (with preview API)
