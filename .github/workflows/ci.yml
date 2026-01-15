@@ -233,44 +233,47 @@ jobs:
     permissions:
       pull-requests: write
     steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
       - name: Download Parser Coverage
         uses: actions/download-artifact@v4
         with:
           name: coverage-parser
-          path: coverage/parser
+          path: packages/htoprc-parser/coverage
 
       - name: Download API Coverage
         uses: actions/download-artifact@v4
         with:
           name: coverage-api
-          path: coverage/api
+          path: apps/api/coverage
 
       - name: Download Web Coverage
         uses: actions/download-artifact@v4
         with:
           name: coverage-web
-          path: coverage/web
+          path: apps/web/coverage
 
-      - name: Coverage Report
+      - name: Coverage Report Parser
         uses: davelosert/vitest-coverage-report-action@v2
         with:
-          json-summary-path: coverage/parser/coverage-summary.json
-          json-final-path: coverage/parser/coverage-final.json
+          working-directory: packages/htoprc-parser
           name: Parser
+          comment-on: none
 
       - name: Coverage Report API
         uses: davelosert/vitest-coverage-report-action@v2
         with:
-          json-summary-path: coverage/api/coverage-summary.json
-          json-final-path: coverage/api/coverage-final.json
+          working-directory: apps/api
           name: API
+          comment-on: none
 
       - name: Coverage Report Web
         uses: davelosert/vitest-coverage-report-action@v2
         with:
-          json-summary-path: coverage/web/coverage-summary.json
-          json-final-path: coverage/web/coverage-final.json
+          working-directory: apps/web
           name: Web
+          comment-on: none
 
   summary:
     needs: [test-parser, test-api, test-web, quality]

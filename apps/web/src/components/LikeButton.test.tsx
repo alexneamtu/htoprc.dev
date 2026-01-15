@@ -5,17 +5,17 @@ import { fromValue, delay, pipe } from 'wonka'
 import { LikeButton } from './LikeButton'
 
 // Mock urql client
-function createMockClient() {
+function createMockClient(queryData = { hasLiked: false }, mutationData = {}) {
   return {
     executeQuery: vi.fn(() =>
       pipe(
-        fromValue({ data: { hasLiked: false } }),
+        fromValue({ data: queryData }),
         delay(0)
       )
     ),
     executeMutation: vi.fn(() =>
       pipe(
-        fromValue({ data: {} }),
+        fromValue({ data: mutationData }),
         delay(0)
       )
     ),
@@ -23,12 +23,14 @@ function createMockClient() {
   }
 }
 
-// Mock auth service
+// Default mock for auth service (not signed in)
+const mockUseAuth = vi.fn(() => ({
+  user: null,
+  isSignedIn: false,
+}))
+
 vi.mock('../services/auth', () => ({
-  useAuth: () => ({
-    user: null,
-    isSignedIn: false,
-  }),
+  useAuth: () => mockUseAuth(),
 }))
 
 describe('LikeButton', () => {
@@ -103,5 +105,33 @@ describe('LikeButton', () => {
     )
 
     expect(screen.getByText('1234')).toBeInTheDocument()
+  })
+
+  it('renders with inline-flex layout', () => {
+    const mockClient = createMockClient()
+
+    const { container } = render(
+      <Provider value={mockClient as never}>
+        <LikeButton configId="config-1" initialLikesCount={5} />
+      </Provider>
+    )
+
+    // Component renders with flex layout regardless of Clerk status
+    const wrapper = container.firstChild as HTMLElement
+    expect(wrapper).toHaveClass('inline-flex', 'items-center')
+  })
+
+  it('displays heart icon and count', () => {
+    const mockClient = createMockClient()
+
+    const { container } = render(
+      <Provider value={mockClient as never}>
+        <LikeButton configId="config-1" initialLikesCount={5} />
+      </Provider>
+    )
+
+    // Should have heart icon and count
+    expect(container.querySelector('svg')).toBeInTheDocument()
+    expect(screen.getByText('5')).toBeInTheDocument()
   })
 })

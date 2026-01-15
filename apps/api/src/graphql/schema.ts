@@ -1,7 +1,7 @@
 import { createSchema } from 'graphql-yoga'
 import { GraphQLError } from 'graphql'
 import { parseHtoprc } from '@htoprc/parser'
-import { isUserAdmin } from '../utils/auth'
+import { isUserAdmin, type AuthContext } from '../utils/auth'
 import { secureRandomString } from '../utils/random'
 import {
   validateTitle,
@@ -61,6 +61,22 @@ async function generateUniqueSlug(db: D1Database, title: string): Promise<string
 // GraphQL context type
 interface GraphQLContext {
   db: D1Database
+  auth: AuthContext | null
+  anonKey: string | null
+}
+
+function requireAuthUser(ctx: GraphQLContext, userId: string): string {
+  if (!ctx.auth?.userId) {
+    throw new GraphQLError('Authentication required', {
+      extensions: { code: 'UNAUTHENTICATED' },
+    })
+  }
+  if (ctx.auth.userId !== userId) {
+    throw new GraphQLError('Forbidden', {
+      extensions: { code: 'FORBIDDEN' },
+    })
+  }
+  return ctx.auth.userId
 }
 
 // Database row types
@@ -131,6 +147,45 @@ async function checkRateLimit(
       DO UPDATE SET count = count + 1
     `)
     .bind(userId, actionType, today)
+    .run()
+
+  return { allowed: true, remaining: limit.max - currentCount - 1 }
+}
+
+async function checkAnonRateLimit(
+  db: D1Database,
+  anonKey: string | null,
+  actionType: keyof typeof RATE_LIMITS
+): Promise<{ allowed: boolean; remaining: number }> {
+  if (!anonKey) {
+    throw new GraphQLError('Unable to determine client IP for rate limiting', {
+      extensions: { code: 'BAD_REQUEST' },
+    })
+  }
+
+  const limit = RATE_LIMITS[actionType]
+  const today = new Date().toISOString().split('T')[0]
+
+  const result = await db
+    .prepare(
+      'SELECT count FROM anon_rate_limits WHERE anon_key = ? AND action_type = ? AND action_date = ?'
+    )
+    .bind(anonKey, actionType, today)
+    .first<{ count: number }>()
+
+  const currentCount = result?.count ?? 0
+  if (currentCount >= limit.max) {
+    return { allowed: false, remaining: 0 }
+  }
+
+  await db
+    .prepare(
+      `INSERT INTO anon_rate_limits (anon_key, action_type, action_date, count)
+       VALUES (?, ?, ?, 1)
+       ON CONFLICT (anon_key, action_type, action_date)
+       DO UPDATE SET count = count + 1`
+    )
+    .bind(anonKey, actionType, today)
     .run()
 
   return { allowed: true, remaining: limit.max - currentCount - 1 }
@@ -459,6 +514,7 @@ export const schema = createSchema<GraphQLContext>({
         { userId }: { userId: string },
         ctx: GraphQLContext
       ) => {
+        requireAuthUser(ctx, userId)
         const result = await ctx.db
           .prepare('SELECT * FROM configs WHERE author_id = ? AND status != ? ORDER BY created_at DESC')
           .bind(userId, 'deleted')
@@ -485,6 +541,7 @@ export const schema = createSchema<GraphQLContext>({
         { userId }: { userId: string },
         ctx: GraphQLContext
       ) => {
+        requireAuthUser(ctx, userId)
         const result = await ctx.db
           .prepare(`
             SELECT c.* FROM configs c
@@ -516,6 +573,7 @@ export const schema = createSchema<GraphQLContext>({
         { userId }: { userId: string },
         ctx: GraphQLContext
       ) => {
+        requireAuthUser(ctx, userId)
         return isUserAdmin(ctx.db, userId)
       },
       hasLiked: async (
@@ -523,6 +581,7 @@ export const schema = createSchema<GraphQLContext>({
         { configId, userId }: { configId: string; userId: string },
         ctx: GraphQLContext
       ) => {
+        requireAuthUser(ctx, userId)
         const like = await ctx.db
           .prepare('SELECT 1 FROM likes WHERE config_id = ? AND user_id = ?')
           .bind(configId, userId)
@@ -534,6 +593,7 @@ export const schema = createSchema<GraphQLContext>({
         { configId, userId }: { configId: string; userId: string },
         ctx: GraphQLContext
       ) => {
+        requireAuthUser(ctx, userId)
         const result = await ctx.db
           .prepare(`
             SELECT c.id, c.content, c.created_at, c.author_id,
@@ -563,7 +623,8 @@ export const schema = createSchema<GraphQLContext>({
         ctx: GraphQLContext
       ) => {
         // Only admins can see full stats
-        const admin = await isUserAdmin(ctx.db, userId)
+        const authedUserId = requireAuthUser(ctx, userId)
+        const admin = await isUserAdmin(ctx.db, authedUserId)
         if (!admin) {
           return null
         }
@@ -595,7 +656,8 @@ export const schema = createSchema<GraphQLContext>({
         ctx: GraphQLContext
       ) => {
         // Only admins can see all pending configs
-        const admin = await isUserAdmin(ctx.db, userId)
+        const authedUserId = requireAuthUser(ctx, userId)
+        const admin = await isUserAdmin(ctx.db, authedUserId)
         if (!admin) {
           return []
         }
@@ -627,7 +689,8 @@ export const schema = createSchema<GraphQLContext>({
         ctx: GraphQLContext
       ) => {
         // Only admins can see pending comments
-        const admin = await isUserAdmin(ctx.db, userId)
+        const authedUserId = requireAuthUser(ctx, userId)
+        const admin = await isUserAdmin(ctx.db, authedUserId)
         if (!admin) {
           return []
         }
@@ -673,7 +736,8 @@ export const schema = createSchema<GraphQLContext>({
         ctx: GraphQLContext
       ) => {
         // Only admins can see reports
-        const admin = await isUserAdmin(ctx.db, userId)
+        const authedUserId = requireAuthUser(ctx, userId)
+        const admin = await isUserAdmin(ctx.db, authedUserId)
         if (!admin) {
           return []
         }
@@ -728,18 +792,20 @@ export const schema = createSchema<GraphQLContext>({
         const validatedTitle = validateTitle(input.title)
         const validatedContent = validateContent(input.content)
 
+        const authedUserId = input.userId ? requireAuthUser(ctx, input.userId) : null
+
         // Ensure user exists before rate limiting (rate_limits has FK to users)
         let isTrustedOrAdmin = false
-        if (input.userId) {
+        if (authedUserId) {
           const user = await ctx.db
             .prepare('SELECT is_trusted, is_admin FROM users WHERE id = ?')
-            .bind(input.userId)
+            .bind(authedUserId)
             .first<{ is_trusted: number; is_admin: number }>()
 
           if (!user) {
             await ctx.db
               .prepare('INSERT INTO users (id, username, is_trusted, is_admin) VALUES (?, ?, 0, 0)')
-              .bind(input.userId, 'User')
+              .bind(authedUserId, 'User')
               .run()
             isTrustedOrAdmin = false
           } else {
@@ -748,10 +814,17 @@ export const schema = createSchema<GraphQLContext>({
 
           // Check rate limit (skip for admins)
           if (!isTrustedOrAdmin) {
-            const rateLimit = await checkRateLimit(ctx.db, input.userId, 'upload')
+            const rateLimit = await checkRateLimit(ctx.db, authedUserId, 'upload')
             if (!rateLimit.allowed) {
               throw new RateLimitError('upload', RATE_LIMITS.upload.max)
             }
+          }
+        }
+
+        if (!authedUserId) {
+          const rateLimit = await checkAnonRateLimit(ctx.db, ctx.anonKey, 'upload')
+          if (!rateLimit.allowed) {
+            throw new RateLimitError('upload', RATE_LIMITS.upload.max)
           }
         }
 
@@ -776,7 +849,7 @@ export const schema = createSchema<GraphQLContext>({
             validatedContent,
             contentHash,
             'uploaded',
-            input.userId || null,
+            authedUserId,
             input.forkedFromId || null,
             parsed.score,
             parsed.config.htopVersion ?? null,
@@ -794,7 +867,7 @@ export const schema = createSchema<GraphQLContext>({
           sourceType: 'uploaded',
           sourceUrl: null,
           sourcePlatform: null,
-          authorId: input.userId || null,
+          authorId: authedUserId,
           forkedFromId: input.forkedFromId || null,
           status,
           score: parsed.score,
@@ -807,6 +880,7 @@ export const schema = createSchema<GraphQLContext>({
         { id, title, content, userId }: { id: string; title?: string; content: string; userId: string },
         ctx: GraphQLContext
       ) => {
+        const authedUserId = requireAuthUser(ctx, userId)
         // Validate input
         const validatedContent = validateContent(content)
         const validatedTitle = title ? validateTitle(title) : undefined
@@ -827,7 +901,7 @@ export const schema = createSchema<GraphQLContext>({
         }
 
         // For uploaded configs, check author_id or allow if it's null (legacy)
-        if (existing.author_id && existing.author_id !== userId) {
+        if (existing.author_id && existing.author_id !== authedUserId) {
           throw new Error('You can only edit your own configs')
         }
 
@@ -871,6 +945,7 @@ export const schema = createSchema<GraphQLContext>({
         { id, title, userId }: { id: string; title: string; userId: string },
         ctx: GraphQLContext
       ) => {
+        const authedUserId = requireAuthUser(ctx, userId)
         // Validate input
         const validatedTitle = validateTitle(title)
 
@@ -878,14 +953,14 @@ export const schema = createSchema<GraphQLContext>({
         let isTrustedOrAdmin = false
         const user = await ctx.db
           .prepare('SELECT is_trusted, is_admin FROM users WHERE id = ?')
-          .bind(userId)
+          .bind(authedUserId)
           .first<{ is_trusted: number; is_admin: number }>()
 
         if (!user) {
           // Create user if not exists
           await ctx.db
             .prepare('INSERT INTO users (id, username, is_trusted, is_admin) VALUES (?, ?, 0, 0)')
-            .bind(userId, 'User')
+            .bind(authedUserId, 'User')
             .run()
           isTrustedOrAdmin = false
         } else {
@@ -894,7 +969,7 @@ export const schema = createSchema<GraphQLContext>({
 
         // Check rate limit (skip for trusted/admin)
         if (!isTrustedOrAdmin) {
-          const rateLimit = await checkRateLimit(ctx.db, userId, 'upload')
+          const rateLimit = await checkRateLimit(ctx.db, authedUserId, 'upload')
           if (!rateLimit.allowed) {
             throw new RateLimitError('fork', RATE_LIMITS.upload.max)
           }
@@ -938,7 +1013,7 @@ export const schema = createSchema<GraphQLContext>({
             original.content,
             contentHash,
             'uploaded',
-            userId,
+            authedUserId,
             id,
             parsed.score,
             parsed.config.htopVersion ?? null,
@@ -956,7 +1031,7 @@ export const schema = createSchema<GraphQLContext>({
           sourceType: 'uploaded',
           sourceUrl: null,
           sourcePlatform: null,
-          authorId: userId,
+          authorId: authedUserId,
           forkedFromId: id,
           status,
           score: parsed.score,
@@ -969,10 +1044,11 @@ export const schema = createSchema<GraphQLContext>({
         { configId, userId, username, avatarUrl }: { configId: string; userId: string; username?: string; avatarUrl?: string },
         ctx: GraphQLContext
       ) => {
+        const authedUserId = requireAuthUser(ctx, userId)
         // Ensure user exists with proper info
         const userExists = await ctx.db
           .prepare('SELECT 1 FROM users WHERE id = ?')
-          .bind(userId)
+          .bind(authedUserId)
           .first()
 
         const finalUsername = username || 'User'
@@ -980,27 +1056,27 @@ export const schema = createSchema<GraphQLContext>({
         if (!userExists) {
           await ctx.db
             .prepare('INSERT INTO users (id, username, avatar_url, is_trusted, is_admin) VALUES (?, ?, ?, 0, 0)')
-            .bind(userId, finalUsername, avatarUrl || null)
+            .bind(authedUserId, finalUsername, avatarUrl || null)
             .run()
         } else if (username || avatarUrl) {
           // Update user info if provided
           await ctx.db
             .prepare('UPDATE users SET username = COALESCE(?, username), avatar_url = COALESCE(?, avatar_url) WHERE id = ?')
-            .bind(username || null, avatarUrl || null, userId)
+            .bind(username || null, avatarUrl || null, authedUserId)
             .run()
         }
 
         // Check if already liked
         const existing = await ctx.db
           .prepare('SELECT 1 FROM likes WHERE user_id = ? AND config_id = ?')
-          .bind(userId, configId)
+          .bind(authedUserId, configId)
           .first()
 
         if (existing) {
           // Unlike: remove the like
           await ctx.db
             .prepare('DELETE FROM likes WHERE user_id = ? AND config_id = ?')
-            .bind(userId, configId)
+            .bind(authedUserId, configId)
             .run()
 
           // Decrement likes count (prevent negative values)
@@ -1020,7 +1096,7 @@ export const schema = createSchema<GraphQLContext>({
           }
         } else {
           // Check rate limit for likes (only when adding, not removing)
-          const rateLimit = await checkRateLimit(ctx.db, userId, 'like')
+          const rateLimit = await checkRateLimit(ctx.db, authedUserId, 'like')
           if (!rateLimit.allowed) {
             throw new RateLimitError('like', RATE_LIMITS.like.max)
           }
@@ -1028,7 +1104,7 @@ export const schema = createSchema<GraphQLContext>({
           // Like: add the like
           await ctx.db
             .prepare('INSERT INTO likes (user_id, config_id) VALUES (?, ?)')
-            .bind(userId, configId)
+            .bind(authedUserId, configId)
             .run()
 
           // Increment likes count
@@ -1053,13 +1129,14 @@ export const schema = createSchema<GraphQLContext>({
         { configId, userId, content, username: inputUsername, avatarUrl: inputAvatarUrl }: { configId: string; userId: string; content: string; username?: string; avatarUrl?: string },
         ctx: GraphQLContext
       ) => {
+        const authedUserId = requireAuthUser(ctx, userId)
         // Validate input
         const validatedContent = validateComment(content)
 
         // Check if user exists, create or update with provided info
         let user = await ctx.db
           .prepare('SELECT is_trusted, username, avatar_url FROM users WHERE id = ?')
-          .bind(userId)
+          .bind(authedUserId)
           .first<{ is_trusted: number; username: string; avatar_url: string | null }>()
 
         const finalUsername = inputUsername || user?.username || 'User'
@@ -1069,21 +1146,21 @@ export const schema = createSchema<GraphQLContext>({
           // Create user with info from Clerk
           await ctx.db
             .prepare('INSERT INTO users (id, username, avatar_url, is_trusted, is_admin) VALUES (?, ?, ?, 0, 0)')
-            .bind(userId, finalUsername, finalAvatarUrl)
+            .bind(authedUserId, finalUsername, finalAvatarUrl)
             .run()
           user = { is_trusted: 0, username: finalUsername, avatar_url: finalAvatarUrl }
         } else if (inputUsername || inputAvatarUrl) {
           // Update user info if provided
           await ctx.db
             .prepare('UPDATE users SET username = ?, avatar_url = ? WHERE id = ?')
-            .bind(finalUsername, finalAvatarUrl, userId)
+            .bind(finalUsername, finalAvatarUrl, authedUserId)
             .run()
         }
 
         // Check rate limit (skip for admins)
-        const userIsAdmin = await isUserAdmin(ctx.db, userId)
+        const userIsAdmin = await isUserAdmin(ctx.db, authedUserId)
         if (!userIsAdmin) {
-          const rateLimit = await checkRateLimit(ctx.db, userId, 'comment')
+          const rateLimit = await checkRateLimit(ctx.db, authedUserId, 'comment')
           if (!rateLimit.allowed) {
             throw new RateLimitError('comment', RATE_LIMITS.comment.max)
           }
@@ -1098,14 +1175,14 @@ export const schema = createSchema<GraphQLContext>({
           .prepare(
             'INSERT INTO comments (id, config_id, author_id, content, status, created_at) VALUES (?, ?, ?, ?, ?, ?)'
           )
-          .bind(id, configId, userId, validatedContent, status, createdAt)
+          .bind(id, configId, authedUserId, validatedContent, status, createdAt)
           .run()
 
         return {
           id,
           content: validatedContent,
           author: {
-            id: userId,
+            id: authedUserId,
             username: finalUsername,
             avatarUrl: finalAvatarUrl,
           },
@@ -1118,7 +1195,8 @@ export const schema = createSchema<GraphQLContext>({
         ctx: GraphQLContext
       ) => {
         // Authorization check
-        const isAdmin = await isUserAdmin(ctx.db, userId)
+        const authedUserId = requireAuthUser(ctx, userId)
+        const isAdmin = await isUserAdmin(ctx.db, authedUserId)
         if (!isAdmin) {
           throw new GraphQLError('Not authorized: admin access required', {
             extensions: { code: 'FORBIDDEN' }
@@ -1161,7 +1239,8 @@ export const schema = createSchema<GraphQLContext>({
         const validatedReason = validateReason(reason)
 
         // Authorization check
-        const isAdmin = await isUserAdmin(ctx.db, userId)
+        const authedUserId = requireAuthUser(ctx, userId)
+        const isAdmin = await isUserAdmin(ctx.db, authedUserId)
         if (!isAdmin) {
           throw new GraphQLError('Not authorized: admin access required', {
             extensions: { code: 'FORBIDDEN' }
@@ -1201,7 +1280,8 @@ export const schema = createSchema<GraphQLContext>({
         ctx: GraphQLContext
       ) => {
         // Authorization check
-        const isAdmin = await isUserAdmin(ctx.db, userId)
+        const authedUserId = requireAuthUser(ctx, userId)
+        const isAdmin = await isUserAdmin(ctx.db, authedUserId)
         if (!isAdmin) {
           throw new GraphQLError('Not authorized: admin access required', {
             extensions: { code: 'FORBIDDEN' }
@@ -1260,7 +1340,8 @@ export const schema = createSchema<GraphQLContext>({
         const validatedReason = validateReason(reason)
 
         // Authorization check
-        const isAdmin = await isUserAdmin(ctx.db, userId)
+        const authedUserId = requireAuthUser(ctx, userId)
+        const isAdmin = await isUserAdmin(ctx.db, authedUserId)
         if (!isAdmin) {
           throw new GraphQLError('Not authorized: admin access required', {
             extensions: { code: 'FORBIDDEN' }
@@ -1279,6 +1360,7 @@ export const schema = createSchema<GraphQLContext>({
         { contentType, contentId, reason, userId }: { contentType: string; contentId: string; reason: string; userId: string },
         ctx: GraphQLContext
       ) => {
+        const authedUserId = requireAuthUser(ctx, userId)
         // Validate contentType
         const validContentTypes = ['config', 'comment'] as const
         if (!validContentTypes.includes(contentType as typeof validContentTypes[number])) {
@@ -1296,7 +1378,7 @@ export const schema = createSchema<GraphQLContext>({
             .prepare('SELECT author_id FROM configs WHERE id = ?')
             .bind(contentId)
             .first<{ author_id: string | null }>()
-          if (config?.author_id === userId) {
+          if (config?.author_id === authedUserId) {
             throw new GraphQLError('You cannot report your own content', {
               extensions: { code: 'FORBIDDEN' }
             })
@@ -1306,7 +1388,7 @@ export const schema = createSchema<GraphQLContext>({
             .prepare('SELECT author_id FROM comments WHERE id = ?')
             .bind(contentId)
             .first<{ author_id: string }>()
-          if (comment?.author_id === userId) {
+          if (comment?.author_id === authedUserId) {
             throw new GraphQLError('You cannot report your own content', {
               extensions: { code: 'FORBIDDEN' }
             })
@@ -1316,18 +1398,18 @@ export const schema = createSchema<GraphQLContext>({
         // Ensure user exists before inserting (reporter_id has FK to users)
         const userExists = await ctx.db
           .prepare('SELECT 1 FROM users WHERE id = ?')
-          .bind(userId)
+          .bind(authedUserId)
           .first()
 
         if (!userExists) {
           await ctx.db
             .prepare('INSERT INTO users (id, username, is_trusted, is_admin) VALUES (?, ?, 0, 0)')
-            .bind(userId, 'User')
+            .bind(authedUserId, 'User')
             .run()
         }
 
         // Check rate limit for reports
-        const rateLimit = await checkRateLimit(ctx.db, userId, 'report')
+        const rateLimit = await checkRateLimit(ctx.db, authedUserId, 'report')
         if (!rateLimit.allowed) {
           throw new RateLimitError('report', RATE_LIMITS.report.max)
         }
@@ -1336,10 +1418,10 @@ export const schema = createSchema<GraphQLContext>({
 
         await ctx.db
           .prepare(
-            `INSERT INTO reports (id, content_type, content_id, reporter_id, reason, status)
+          `INSERT INTO reports (id, content_type, content_id, reporter_id, reason, status)
              VALUES (?, ?, ?, ?, ?, 'pending')`
           )
-          .bind(id, contentType, contentId, userId, validatedReason)
+          .bind(id, contentType, contentId, authedUserId, validatedReason)
           .run()
 
         // Flag the content for review
@@ -1363,7 +1445,8 @@ export const schema = createSchema<GraphQLContext>({
         ctx: GraphQLContext
       ) => {
         // Authorization check
-        const isAdmin = await isUserAdmin(ctx.db, userId)
+        const authedUserId = requireAuthUser(ctx, userId)
+        const isAdmin = await isUserAdmin(ctx.db, authedUserId)
         if (!isAdmin) {
           throw new GraphQLError('Not authorized: admin access required', {
             extensions: { code: 'FORBIDDEN' }
@@ -1406,6 +1489,7 @@ export const schema = createSchema<GraphQLContext>({
         { id, userId }: { id: string; userId: string },
         ctx: GraphQLContext
       ) => {
+        const authedUserId = requireAuthUser(ctx, userId)
         // Get the config to check ownership
         const config = await ctx.db
           .prepare('SELECT author_id FROM configs WHERE id = ?')
@@ -1417,8 +1501,8 @@ export const schema = createSchema<GraphQLContext>({
         }
 
         // Check if user is owner or admin
-        const isOwner = config.author_id === userId
-        const isAdmin = await isUserAdmin(ctx.db, userId)
+        const isOwner = config.author_id === authedUserId
+        const isAdmin = await isUserAdmin(ctx.db, authedUserId)
 
         if (!isOwner && !isAdmin) {
           throw new GraphQLError('Not authorized to delete this config')

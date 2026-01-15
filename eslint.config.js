@@ -22,6 +22,7 @@ export default [
         Request: 'readonly',
         Headers: 'readonly',
         HeadersInit: 'readonly',
+        RequestInit: 'readonly',
         ExportedHandler: 'readonly',
         fetch: 'readonly',
         // React JSX globals

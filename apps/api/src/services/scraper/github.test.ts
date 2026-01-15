@@ -1,11 +1,20 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
   createContentHash,
   shouldFlagConfig,
   generateSlug,
   processScrapedConfig,
+  fetchGitHubContent,
+  searchGitHub,
+  extractConfigFromSearchItem,
+  scrapeGitHub,
 } from './github'
 import type { ParseResult } from '@htoprc/parser'
+import type { ScraperContext, GitHubSearchItem } from './types'
+
+// Mock fetch globally
+const mockFetch = vi.fn()
+vi.stubGlobal('fetch', mockFetch)
 
 const createMockParseResult = (overrides: Partial<ParseResult> = {}): ParseResult => ({
   config: {
@@ -59,6 +68,10 @@ const createMockParseResult = (overrides: Partial<ParseResult> = {}): ParseResul
 })
 
 describe('github scraper', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
   describe('createContentHash', () => {
     it('creates consistent hash for same content', async () => {
       const content = 'htop_version=3\ncolor_scheme=0'
@@ -226,6 +239,383 @@ all_branches_collapsed=0`
 
       expect(result.status).toBe('published')
       expect(result.flagReason).toBeUndefined()
+    })
+  })
+
+  describe('fetchGitHubContent', () => {
+    it('returns content on successful response', async () => {
+      const mockContent = 'htop_version=3\ncolor_scheme=0'
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: () => Promise.resolve(mockContent),
+      })
+
+      const result = await fetchGitHubContent('https://github.com/user/repo/blob/main/.htoprc')
+
+      expect(result).toBe(mockContent)
+    })
+
+    it('converts github URL to raw URL', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: () => Promise.resolve('content'),
+      })
+
+      await fetchGitHubContent('https://github.com/user/repo/blob/main/.htoprc')
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://raw.githubusercontent.com/user/repo/main/.htoprc',
+        expect.any(Object)
+      )
+    })
+
+    it('includes auth token when provided', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: () => Promise.resolve('content'),
+      })
+
+      await fetchGitHubContent('https://github.com/user/repo/blob/main/.htoprc', 'my-token')
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: 'token my-token',
+          }),
+        })
+      )
+    })
+
+    it('returns null on error response', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+      })
+
+      const result = await fetchGitHubContent('https://github.com/user/repo/blob/main/.htoprc')
+
+      expect(result).toBeNull()
+    })
+
+    it('returns null on network error', async () => {
+      mockFetch.mockRejectedValueOnce(new Error('Network error'))
+
+      const result = await fetchGitHubContent('https://github.com/user/repo/blob/main/.htoprc')
+
+      expect(result).toBeNull()
+    })
+  })
+
+  describe('searchGitHub', () => {
+    it('returns search results on successful response', async () => {
+      const mockResults = {
+        total_count: 1,
+        items: [{ name: 'htoprc', html_url: 'https://github.com/user/repo' }],
+      }
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockResults),
+      })
+
+      const result = await searchGitHub('filename:htoprc', 'token')
+
+      expect(result).toEqual(mockResults)
+    })
+
+    it('includes auth token in request', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ items: [] }),
+      })
+
+      await searchGitHub('filename:htoprc', 'my-token')
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: 'token my-token',
+          }),
+        })
+      )
+    })
+
+    it('includes page parameter in URL', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ items: [] }),
+      })
+
+      await searchGitHub('filename:htoprc', 'token', 3)
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('page=3'),
+        expect.any(Object)
+      )
+    })
+
+    it('returns null on API error', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+      })
+
+      const result = await searchGitHub('filename:htoprc', 'token')
+
+      expect(result).toBeNull()
+    })
+
+    it('returns null on network error', async () => {
+      mockFetch.mockRejectedValueOnce(new Error('Network error'))
+
+      const result = await searchGitHub('filename:htoprc', 'token')
+
+      expect(result).toBeNull()
+    })
+  })
+
+  describe('extractConfigFromSearchItem', () => {
+    it('extracts config metadata from search item', () => {
+      const item: GitHubSearchItem = {
+        name: 'htoprc',
+        path: '.config/htop/htoprc',
+        sha: 'abc123',
+        url: 'https://api.github.com/repos/user/dotfiles/contents/.config/htop/htoprc',
+        html_url: 'https://github.com/user/dotfiles/blob/main/.config/htop/htoprc',
+        repository: {
+          id: 12345,
+          full_name: 'user/dotfiles',
+          html_url: 'https://github.com/user/dotfiles',
+          owner: { login: 'user' },
+        },
+      }
+
+      const result = extractConfigFromSearchItem(item)
+
+      expect(result.sourceUrl).toBe(item.html_url)
+      expect(result.sourcePlatform).toBe('github')
+      expect(result.author).toBe('user')
+      expect(result.title).toBe('user/dotfiles/.config/htop/htoprc')
+      expect(result.content).toBe('')
+    })
+  })
+
+  describe('scrapeGitHub', () => {
+    function createMockDb() {
+      return {
+        prepare: vi.fn().mockReturnValue({
+          bind: vi.fn().mockReturnValue({
+            run: vi.fn().mockResolvedValue({ success: true }),
+            first: vi.fn().mockResolvedValue(null),
+          }),
+        }),
+      }
+    }
+
+    it('returns error when GitHub token is not configured', async () => {
+      const ctx: ScraperContext = {
+        db: createMockDb() as unknown as D1Database,
+      }
+
+      const result = await scrapeGitHub(ctx)
+
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('GitHub token not configured')
+    })
+
+    it('returns error when search fails', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+      })
+
+      const ctx: ScraperContext = {
+        db: createMockDb() as unknown as D1Database,
+        githubToken: 'test-token',
+      }
+
+      const result = await scrapeGitHub(ctx)
+
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('Failed to search GitHub')
+    })
+
+    it('returns success with zero configs when no results found', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ total_count: 0, items: [] }),
+      })
+
+      const ctx: ScraperContext = {
+        db: createMockDb() as unknown as D1Database,
+        githubToken: 'test-token',
+      }
+
+      const result = await scrapeGitHub(ctx)
+
+      expect(result.success).toBe(true)
+      expect(result.configsFound).toBe(0)
+      expect(result.configsAdded).toBe(0)
+    })
+
+    it('processes search results and adds new configs', async () => {
+      const htoprcContent = `htop_version=3
+fields=0 48 17 18 38
+color_scheme=0
+tree_view=1
+show_program_path=1
+highlight_base_name=1
+hide_kernel_threads=1`
+
+      // Search returns results
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            total_count: 1,
+            items: [
+              {
+                name: 'htoprc',
+                path: '.config/htop/htoprc',
+                sha: 'abc123',
+                html_url: 'https://github.com/user/dotfiles/blob/main/.config/htop/htoprc',
+                repository: {
+                  full_name: 'user/dotfiles',
+                  owner: { login: 'user' },
+                },
+              },
+            ],
+          }),
+      })
+
+      // File content fetch
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: () => Promise.resolve(htoprcContent),
+      })
+
+      const ctx: ScraperContext = {
+        db: createMockDb() as unknown as D1Database,
+        githubToken: 'test-token',
+      }
+
+      const result = await scrapeGitHub(ctx)
+
+      expect(result.success).toBe(true)
+      expect(result.configsFound).toBe(1)
+      expect(result.configsAdded).toBe(1)
+    })
+
+    it('skips configs when content fetch fails', async () => {
+      // Search returns results
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            total_count: 1,
+            items: [
+              {
+                name: 'htoprc',
+                path: '.htoprc',
+                sha: 'abc123',
+                html_url: 'https://github.com/user/repo/blob/main/.htoprc',
+                repository: {
+                  full_name: 'user/repo',
+                  owner: { login: 'user' },
+                },
+              },
+            ],
+          }),
+      })
+
+      // Content fetch fails
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+      })
+
+      const ctx: ScraperContext = {
+        db: createMockDb() as unknown as D1Database,
+        githubToken: 'test-token',
+      }
+
+      const result = await scrapeGitHub(ctx)
+
+      expect(result.success).toBe(true)
+      expect(result.configsFound).toBe(1)
+      expect(result.configsAdded).toBe(0)
+    })
+
+    it('skips duplicate configs by URL', async () => {
+      const htoprcContent = `htop_version=3
+fields=0 48 17
+color_scheme=0
+tree_view=1`
+
+      // Search returns results
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            total_count: 1,
+            items: [
+              {
+                name: 'htoprc',
+                path: '.htoprc',
+                sha: 'abc123',
+                html_url: 'https://github.com/user/repo/blob/main/.htoprc',
+                repository: {
+                  full_name: 'user/repo',
+                  owner: { login: 'user' },
+                },
+              },
+            ],
+          }),
+      })
+
+      // Content fetch succeeds
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: () => Promise.resolve(htoprcContent),
+      })
+
+      // Mock DB to return existing URL
+      const mockDb = {
+        prepare: vi.fn().mockReturnValue({
+          bind: vi.fn().mockReturnValue({
+            run: vi.fn().mockResolvedValue({ success: true }),
+            first: vi.fn().mockResolvedValue({ id: 'existing-id' }), // URL already exists
+          }),
+        }),
+      }
+
+      const ctx: ScraperContext = {
+        db: mockDb as unknown as D1Database,
+        githubToken: 'test-token',
+      }
+
+      const result = await scrapeGitHub(ctx)
+
+      expect(result.success).toBe(true)
+      expect(result.configsFound).toBe(1)
+      expect(result.configsAdded).toBe(0)
+    })
+
+    it('handles search failure gracefully', async () => {
+      // Search returns null (error handled internally by searchGitHub)
+      mockFetch.mockRejectedValueOnce(new Error('Network error'))
+
+      const ctx: ScraperContext = {
+        db: createMockDb() as unknown as D1Database,
+        githubToken: 'test-token',
+      }
+
+      const result = await scrapeGitHub(ctx)
+
+      // searchGitHub catches errors and returns null, then scrapeGitHub returns the "Failed to search" error
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('Failed to search GitHub')
     })
   })
 })

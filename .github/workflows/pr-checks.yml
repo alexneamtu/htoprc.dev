@@ -4,11 +4,26 @@ on:
   pull_request:
     types: [opened, edited, synchronize, ready_for_review, labeled, unlabeled]
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
-  require-assignee:
-    name: Require Assignee
+  pr-metadata:
+    name: PR Metadata
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Label PR by path
+        uses: actions/labeler@v5
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          sync-labels: false
+
       - name: Check for assignee
         uses: actions/github-script@v7
         with:
@@ -27,10 +42,6 @@ jobs:
               console.log(`PR has ${pr.assignees.length} assignee(s): ${pr.assignees.map(a => a.login).join(', ')}`);
             }
 
-  require-labels:
-    name: Require Labels
-    runs-on: ubuntu-latest
-    steps:
       - name: Check for labels
         uses: actions/github-script@v7
         with:
@@ -43,16 +54,19 @@ jobs:
               return;
             }
 
-            if (!pr.labels || pr.labels.length === 0) {
+            const { owner, repo } = context.repo;
+            const { data: labels } = await github.rest.issues.listLabelsOnIssue({
+              owner,
+              repo,
+              issue_number: pr.number,
+            });
+
+            if (!labels || labels.length === 0) {
               core.setFailed('PR must have at least one label. Please add a label (e.g., feature, bug, chore, docs).');
             } else {
-              console.log(`PR has ${pr.labels.length} label(s): ${pr.labels.map(l => l.name).join(', ')}`);
+              console.log(`PR has ${labels.length} label(s): ${labels.map(l => l.name).join(', ')}`);
             }
 
-  conventional-title:
-    name: Conventional Title
-    runs-on: ubuntu-latest
-    steps:
       - name: Check PR title format
         uses: actions/github-script@v7
         with:
@@ -82,15 +96,6 @@ jobs:
             } else {
               console.log(`PR title is valid: "${title}"`);
             }
-
-  commit-lint:
-    name: Commit Lint
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
 
       - name: Check commit messages
         uses: actions/github-script@v7
