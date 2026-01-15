@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation } from 'urql'
-import { Navigate } from 'react-router-dom'
+import { Navigate, Link } from 'react-router-dom'
 import { SEO } from '../components/SEO'
 import { HtopPreview } from '../components/htop/HtopPreview'
 import { parseHtoprc } from '@htoprc/parser'
@@ -67,6 +67,7 @@ const PENDING_COMMENTS_QUERY = /* GraphQL */ `
       id
       content
       configId
+      configSlug
       configTitle
       authorId
       authorUsername
@@ -113,6 +114,8 @@ const PENDING_REPORTS_QUERY = /* GraphQL */ `
       id
       contentType
       contentId
+      contentSlug
+      contentTitle
       reason
       createdAt
     }
@@ -149,6 +152,7 @@ interface PendingComment {
   id: string
   content: string
   configId: string
+  configSlug: string
   configTitle: string
   authorId: string
   authorUsername: string
@@ -159,6 +163,8 @@ interface Report {
   id: string
   contentType: string
   contentId: string
+  contentSlug: string | null
+  contentTitle: string | null
   reason: string
   createdAt: string
 }
@@ -419,6 +425,12 @@ export function AdminPage() {
                     </p>
                   </div>
                   <div className="flex gap-2">
+                    <Link
+                      to={`/config/${config.slug}`}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm"
+                    >
+                      View
+                    </Link>
                     <button
                       onClick={() => handleApproveConfig(config.id)}
                       className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md text-sm"
@@ -458,7 +470,9 @@ export function AdminPage() {
                 <div>
                   <p className="text-sm text-gray-500 mb-2">
                     <span className="font-medium">{comment.authorUsername}</span> on{' '}
-                    <span className="font-medium">{comment.configTitle}</span>
+                    <Link to={`/config/${comment.configSlug}`} className="font-medium text-blue-500 hover:underline">
+                      {comment.configTitle}
+                    </Link>
                   </p>
                   <p className="text-gray-700 dark:text-gray-300">{comment.content}</p>
                 </div>
@@ -498,9 +512,15 @@ export function AdminPage() {
                 <div>
                   <p className="text-sm text-gray-500 mb-2">
                     <span className="font-medium capitalize">{report.contentType}</span>{' '}
-                    <span className="text-xs font-mono bg-gray-200 dark:bg-gray-700 px-1 rounded">
-                      {report.contentId}
-                    </span>
+                    {report.contentSlug ? (
+                      <Link to={`/config/${report.contentSlug}`} className="text-blue-500 hover:underline">
+                        {report.contentTitle || report.contentId}
+                      </Link>
+                    ) : (
+                      <span className="text-xs font-mono bg-gray-200 dark:bg-gray-700 px-1 rounded">
+                        {report.contentId}
+                      </span>
+                    )}
                   </p>
                   <p className="text-gray-700 dark:text-gray-300 mb-2">{report.reason}</p>
                   <p className="text-xs text-gray-400">

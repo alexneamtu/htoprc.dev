@@ -204,6 +204,8 @@ export const schema = createSchema<GraphQLContext>({
       id: ID!
       contentType: String!
       contentId: ID!
+      contentSlug: String
+      contentTitle: String
       reason: String!
       createdAt: String!
     }
@@ -212,6 +214,7 @@ export const schema = createSchema<GraphQLContext>({
       id: ID!
       content: String!
       configId: ID!
+      configSlug: String!
       configTitle: String!
       authorId: ID!
       authorUsername: String!
@@ -620,6 +623,7 @@ export const schema = createSchema<GraphQLContext>({
         const result = await ctx.db
           .prepare(`
             SELECT c.id, c.content, c.config_id, c.author_id, c.created_at,
+                   cfg.slug as config_slug,
                    cfg.title as config_title,
                    u.username as author_username
             FROM comments c
@@ -633,6 +637,7 @@ export const schema = createSchema<GraphQLContext>({
             id: string
             content: string
             config_id: string
+            config_slug: string
             config_title: string
             author_id: string
             author_username: string
@@ -643,6 +648,7 @@ export const schema = createSchema<GraphQLContext>({
           id: row.id,
           content: row.content,
           configId: row.config_id,
+          configSlug: row.config_slug ?? '',
           configTitle: row.config_title ?? 'Unknown',
           authorId: row.author_id,
           authorUsername: row.author_username ?? 'Anonymous',
@@ -662,16 +668,29 @@ export const schema = createSchema<GraphQLContext>({
 
         const result = await ctx.db
           .prepare(`
-            SELECT id, content_type, content_id, reason, created_at
-            FROM reports
-            WHERE status = ?
-            ORDER BY created_at DESC
+            SELECT r.id, r.content_type, r.content_id, r.reason, r.created_at,
+                   CASE
+                     WHEN r.content_type = 'config' THEN cfg.slug
+                     WHEN r.content_type = 'comment' THEN cfg2.slug
+                   END as content_slug,
+                   CASE
+                     WHEN r.content_type = 'config' THEN cfg.title
+                     WHEN r.content_type = 'comment' THEN cfg2.title
+                   END as content_title
+            FROM reports r
+            LEFT JOIN configs cfg ON r.content_type = 'config' AND r.content_id = cfg.id
+            LEFT JOIN comments cmt ON r.content_type = 'comment' AND r.content_id = cmt.id
+            LEFT JOIN configs cfg2 ON cmt.config_id = cfg2.id
+            WHERE r.status = ?
+            ORDER BY r.created_at DESC
           `)
           .bind('pending')
           .all<{
             id: string
             content_type: string
             content_id: string
+            content_slug: string | null
+            content_title: string | null
             reason: string
             created_at: string
           }>()
@@ -680,6 +699,8 @@ export const schema = createSchema<GraphQLContext>({
           id: row.id,
           contentType: row.content_type,
           contentId: row.content_id,
+          contentSlug: row.content_slug,
+          contentTitle: row.content_title,
           reason: row.reason,
           createdAt: row.created_at,
         }))
@@ -692,22 +713,25 @@ export const schema = createSchema<GraphQLContext>({
         ctx: GraphQLContext
       ) => {
         // Ensure user exists before rate limiting (rate_limits has FK to users)
+        let isTrustedOrAdmin = false
         if (input.userId) {
-          const userExists = await ctx.db
-            .prepare('SELECT 1 FROM users WHERE id = ?')
+          const user = await ctx.db
+            .prepare('SELECT is_trusted, is_admin FROM users WHERE id = ?')
             .bind(input.userId)
-            .first()
+            .first<{ is_trusted: number; is_admin: number }>()
 
-          if (!userExists) {
+          if (!user) {
             await ctx.db
               .prepare('INSERT INTO users (id, username, is_trusted, is_admin) VALUES (?, ?, 0, 0)')
               .bind(input.userId, 'User')
               .run()
+            isTrustedOrAdmin = false
+          } else {
+            isTrustedOrAdmin = user.is_trusted === 1 || user.is_admin === 1
           }
 
           // Check rate limit (skip for admins)
-          const userIsAdmin = await isUserAdmin(ctx.db, input.userId)
-          if (!userIsAdmin) {
+          if (!isTrustedOrAdmin) {
             const rateLimit = await checkRateLimit(ctx.db, input.userId, 'upload')
             if (!rateLimit.allowed) {
               throw new RateLimitError('upload', RATE_LIMITS.upload.max)
@@ -722,6 +746,7 @@ export const schema = createSchema<GraphQLContext>({
         const slug = await generateUniqueSlug(ctx.db, input.title)
         const contentHash = await sha256(input.content)
         const createdAt = new Date().toISOString()
+        const status = isTrustedOrAdmin ? 'published' : 'pending'
 
         await ctx.db
           .prepare(
@@ -739,7 +764,7 @@ export const schema = createSchema<GraphQLContext>({
             input.forkedFromId || null,
             parsed.score,
             parsed.config.htopVersion ?? null,
-            'published',
+            status,
             0,
             createdAt
           )
@@ -755,7 +780,7 @@ export const schema = createSchema<GraphQLContext>({
           sourcePlatform: null,
           authorId: input.userId || null,
           forkedFromId: input.forkedFromId || null,
-          status: 'published',
+          status,
           score: parsed.score,
           likesCount: 0,
           createdAt,

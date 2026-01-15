@@ -103,6 +103,15 @@ jobs:
       - name: Build parser
         run: pnpm --filter @htoprc/parser build
 
+      - name: Run D1 Migrations
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: ./apps/api
+          command: d1 migrations apply DB --env ${{ env.DEPLOY_ENV }} --remote
+          packageManager: pnpm
+
       - name: Deploy API to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3
         with:
@@ -119,6 +128,7 @@ jobs:
           echo "| Setting | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|---------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| Environment | ${{ env.DEPLOY_ENV }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Migrations | Applied |" >> $GITHUB_STEP_SUMMARY
           if [ "${{ env.DEPLOY_ENV }}" = "production" ]; then
             echo "| Worker | htoprc-api-production |" >> $GITHUB_STEP_SUMMARY
             echo "| Custom Domain | api.htoprc.dev.alexneamtu.top |" >> $GITHUB_STEP_SUMMARY
