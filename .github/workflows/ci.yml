@@ -1,0 +1,222 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      cache-key: ${{ steps.cache-key.outputs.key }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+
+      - name: Generate cache key
+        id: cache-key
+        run: echo "key=${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}" >> $GITHUB_OUTPUT
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build parser
+        run: pnpm --filter @htoprc/parser build
+
+      - name: Upload parser build
+        uses: actions/upload-artifact@v4
+        with:
+          name: parser-dist
+          path: packages/htoprc-parser/dist
+          retention-days: 1
+
+      - name: Upload node_modules cache info
+        uses: actions/upload-artifact@v4
+        with:
+          name: pnpm-store-path
+          path: |
+            node_modules
+            packages/*/node_modules
+            apps/*/node_modules
+          retention-days: 1
+
+  test-parser:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Download parser build
+        uses: actions/download-artifact@v4
+        with:
+          name: parser-dist
+          path: packages/htoprc-parser/dist
+
+      - name: Test Parser
+        run: pnpm --filter @htoprc/parser exec vitest run --reporter=verbose --reporter=github-actions
+
+  test-api:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Download parser build
+        uses: actions/download-artifact@v4
+        with:
+          name: parser-dist
+          path: packages/htoprc-parser/dist
+
+      - name: Test API
+        run: pnpm --filter @htoprc/api exec vitest run --reporter=verbose --reporter=github-actions
+
+  test-web:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Download parser build
+        uses: actions/download-artifact@v4
+        with:
+          name: parser-dist
+          path: packages/htoprc-parser/dist
+
+      - name: Test Web
+        run: pnpm --filter @htoprc/web exec vitest run --reporter=verbose --reporter=github-actions
+
+  quality:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Download parser build
+        uses: actions/download-artifact@v4
+        with:
+          name: parser-dist
+          path: packages/htoprc-parser/dist
+
+      - name: TypeCheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+  build:
+    needs: [test-parser, test-api, test-web, quality]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Download parser build
+        uses: actions/download-artifact@v4
+        with:
+          name: parser-dist
+          path: packages/htoprc-parser/dist
+
+      - name: Build Web
+        run: pnpm --filter @htoprc/web build
+        env:
+          VITE_API_URL: https://api.htoprc.dev.alexneamtu.top
+          VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.VITE_CLERK_PUBLISHABLE_KEY_PROD }}
+
+      - name: Upload web build
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: apps/web/dist
+          retention-days: 1
+
+  summary:
+    needs: [test-parser, test-api, test-web, quality]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: CI Summary
+        run: |
+          echo "## CI Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Parser Tests | ${{ needs.test-parser.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| API Tests | ${{ needs.test-api.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Web Tests | ${{ needs.test-web.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Quality (Type + Lint) | ${{ needs.quality.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY

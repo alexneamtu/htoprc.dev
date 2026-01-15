@@ -1,8 +1,10 @@
 name: Deploy
 
 on:
-  push:
+  workflow_run:
+    workflows: ["CI"]
     branches: [main]
+    types: [completed]
   workflow_dispatch:
     inputs:
       environment:
@@ -20,9 +22,12 @@ env:
 jobs:
   deploy-web:
     runs-on: ubuntu-latest
+    # Only deploy if CI succeeded, or if manually triggered
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
     permissions:
       contents: read
       deployments: write
+      actions: read
     environment:
       name: ${{ github.event.inputs.environment || 'production' }}
       url: ${{ steps.deploy.outputs.deployment-url }}
@@ -43,10 +48,30 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build parser
+      - name: Download parser build from CI
+        if: github.event_name == 'workflow_run'
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: ci.yml
+          run_id: ${{ github.event.workflow_run.id }}
+          name: parser-dist
+          path: packages/htoprc-parser/dist
+
+      - name: Download web build from CI
+        if: github.event_name == 'workflow_run' && env.DEPLOY_ENV == 'production'
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: ci.yml
+          run_id: ${{ github.event.workflow_run.id }}
+          name: web-dist
+          path: apps/web/dist
+
+      - name: Build parser (manual trigger only)
+        if: github.event_name == 'workflow_dispatch'
         run: pnpm --filter @htoprc/parser build
 
-      - name: Build web
+      - name: Build web (manual trigger or staging)
+        if: github.event_name == 'workflow_dispatch' || env.DEPLOY_ENV == 'staging'
         run: pnpm --filter @htoprc/web build
         env:
           VITE_API_URL: ${{ env.DEPLOY_ENV == 'production' && 'https://api.htoprc.dev.alexneamtu.top' || 'https://api.htoprc.staging.alexneamtu.top' }}
@@ -70,6 +95,7 @@ jobs:
           echo "|---------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| Environment | ${{ env.DEPLOY_ENV }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Project | htoprc-${{ env.DEPLOY_ENV }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Trigger | ${{ github.event_name }} |" >> $GITHUB_STEP_SUMMARY
           if [ "${{ env.DEPLOY_ENV }}" = "production" ]; then
             echo "| Custom Domain | htoprc.dev |" >> $GITHUB_STEP_SUMMARY
           else
@@ -78,9 +104,12 @@ jobs:
 
   deploy-api:
     runs-on: ubuntu-latest
+    # Only deploy if CI succeeded, or if manually triggered
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
     permissions:
       contents: read
       deployments: write
+      actions: read
     environment:
       name: ${{ github.event.inputs.environment || 'production' }}
 
@@ -100,7 +129,17 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build parser
+      - name: Download parser build from CI
+        if: github.event_name == 'workflow_run'
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: ci.yml
+          run_id: ${{ github.event.workflow_run.id }}
+          name: parser-dist
+          path: packages/htoprc-parser/dist
+
+      - name: Build parser (manual trigger only)
+        if: github.event_name == 'workflow_dispatch'
         run: pnpm --filter @htoprc/parser build
 
       - name: Run D1 Migrations
@@ -129,6 +168,7 @@ jobs:
           echo "|---------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| Environment | ${{ env.DEPLOY_ENV }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Migrations | Applied |" >> $GITHUB_STEP_SUMMARY
+          echo "| Trigger | ${{ github.event_name }} |" >> $GITHUB_STEP_SUMMARY
           if [ "${{ env.DEPLOY_ENV }}" = "production" ]; then
             echo "| Worker | htoprc-api-production |" >> $GITHUB_STEP_SUMMARY
             echo "| Custom Domain | api.htoprc.dev.alexneamtu.top |" >> $GITHUB_STEP_SUMMARY
@@ -136,3 +176,15 @@ jobs:
             echo "| Worker | htoprc-api-staging |" >> $GITHUB_STEP_SUMMARY
             echo "| Custom Domain | api.htoprc.staging.alexneamtu.top |" >> $GITHUB_STEP_SUMMARY
           fi
+
+  notify-failure:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    steps:
+      - name: CI Failed - Skip Deploy
+        run: |
+          echo "## Deployment Skipped" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "CI workflow failed. Deployment was not attempted." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "[View CI Run](https://github.com/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }})" >> $GITHUB_STEP_SUMMARY
