@@ -7,8 +7,6 @@ import { SEO } from '../components/SEO'
 import { parseHtoprc } from '@htoprc/parser'
 import { useAuth } from '../services/auth'
 
-const CLERK_ENABLED = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
-
 const UPLOAD_CONFIG_MUTATION = /* GraphQL */ `
   mutation UploadConfig($input: UploadConfigInput!) {
     uploadConfig(input: $input) {
@@ -94,8 +92,8 @@ export function EditorPage() {
   const [isUploading, setIsUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
 
-  // Get auth if Clerk is enabled
-  const auth = CLERK_ENABLED ? useAuth() : { user: null, isSignedIn: false }
+  // Auth state (handles disabled case internally)
+  const auth = useAuth()
 
   // Fork and edit params (can be ID or slug)
   const forkParam = searchParams.get('fork')

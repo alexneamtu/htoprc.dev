@@ -6,8 +6,6 @@ import { HtopPreview } from '../components/htop/HtopPreview'
 import { parseHtoprc } from '@htoprc/parser'
 import { useAuth } from '../services/auth'
 
-const CLERK_ENABLED = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
-
 const IS_ADMIN_QUERY = /* GraphQL */ `
   query IsAdmin($userId: ID!) {
     isAdmin(userId: $userId)
@@ -77,8 +75,8 @@ const PENDING_COMMENTS_QUERY = /* GraphQL */ `
 `
 
 const APPROVE_CONFIG_MUTATION = /* GraphQL */ `
-  mutation ApproveConfig($id: ID!) {
-    approveConfig(id: $id) {
+  mutation ApproveConfig($id: ID!, $userId: ID!) {
+    approveConfig(id: $id, userId: $userId) {
       id
       status
     }
@@ -86,8 +84,8 @@ const APPROVE_CONFIG_MUTATION = /* GraphQL */ `
 `
 
 const REJECT_CONFIG_MUTATION = /* GraphQL */ `
-  mutation RejectConfig($id: ID!, $reason: String!) {
-    rejectConfig(id: $id, reason: $reason) {
+  mutation RejectConfig($id: ID!, $reason: String!, $userId: ID!) {
+    rejectConfig(id: $id, reason: $reason, userId: $userId) {
       id
       status
     }
@@ -95,16 +93,16 @@ const REJECT_CONFIG_MUTATION = /* GraphQL */ `
 `
 
 const APPROVE_COMMENT_MUTATION = /* GraphQL */ `
-  mutation ApproveComment($id: ID!) {
-    approveComment(id: $id) {
+  mutation ApproveComment($id: ID!, $userId: ID!) {
+    approveComment(id: $id, userId: $userId) {
       id
     }
   }
 `
 
 const REJECT_COMMENT_MUTATION = /* GraphQL */ `
-  mutation RejectComment($id: ID!, $reason: String!) {
-    rejectComment(id: $id, reason: $reason)
+  mutation RejectComment($id: ID!, $reason: String!, $userId: ID!) {
+    rejectComment(id: $id, reason: $reason, userId: $userId)
   }
 `
 
@@ -123,8 +121,8 @@ const PENDING_REPORTS_QUERY = /* GraphQL */ `
 `
 
 const DISMISS_REPORT_MUTATION = /* GraphQL */ `
-  mutation DismissReport($id: ID!) {
-    dismissReport(id: $id)
+  mutation DismissReport($id: ID!, $userId: ID!) {
+    dismissReport(id: $id, userId: $userId)
   }
 `
 
@@ -172,7 +170,7 @@ interface Report {
 type Tab = 'myconfigs' | 'stats' | 'configs' | 'comments' | 'reports'
 
 export function AdminPage() {
-  const auth = CLERK_ENABLED ? useAuth() : { isSignedIn: false, isLoaded: true, user: null }
+  const auth = useAuth()
   const [activeTab, setActiveTab] = useState<Tab>('myconfigs')
 
   const userId = auth.user?.id
@@ -246,33 +244,38 @@ export function AdminPage() {
   const stats = statsResult.data?.adminStats
 
   const handleApproveConfig = async (id: string) => {
-    await approveConfig({ id })
+    if (!userId) return
+    await approveConfig({ id, userId })
     refetchConfigs({ requestPolicy: 'network-only' })
   }
 
   const handleRejectConfig = async (id: string) => {
+    if (!userId) return
     const reason = prompt('Rejection reason:')
     if (reason) {
-      await rejectConfig({ id, reason })
+      await rejectConfig({ id, reason, userId })
       refetchConfigs({ requestPolicy: 'network-only' })
     }
   }
 
   const handleApproveComment = async (id: string) => {
-    await approveComment({ id })
+    if (!userId) return
+    await approveComment({ id, userId })
     refetchComments({ requestPolicy: 'network-only' })
   }
 
   const handleRejectComment = async (id: string) => {
+    if (!userId) return
     const reason = prompt('Rejection reason:')
     if (reason) {
-      await rejectComment({ id, reason })
+      await rejectComment({ id, reason, userId })
       refetchComments({ requestPolicy: 'network-only' })
     }
   }
 
   const handleDismissReport = async (id: string) => {
-    await dismissReport({ id })
+    if (!userId) return
+    await dismissReport({ id, userId })
     refetchReports({ requestPolicy: 'network-only' })
   }
 

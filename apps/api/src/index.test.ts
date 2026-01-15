@@ -245,7 +245,8 @@ describe('API', () => {
       expect(data.data.uploadConfig.title).toBe('My Config')
       expect(data.data.uploadConfig.content).toBe('htop_version=3.2.1')
       expect(data.data.uploadConfig.sourceType).toBe('uploaded')
-      expect(data.data.uploadConfig.status).toBe('published')
+      // Anonymous uploads go to pending status for moderation
+      expect(data.data.uploadConfig.status).toBe('pending')
     })
 
     it('calculates score based on config content', async () => {
@@ -415,6 +416,14 @@ describe('API', () => {
       }
       const uploadData = (await uploadRes.json()) as GraphQLResponse<UploadResponse>
       const uploadedId = uploadData.data.uploadConfig.id
+
+      // Anonymous uploads go to pending status, so simulate admin approval
+      const config = mockDB._data.configs.find(
+        (c) => (c as { id: string }).id === uploadedId
+      ) as { status: string } | undefined
+      if (config) {
+        config.status = 'published'
+      }
 
       // Then, retrieve via configs query
       const configsRes = await app.request(

@@ -9,7 +9,16 @@ import { useConfig } from '../hooks'
 import { useMutation, useQuery } from 'urql'
 import { useAuth } from '../services/auth'
 
-const CLERK_ENABLED = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
+// Validate URL is safe (http/https only) to prevent XSS via javascript: URLs
+function isSafeUrl(url: string | null | undefined): url is string {
+  if (!url) return false
+  try {
+    const parsed = new URL(url)
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
 
 const REPORT_MUTATION = /* GraphQL */ `
   mutation ReportContent($contentType: String!, $contentId: ID!, $reason: String!, $userId: ID!) {
@@ -54,7 +63,7 @@ export function ConfigPage() {
   const [reportReason, setReportReason] = useState('')
   const [reportSubmitted, setReportSubmitted] = useState(false)
 
-  const auth = CLERK_ENABLED ? useAuth() : { user: null, isSignedIn: false }
+  const auth = useAuth()
 
   const [{ data: adminData }] = useQuery<{ isAdmin: boolean }>({
     query: IS_ADMIN_QUERY,
@@ -187,7 +196,7 @@ export function ConfigPage() {
           Score: {config.score}
         </span>
         <LikeButton configId={config.id} initialLikesCount={config.likesCount} />
-        {config.sourceUrl ? (
+        {isSafeUrl(config.sourceUrl) ? (
           <a
             href={config.sourceUrl}
             target="_blank"

@@ -4,6 +4,7 @@ import { createYoga } from 'graphql-yoga'
 import { schema } from './graphql/schema'
 import { runScraper, runAllScrapers } from './services/scraper'
 import type { Platform } from './services/scraper'
+import { isUserAdmin } from './utils/auth'
 
 type Bindings = {
   DB: D1Database
@@ -34,6 +35,14 @@ app.use(
     credentials: true,
   })
 )
+
+// Security headers middleware
+app.use('*', async (c, next) => {
+  await next()
+  c.header('X-Content-Type-Options', 'nosniff')
+  c.header('X-Frame-Options', 'DENY')
+  c.header('Referrer-Policy', 'strict-origin-when-cross-origin')
+})
 
 // Health check
 app.get('/api/health', (c) => {
@@ -99,6 +108,17 @@ app.on(['GET', 'POST'], '/api/graphql', async (c) => {
 
 // Admin endpoint to trigger scraper manually
 app.post('/api/admin/scrape', async (c) => {
+  // Authorization check
+  const userId = c.req.header('X-User-Id')
+  if (!userId) {
+    return c.json({ error: 'Unauthorized: User ID required' }, 401)
+  }
+
+  const admin = await isUserAdmin(c.env.DB, userId)
+  if (!admin) {
+    return c.json({ error: 'Forbidden: Admin access required' }, 403)
+  }
+
   const body = await c.req.json<{ platform?: Platform }>().catch(() => ({}))
   const platform = body?.platform || 'github'
 
@@ -114,6 +134,17 @@ app.post('/api/admin/scrape', async (c) => {
 
 // Get scraper run history
 app.get('/api/admin/scraper-logs', async (c) => {
+  // Authorization check
+  const userId = c.req.header('X-User-Id')
+  if (!userId) {
+    return c.json({ error: 'Unauthorized: User ID required' }, 401)
+  }
+
+  const admin = await isUserAdmin(c.env.DB, userId)
+  if (!admin) {
+    return c.json({ error: 'Forbidden: Admin access required' }, 403)
+  }
+
   const limit = parseInt(c.req.query('limit') || '10', 10)
 
   const result = await c.env.DB.prepare(
