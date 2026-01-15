@@ -161,6 +161,24 @@ jobs:
         if: github.event_name != 'workflow_run'
         run: pnpm --filter @htoprc/parser build
 
+      - name: Backup D1 Database (Production)
+        if: needs.determine-environment.outputs.environment == 'production'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: ./apps/api
+          command: d1 export DB --env production --remote --output=backup-${{ github.run_id }}.sql
+          packageManager: pnpm
+
+      - name: Upload D1 Backup
+        if: needs.determine-environment.outputs.environment == 'production'
+        uses: actions/upload-artifact@v6
+        with:
+          name: d1-backup-${{ github.run_id }}
+          path: apps/api/backup-${{ github.run_id }}.sql
+          retention-days: 30
+
       - name: Run D1 Migrations
         uses: cloudflare/wrangler-action@v3
         with:
@@ -189,6 +207,7 @@ jobs:
           echo "| Migrations | Applied |" >> $GITHUB_STEP_SUMMARY
           echo "| Trigger | ${{ github.event_name }} |" >> $GITHUB_STEP_SUMMARY
           if [ "${{ needs.determine-environment.outputs.environment }}" = "production" ]; then
+            echo "| DB Backup | d1-backup-${{ github.run_id }} (30 days retention) |" >> $GITHUB_STEP_SUMMARY
             echo "| Worker | htoprc-api-production |" >> $GITHUB_STEP_SUMMARY
             echo "| Custom Domain | api.htoprc.dev.alexneamtu.top |" >> $GITHUB_STEP_SUMMARY
             echo "| Release | ${{ github.event.release.tag_name }} |" >> $GITHUB_STEP_SUMMARY
