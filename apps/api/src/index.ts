@@ -18,6 +18,7 @@ type Bindings = {
   GITHUB_TOKEN?: string
   CLERK_SECRET_KEY?: string
   ANON_RATE_LIMIT_SALT?: string
+  BASE_URL?: string  // For sitemap generation (defaults to https://htoprc.dev)
 }
 
 type AppDependencies = {
@@ -89,7 +90,7 @@ export function createApp({ verifyAuth = verifyClerkToken }: AppDependencies = {
 
   // Sitemap.xml
   app.get('/sitemap.xml', async (c) => {
-    const baseUrl = 'https://htoprc.dev'
+    const baseUrl = c.env.BASE_URL || 'https://htoprc.dev'
 
     // Get all published configs
     const result = await c.env.DB.prepare(
@@ -134,11 +135,8 @@ ${urls
 
   // GraphQL endpoint
   app.on(['GET', 'POST'], '/api/graphql', async (c) => {
-    // Require dedicated salt for anonymous rate limiting - don't fallback to auth secret
-    if (!c.env.ANON_RATE_LIMIT_SALT) {
-      console.warn('ANON_RATE_LIMIT_SALT not configured - anonymous rate limiting disabled')
-    }
     const auth = await getAuthFromRequest(c.req.raw, c.env.CLERK_SECRET_KEY, verifyAuth)
+    // Anonymous rate limiting requires ANON_RATE_LIMIT_SALT - returns null if not configured
     const anonKey = await getAnonKeyFromRequest(c.req.raw, c.env.ANON_RATE_LIMIT_SALT)
     const response = await yoga.handle(c.req.raw, { db: c.env.DB, auth, anonKey })
     return response

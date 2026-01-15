@@ -1,8 +1,7 @@
 import { createSchema } from 'graphql-yoga'
 import { GraphQLError } from 'graphql'
 import { parseHtoprc } from '@htoprc/parser'
-import { isUserAdmin, type AuthContext } from '../utils/auth'
-import { secureRandomString } from '../utils/random'
+import { isUserAdmin } from '../utils/auth'
 import {
   validateTitle,
   validateContent,
@@ -11,194 +10,24 @@ import {
   validateSearch,
   validateRequiredId,
 } from '../utils/validation'
-
-// SHA-256 hash using Web Crypto API (compatible with Cloudflare Workers)
-async function sha256(content: string): Promise<string> {
-  const encoder = new TextEncoder()
-  const data = encoder.encode(content)
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
-  const hashArray = Array.from(new Uint8Array(hashBuffer))
-  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
-}
-
-// Generate a unique slug from a title
-async function generateUniqueSlug(db: D1Database, title: string): Promise<string> {
-  const baseSlug = title
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
-    .replace(/\s+/g, '-') // Replace spaces with hyphens
-    .replace(/-+/g, '-') // Replace multiple hyphens with single
-    .replace(/^-|-$/g, '') // Remove leading/trailing hyphens
-    || 'config' // Fallback if title becomes empty
-
-  // Check if base slug exists
-  const existing = await db
-    .prepare('SELECT slug FROM configs WHERE slug = ? OR slug LIKE ?')
-    .bind(baseSlug, `${baseSlug}-%`)
-    .all<{ slug: string }>()
-
-  if (!existing.results || existing.results.length === 0) {
-    return baseSlug
-  }
-
-  // Find the highest suffix number
-  const existingSlugs = new Set(existing.results.map(r => r.slug))
-
-  if (!existingSlugs.has(baseSlug)) {
-    return baseSlug
-  }
-
-  // Find next available number, add random suffix to avoid race conditions
-  let counter = 2
-  while (existingSlugs.has(`${baseSlug}-${counter}`)) {
-    counter++
-  }
-
-  // Add a small random suffix to prevent race condition collisions
-  const randomSuffix = secureRandomString(3)
-  return `${baseSlug}-${counter}-${randomSuffix}`
-}
-
-// GraphQL context type
-interface GraphQLContext {
-  db: D1Database
-  auth: AuthContext | null
-  anonKey: string | null
-}
-
-function requireAuthUser(ctx: GraphQLContext, userId: string): string {
-  if (!ctx.auth?.userId) {
-    throw new GraphQLError('Authentication required', {
-      extensions: { code: 'UNAUTHENTICATED' },
-    })
-  }
-  if (ctx.auth.userId !== userId) {
-    throw new GraphQLError('Forbidden', {
-      extensions: { code: 'FORBIDDEN' },
-    })
-  }
-  return ctx.auth.userId
-}
-
-// Database row types
-interface ConfigRow {
-  id: string
-  slug: string
-  title: string
-  content: string
-  content_hash: string
-  source_type: string
-  source_url: string | null
-  source_platform: string | null
-  author_id: string | null
-  forked_from_id: string | null
-  status: string
-  score: number
-  likes_count: number
-  htop_version: string | null
-  created_at: string
-}
-
-interface CommentRow {
-  id: string
-  config_id: string
-  author_id: string
-  author_username: string
-  author_avatar_url: string | null
-  content: string
-  status: string
-  created_at: string
-}
-
-// Rate limit configuration
-const RATE_LIMITS = {
-  upload: { max: 5, window: 'day' },
-  comment: { max: 20, window: 'day' },
-  like: { max: 100, window: 'day' },
-  report: { max: 10, window: 'day' },
-} as const
-
-// Rate limiting helper
-async function checkRateLimit(
-  db: D1Database,
-  userId: string,
-  actionType: keyof typeof RATE_LIMITS
-): Promise<{ allowed: boolean; remaining: number }> {
-  const limit = RATE_LIMITS[actionType]
-  const today = new Date().toISOString().split('T')[0]
-
-  // Get current count
-  const result = await db
-    .prepare('SELECT count FROM rate_limits WHERE user_id = ? AND action_type = ? AND action_date = ?')
-    .bind(userId, actionType, today)
-    .first<{ count: number }>()
-
-  const currentCount = result?.count ?? 0
-
-  if (currentCount >= limit.max) {
-    return { allowed: false, remaining: 0 }
-  }
-
-  // Increment count
-  await db
-    .prepare(`
-      INSERT INTO rate_limits (user_id, action_type, action_date, count)
-      VALUES (?, ?, ?, 1)
-      ON CONFLICT (user_id, action_type, action_date)
-      DO UPDATE SET count = count + 1
-    `)
-    .bind(userId, actionType, today)
-    .run()
-
-  return { allowed: true, remaining: limit.max - currentCount - 1 }
-}
-
-async function checkAnonRateLimit(
-  db: D1Database,
-  anonKey: string | null,
-  actionType: keyof typeof RATE_LIMITS
-): Promise<{ allowed: boolean; remaining: number }> {
-  if (!anonKey) {
-    throw new GraphQLError('Unable to determine client IP for rate limiting', {
-      extensions: { code: 'BAD_REQUEST' },
-    })
-  }
-
-  const limit = RATE_LIMITS[actionType]
-  const today = new Date().toISOString().split('T')[0]
-
-  const result = await db
-    .prepare(
-      'SELECT count FROM anon_rate_limits WHERE anon_key = ? AND action_type = ? AND action_date = ?'
-    )
-    .bind(anonKey, actionType, today)
-    .first<{ count: number }>()
-
-  const currentCount = result?.count ?? 0
-  if (currentCount >= limit.max) {
-    return { allowed: false, remaining: 0 }
-  }
-
-  await db
-    .prepare(
-      `INSERT INTO anon_rate_limits (anon_key, action_type, action_date, count)
-       VALUES (?, ?, ?, 1)
-       ON CONFLICT (anon_key, action_type, action_date)
-       DO UPDATE SET count = count + 1`
-    )
-    .bind(anonKey, actionType, today)
-    .run()
-
-  return { allowed: true, remaining: limit.max - currentCount - 1 }
-}
-
-class RateLimitError extends GraphQLError {
-  constructor(actionType: string, max: number) {
-    super(`Rate limit exceeded: You can only perform ${max} ${actionType}(s) per day`, {
-      extensions: { code: 'RATE_LIMIT_EXCEEDED' }
-    })
-  }
-}
+import {
+  type GraphQLContext,
+  type ConfigRow,
+  type CommentRow,
+  RATE_LIMITS,
+  RateLimitError,
+  CONFIG_STATUS,
+  COMMENT_STATUS,
+  REPORT_STATUS,
+} from './types'
+import {
+  sha256,
+  generateUniqueSlug,
+  requireAuthUser,
+  mapConfigRow,
+  checkRateLimit,
+  checkAnonRateLimit,
+} from './helpers'
 
 // Simple initial schema - will be expanded with Pothos later
 export const schema = createSchema<GraphQLContext>({
@@ -381,7 +210,7 @@ export const schema = createSchema<GraphQLContext>({
 
         // Build WHERE clause
         const conditions = ['status = ?', 'score >= ?']
-        const params: (string | number)[] = ['published', minScore]
+        const params: (string | number)[] = [CONFIG_STATUS.PUBLISHED, minScore]
 
         // Validate and escape search input
         const validatedSearch = validateSearch(search)
@@ -419,21 +248,7 @@ export const schema = createSchema<GraphQLContext>({
           .bind(...params, validatedLimit, offset)
           .all<ConfigRow>()
 
-        const nodes = (result.results ?? []).map((row) => ({
-          id: row.id,
-          slug: row.slug,
-          title: row.title,
-          content: row.content,
-          sourceType: row.source_type,
-          sourceUrl: row.source_url,
-          sourcePlatform: row.source_platform,
-          authorId: row.author_id,
-          forkedFromId: row.forked_from_id,
-          status: row.status,
-          score: row.score,
-          likesCount: row.likes_count,
-          createdAt: row.created_at,
-        }))
+        const nodes = (result.results ?? []).map(mapConfigRow)
 
         const totalPages = Math.ceil(totalCount / validatedLimit)
 
@@ -460,25 +275,11 @@ export const schema = createSchema<GraphQLContext>({
           : 'SELECT * FROM configs WHERE slug = ? AND status = ?'
         const param = id ?? slug
 
-        const row = await ctx.db.prepare(query).bind(param, 'published').first<ConfigRow>()
+        const row = await ctx.db.prepare(query).bind(param, CONFIG_STATUS.PUBLISHED).first<ConfigRow>()
 
         if (!row) return null
 
-        return {
-          id: row.id,
-          slug: row.slug,
-          title: row.title,
-          content: row.content,
-          sourceType: row.source_type,
-          sourceUrl: row.source_url,
-          sourcePlatform: row.source_platform,
-          authorId: row.author_id,
-          forkedFromId: row.forked_from_id,
-          status: row.status,
-          score: row.score,
-          likesCount: row.likes_count,
-          createdAt: row.created_at,
-        }
+        return mapConfigRow(row)
       },
       recentConfigs: async (
         _: unknown,
@@ -491,24 +292,10 @@ export const schema = createSchema<GraphQLContext>({
 
         const result = await ctx.db
           .prepare('SELECT * FROM configs WHERE status = ? ORDER BY created_at DESC LIMIT ?')
-          .bind('published', validatedLimit)
+          .bind(CONFIG_STATUS.PUBLISHED, validatedLimit)
           .all<ConfigRow>()
 
-        return (result.results ?? []).map((row) => ({
-          id: row.id,
-          slug: row.slug,
-          title: row.title,
-          content: row.content,
-          sourceType: row.source_type,
-          sourceUrl: row.source_url,
-          sourcePlatform: row.source_platform,
-          authorId: row.author_id,
-          forkedFromId: row.forked_from_id,
-          status: row.status,
-          score: row.score,
-          likesCount: row.likes_count,
-          createdAt: row.created_at,
-        }))
+        return (result.results ?? []).map(mapConfigRow)
       },
       myConfigs: async (
         _: unknown,
@@ -518,24 +305,10 @@ export const schema = createSchema<GraphQLContext>({
         requireAuthUser(ctx, userId)
         const result = await ctx.db
           .prepare('SELECT * FROM configs WHERE author_id = ? AND status != ? ORDER BY created_at DESC')
-          .bind(userId, 'deleted')
+          .bind(userId, CONFIG_STATUS.DELETED)
           .all<ConfigRow>()
 
-        return (result.results ?? []).map((row) => ({
-          id: row.id,
-          slug: row.slug,
-          title: row.title,
-          content: row.content,
-          sourceType: row.source_type,
-          sourceUrl: row.source_url,
-          sourcePlatform: row.source_platform,
-          authorId: row.author_id,
-          forkedFromId: row.forked_from_id,
-          status: row.status,
-          score: row.score,
-          likesCount: row.likes_count,
-          createdAt: row.created_at,
-        }))
+        return (result.results ?? []).map(mapConfigRow)
       },
       likedConfigs: async (
         _: unknown,
@@ -550,24 +323,10 @@ export const schema = createSchema<GraphQLContext>({
             WHERE l.user_id = ? AND c.status = ?
             ORDER BY l.created_at DESC
           `)
-          .bind(userId, 'published')
+          .bind(userId, CONFIG_STATUS.PUBLISHED)
           .all<ConfigRow>()
 
-        return (result.results ?? []).map((row) => ({
-          id: row.id,
-          slug: row.slug,
-          title: row.title,
-          content: row.content,
-          sourceType: row.source_type,
-          sourceUrl: row.source_url,
-          sourcePlatform: row.source_platform,
-          authorId: row.author_id,
-          forkedFromId: row.forked_from_id,
-          status: row.status,
-          score: row.score,
-          likesCount: row.likes_count,
-          createdAt: row.created_at,
-        }))
+        return (result.results ?? []).map(mapConfigRow)
       },
       isAdmin: async (
         _: unknown,
@@ -604,7 +363,7 @@ export const schema = createSchema<GraphQLContext>({
             WHERE c.config_id = ? AND c.author_id = ? AND c.status = ?
             ORDER BY c.created_at ASC
           `)
-          .bind(configId, userId, 'pending')
+          .bind(configId, userId, CONFIG_STATUS.PENDING)
           .all<CommentRow>()
 
         return (result.results ?? []).map((row) => ({
@@ -630,25 +389,36 @@ export const schema = createSchema<GraphQLContext>({
           return null
         }
 
-        const [totalConfigs, publishedConfigs, pendingConfigs, totalComments, pendingComments, totalLikes, pendingReports] =
-          await Promise.all([
-            ctx.db.prepare('SELECT COUNT(*) as count FROM configs').first<{ count: number }>(),
-            ctx.db.prepare('SELECT COUNT(*) as count FROM configs WHERE status = ?').bind('published').first<{ count: number }>(),
-            ctx.db.prepare('SELECT COUNT(*) as count FROM configs WHERE status = ?').bind('pending').first<{ count: number }>(),
-            ctx.db.prepare('SELECT COUNT(*) as count FROM comments').first<{ count: number }>(),
-            ctx.db.prepare('SELECT COUNT(*) as count FROM comments WHERE status = ?').bind('pending').first<{ count: number }>(),
-            ctx.db.prepare('SELECT COUNT(*) as count FROM likes').first<{ count: number }>(),
-            ctx.db.prepare('SELECT COUNT(*) as count FROM reports WHERE status = ?').bind('pending').first<{ count: number }>(),
-          ])
+        // Single query to get all admin stats (more efficient than 7 separate queries)
+        const stats = await ctx.db
+          .prepare(`
+            SELECT
+              (SELECT COUNT(*) FROM configs) as total_configs,
+              (SELECT COUNT(*) FROM configs WHERE status = CONFIG_STATUS.PUBLISHED) as published_configs,
+              (SELECT COUNT(*) FROM configs WHERE status = CONFIG_STATUS.PENDING) as pending_configs,
+              (SELECT COUNT(*) FROM comments) as total_comments,
+              (SELECT COUNT(*) FROM comments WHERE status = CONFIG_STATUS.PENDING) as pending_comments,
+              (SELECT COUNT(*) FROM likes) as total_likes,
+              (SELECT COUNT(*) FROM reports WHERE status = CONFIG_STATUS.PENDING) as pending_reports
+          `)
+          .first<{
+            total_configs: number
+            published_configs: number
+            pending_configs: number
+            total_comments: number
+            pending_comments: number
+            total_likes: number
+            pending_reports: number
+          }>()
 
         return {
-          totalConfigs: totalConfigs?.count ?? 0,
-          publishedConfigs: publishedConfigs?.count ?? 0,
-          pendingConfigs: pendingConfigs?.count ?? 0,
-          totalComments: totalComments?.count ?? 0,
-          pendingComments: pendingComments?.count ?? 0,
-          totalLikes: totalLikes?.count ?? 0,
-          pendingReports: pendingReports?.count ?? 0,
+          totalConfigs: stats?.total_configs ?? 0,
+          publishedConfigs: stats?.published_configs ?? 0,
+          pendingConfigs: stats?.pending_configs ?? 0,
+          totalComments: stats?.total_comments ?? 0,
+          pendingComments: stats?.pending_comments ?? 0,
+          totalLikes: stats?.total_likes ?? 0,
+          pendingReports: stats?.pending_reports ?? 0,
         }
       },
       pendingConfigs: async (
@@ -665,24 +435,10 @@ export const schema = createSchema<GraphQLContext>({
 
         const result = await ctx.db
           .prepare('SELECT * FROM configs WHERE status = ? ORDER BY created_at DESC')
-          .bind('pending')
+          .bind(CONFIG_STATUS.PENDING)
           .all<ConfigRow>()
 
-        return (result.results ?? []).map((row) => ({
-          id: row.id,
-          slug: row.slug,
-          title: row.title,
-          content: row.content,
-          sourceType: row.source_type,
-          sourceUrl: row.source_url,
-          sourcePlatform: row.source_platform,
-          authorId: row.author_id,
-          forkedFromId: row.forked_from_id,
-          status: row.status,
-          score: row.score,
-          likesCount: row.likes_count,
-          createdAt: row.created_at,
-        }))
+        return (result.results ?? []).map(mapConfigRow)
       },
       pendingComments: async (
         _: unknown,
@@ -708,7 +464,7 @@ export const schema = createSchema<GraphQLContext>({
             WHERE c.status = ?
             ORDER BY c.created_at DESC
           `)
-          .bind('pending')
+          .bind(CONFIG_STATUS.PENDING)
           .all<{
             id: string
             content: string
@@ -761,7 +517,7 @@ export const schema = createSchema<GraphQLContext>({
             WHERE r.status = ?
             ORDER BY r.created_at DESC
           `)
-          .bind('pending')
+          .bind(CONFIG_STATUS.PENDING)
           .all<{
             id: string
             content_type: string
@@ -842,7 +598,7 @@ export const schema = createSchema<GraphQLContext>({
               extensions: { code: 'NOT_FOUND' },
             })
           }
-          if (forkedFrom.status !== 'published') {
+          if (forkedFrom.status !== CONFIG_STATUS.PUBLISHED) {
             throw new GraphQLError('Cannot fork a config that is not published', {
               extensions: { code: 'FORBIDDEN' },
             })
@@ -856,7 +612,7 @@ export const schema = createSchema<GraphQLContext>({
         const slug = await generateUniqueSlug(ctx.db, validatedTitle)
         const contentHash = await sha256(validatedContent)
         const createdAt = new Date().toISOString()
-        const status = isTrustedOrAdmin ? 'published' : 'pending'
+        const status = isTrustedOrAdmin ? CONFIG_STATUS.PUBLISHED : CONFIG_STATUS.PENDING
 
         await ctx.db
           .prepare(
@@ -903,27 +659,34 @@ export const schema = createSchema<GraphQLContext>({
       ) => {
         const authedUserId = requireAuthUser(ctx, userId)
         // Validate input
+        const validatedId = validateRequiredId(id, 'id')
         const validatedContent = validateContent(content)
         const validatedTitle = title ? validateTitle(title) : undefined
 
         // Get the existing config
         const existing = await ctx.db
           .prepare('SELECT * FROM configs WHERE id = ?')
-          .bind(id)
+          .bind(validatedId)
           .first<ConfigRow>()
 
         if (!existing) {
-          throw new Error('Config not found')
+          throw new GraphQLError('Config not found', {
+            extensions: { code: 'NOT_FOUND' }
+          })
         }
 
         // Check if user is the author (only uploaded configs can be edited by their author)
         if (existing.source_type !== 'uploaded') {
-          throw new Error('Only uploaded configs can be edited')
+          throw new GraphQLError('Only uploaded configs can be edited', {
+            extensions: { code: 'FORBIDDEN' }
+          })
         }
 
         // For uploaded configs, check author_id or allow if it's null (legacy)
         if (existing.author_id && existing.author_id !== authedUserId) {
-          throw new Error('You can only edit your own configs')
+          throw new GraphQLError('You can only edit your own configs', {
+            extensions: { code: 'FORBIDDEN' }
+          })
         }
 
         // Parse the new content to calculate score
@@ -968,6 +731,7 @@ export const schema = createSchema<GraphQLContext>({
       ) => {
         const authedUserId = requireAuthUser(ctx, userId)
         // Validate input
+        const validatedId = validateRequiredId(id, 'id')
         const validatedTitle = validateTitle(title)
 
         // Check if user is trusted/admin for auto-publish
@@ -999,15 +763,17 @@ export const schema = createSchema<GraphQLContext>({
         // Get the original config
         const original = await ctx.db
           .prepare('SELECT * FROM configs WHERE id = ?')
-          .bind(id)
+          .bind(validatedId)
           .first<ConfigRow>()
 
         if (!original) {
-          throw new Error('Config not found')
+          throw new GraphQLError('Config not found', {
+            extensions: { code: 'NOT_FOUND' }
+          })
         }
 
         // Only allow forking published configs
-        if (original.status !== 'published') {
+        if (original.status !== CONFIG_STATUS.PUBLISHED) {
           throw new GraphQLError('Cannot fork a config that is not published', {
             extensions: { code: 'FORBIDDEN' },
           })
@@ -1020,7 +786,7 @@ export const schema = createSchema<GraphQLContext>({
         const slug = await generateUniqueSlug(ctx.db, validatedTitle)
         const contentHash = await sha256(original.content)
         const createdAt = new Date().toISOString()
-        const status = isTrustedOrAdmin ? 'published' : 'pending'
+        const status = isTrustedOrAdmin ? CONFIG_STATUS.PUBLISHED : CONFIG_STATUS.PENDING
 
         await ctx.db
           .prepare(
@@ -1035,7 +801,7 @@ export const schema = createSchema<GraphQLContext>({
             contentHash,
             'uploaded',
             authedUserId,
-            id,
+            validatedId,
             parsed.score,
             parsed.config.htopVersion ?? null,
             status,
@@ -1053,7 +819,7 @@ export const schema = createSchema<GraphQLContext>({
           sourceUrl: null,
           sourcePlatform: null,
           authorId: authedUserId,
-          forkedFromId: id,
+          forkedFromId: validatedId,
           status,
           score: parsed.score,
           likesCount: 0,
@@ -1192,7 +958,7 @@ export const schema = createSchema<GraphQLContext>({
         const id = crypto.randomUUID()
         const createdAt = new Date().toISOString()
 
-        const status = user.is_trusted ? 'published' : 'pending'
+        const status = user.is_trusted ? CONFIG_STATUS.PUBLISHED : CONFIG_STATUS.PENDING
 
         await ctx.db
           .prepare(
@@ -1217,6 +983,9 @@ export const schema = createSchema<GraphQLContext>({
         { id, userId }: { id: string; userId: string },
         ctx: GraphQLContext
       ) => {
+        // Validate input
+        const validatedId = validateRequiredId(id, 'id')
+
         // Authorization check
         const authedUserId = requireAuthUser(ctx, userId)
         const isAdmin = await isUserAdmin(ctx.db, authedUserId)
@@ -1228,30 +997,21 @@ export const schema = createSchema<GraphQLContext>({
 
         await ctx.db
           .prepare('UPDATE configs SET status = ? WHERE id = ?')
-          .bind('published', id)
+          .bind(CONFIG_STATUS.PUBLISHED, validatedId)
           .run()
 
         const row = await ctx.db
           .prepare('SELECT * FROM configs WHERE id = ?')
-          .bind(id)
+          .bind(validatedId)
           .first<ConfigRow>()
 
-        if (!row) throw new Error('Config not found')
-
-        return {
-          id: row.id,
-          slug: row.slug,
-          title: row.title,
-          content: row.content,
-          sourceType: row.source_type,
-          sourceUrl: row.source_url,
-          sourcePlatform: row.source_platform,
-          forkedFromId: row.forked_from_id,
-          status: row.status,
-          score: row.score,
-          likesCount: row.likes_count,
-          createdAt: row.created_at,
+        if (!row) {
+          throw new GraphQLError('Config not found', {
+            extensions: { code: 'NOT_FOUND' }
+          })
         }
+
+        return mapConfigRow(row)
       },
       rejectConfig: async (
         _: unknown,
@@ -1259,6 +1019,7 @@ export const schema = createSchema<GraphQLContext>({
         ctx: GraphQLContext
       ) => {
         // Validate input
+        const validatedId = validateRequiredId(id, 'id')
         const validatedReason = validateReason(reason)
 
         // Authorization check
@@ -1272,36 +1033,30 @@ export const schema = createSchema<GraphQLContext>({
 
         await ctx.db
           .prepare('UPDATE configs SET status = ?, rejection_reason = ? WHERE id = ?')
-          .bind('rejected', validatedReason, id)
+          .bind(CONFIG_STATUS.REJECTED, validatedReason, validatedId)
           .run()
 
         const row = await ctx.db
           .prepare('SELECT * FROM configs WHERE id = ?')
-          .bind(id)
+          .bind(validatedId)
           .first<ConfigRow>()
 
-        if (!row) throw new Error('Config not found')
-
-        return {
-          id: row.id,
-          slug: row.slug,
-          title: row.title,
-          content: row.content,
-          sourceType: row.source_type,
-          sourceUrl: row.source_url,
-          sourcePlatform: row.source_platform,
-          forkedFromId: row.forked_from_id,
-          status: row.status,
-          score: row.score,
-          likesCount: row.likes_count,
-          createdAt: row.created_at,
+        if (!row) {
+          throw new GraphQLError('Config not found', {
+            extensions: { code: 'NOT_FOUND' }
+          })
         }
+
+        return mapConfigRow(row)
       },
       approveComment: async (
         _: unknown,
         { id, userId }: { id: string; userId: string },
         ctx: GraphQLContext
       ) => {
+        // Validate input
+        const validatedId = validateRequiredId(id, 'id')
+
         // Authorization check
         const authedUserId = requireAuthUser(ctx, userId)
         const isAdmin = await isUserAdmin(ctx.db, authedUserId)
@@ -1314,13 +1069,13 @@ export const schema = createSchema<GraphQLContext>({
         // Update comment status
         await ctx.db
           .prepare('UPDATE comments SET status = ? WHERE id = ?')
-          .bind('published', id)
+          .bind(COMMENT_STATUS.PUBLISHED, validatedId)
           .run()
 
         // Mark user as trusted after first approved comment
         const comment = await ctx.db
           .prepare('SELECT author_id FROM comments WHERE id = ?')
-          .bind(id)
+          .bind(validatedId)
           .first<{ author_id: string }>()
 
         if (comment) {
@@ -1338,10 +1093,14 @@ export const schema = createSchema<GraphQLContext>({
             LEFT JOIN users u ON c.author_id = u.id
             WHERE c.id = ?
           `)
-          .bind(id)
+          .bind(validatedId)
           .first<CommentRow>()
 
-        if (!row) throw new Error('Comment not found')
+        if (!row) {
+          throw new GraphQLError('Comment not found', {
+            extensions: { code: 'NOT_FOUND' }
+          })
+        }
 
         return {
           id: row.id,
@@ -1360,6 +1119,7 @@ export const schema = createSchema<GraphQLContext>({
         ctx: GraphQLContext
       ) => {
         // Validate input
+        const validatedId = validateRequiredId(id, 'id')
         const validatedReason = validateReason(reason)
 
         // Authorization check
@@ -1373,7 +1133,7 @@ export const schema = createSchema<GraphQLContext>({
 
         await ctx.db
           .prepare('UPDATE comments SET status = ?, rejection_reason = ? WHERE id = ?')
-          .bind('rejected', validatedReason, id)
+          .bind(COMMENT_STATUS.REJECTED, validatedReason, validatedId)
           .run()
 
         return true
@@ -1443,7 +1203,7 @@ export const schema = createSchema<GraphQLContext>({
         await ctx.db
           .prepare(
           `INSERT INTO reports (id, content_type, content_id, reporter_id, reason, status)
-             VALUES (?, ?, ?, ?, ?, 'pending')`
+             VALUES (?, ?, ?, ?, ?, CONFIG_STATUS.PENDING)`
           )
           .bind(id, contentType, validatedContentId, authedUserId, validatedReason)
           .run()
@@ -1452,12 +1212,12 @@ export const schema = createSchema<GraphQLContext>({
         if (contentType === 'config') {
           await ctx.db
             .prepare('UPDATE configs SET status = ? WHERE id = ? AND status = ?')
-            .bind('flagged', validatedContentId, 'published')
+            .bind(CONFIG_STATUS.FLAGGED, validatedContentId, CONFIG_STATUS.PUBLISHED)
             .run()
         } else if (contentType === 'comment') {
           await ctx.db
             .prepare('UPDATE comments SET status = ? WHERE id = ? AND status = ?')
-            .bind('pending', validatedContentId, 'published')
+            .bind(CONFIG_STATUS.PENDING, validatedContentId, CONFIG_STATUS.PUBLISHED)
             .run()
         }
 
@@ -1468,6 +1228,9 @@ export const schema = createSchema<GraphQLContext>({
         { id, userId }: { id: string; userId: string },
         ctx: GraphQLContext
       ) => {
+        // Validate input
+        const validatedId = validateRequiredId(id, 'id')
+
         // Authorization check
         const authedUserId = requireAuthUser(ctx, userId)
         const isAdmin = await isUserAdmin(ctx.db, authedUserId)
@@ -1480,7 +1243,7 @@ export const schema = createSchema<GraphQLContext>({
         // Get the report to know what content to restore
         const report = await ctx.db
           .prepare('SELECT content_type, content_id FROM reports WHERE id = ?')
-          .bind(id)
+          .bind(validatedId)
           .first<{ content_type: string; content_id: string }>()
 
         if (!report) {
@@ -1490,19 +1253,19 @@ export const schema = createSchema<GraphQLContext>({
         // Mark report as dismissed
         await ctx.db
           .prepare('UPDATE reports SET status = ? WHERE id = ?')
-          .bind('dismissed', id)
+          .bind(REPORT_STATUS.DISMISSED, validatedId)
           .run()
 
         // Restore content status to published
         if (report.content_type === 'config') {
           await ctx.db
             .prepare('UPDATE configs SET status = ? WHERE id = ? AND status = ?')
-            .bind('published', report.content_id, 'flagged')
+            .bind(CONFIG_STATUS.PUBLISHED, report.content_id, CONFIG_STATUS.FLAGGED)
             .run()
         } else if (report.content_type === 'comment') {
           await ctx.db
             .prepare('UPDATE comments SET status = ? WHERE id = ? AND status = ?')
-            .bind('published', report.content_id, 'pending')
+            .bind(COMMENT_STATUS.PUBLISHED, report.content_id, COMMENT_STATUS.PENDING)
             .run()
         }
 
@@ -1513,15 +1276,20 @@ export const schema = createSchema<GraphQLContext>({
         { id, userId }: { id: string; userId: string },
         ctx: GraphQLContext
       ) => {
+        // Validate input
+        const validatedId = validateRequiredId(id, 'id')
         const authedUserId = requireAuthUser(ctx, userId)
+
         // Get the config to check ownership
         const config = await ctx.db
           .prepare('SELECT author_id FROM configs WHERE id = ?')
-          .bind(id)
+          .bind(validatedId)
           .first<{ author_id: string | null }>()
 
         if (!config) {
-          throw new GraphQLError('Config not found')
+          throw new GraphQLError('Config not found', {
+            extensions: { code: 'NOT_FOUND' }
+          })
         }
 
         // Check if user is owner or admin
@@ -1529,13 +1297,15 @@ export const schema = createSchema<GraphQLContext>({
         const isAdmin = await isUserAdmin(ctx.db, authedUserId)
 
         if (!isOwner && !isAdmin) {
-          throw new GraphQLError('Not authorized to delete this config')
+          throw new GraphQLError('Not authorized to delete this config', {
+            extensions: { code: 'FORBIDDEN' }
+          })
         }
 
-        // Soft delete by setting status to 'deleted'
+        // Soft delete by setting status to deleted
         await ctx.db
           .prepare('UPDATE configs SET status = ? WHERE id = ?')
-          .bind('deleted', id)
+          .bind(CONFIG_STATUS.DELETED, validatedId)
           .run()
 
         return true
@@ -1552,7 +1322,7 @@ export const schema = createSchema<GraphQLContext>({
             WHERE c.config_id = ? AND c.status = ?
             ORDER BY c.created_at ASC
           `)
-          .bind(parent.id, 'published')
+          .bind(parent.id, CONFIG_STATUS.PUBLISHED)
           .all<CommentRow>()
 
         return (result.results ?? []).map((row) => ({
