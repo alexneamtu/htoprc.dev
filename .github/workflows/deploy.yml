@@ -34,13 +34,13 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: '.nvmrc'
           cache: 'pnpm'
@@ -50,7 +50,7 @@ jobs:
 
       - name: Download parser build from CI
         if: github.event_name == 'workflow_run'
-        uses: dawidd6/action-download-artifact@v6
+        uses: dawidd6/action-download-artifact@v12
         with:
           workflow: ci.yml
           run_id: ${{ github.event.workflow_run.id }}
@@ -59,7 +59,7 @@ jobs:
 
       - name: Download web build from CI
         if: github.event_name == 'workflow_run' && env.DEPLOY_ENV == 'production'
-        uses: dawidd6/action-download-artifact@v6
+        uses: dawidd6/action-download-artifact@v12
         with:
           workflow: ci.yml
           run_id: ${{ github.event.workflow_run.id }}
@@ -115,13 +115,13 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: '.nvmrc'
           cache: 'pnpm'
@@ -131,7 +131,7 @@ jobs:
 
       - name: Download parser build from CI
         if: github.event_name == 'workflow_run'
-        uses: dawidd6/action-download-artifact@v6
+        uses: dawidd6/action-download-artifact@v12
         with:
           workflow: ci.yml
           run_id: ${{ github.event.workflow_run.id }}
