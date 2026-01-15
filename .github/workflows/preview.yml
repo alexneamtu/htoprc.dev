@@ -44,13 +44,16 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: ./apps/api
           command: deploy --env preview --name api-pr-${{ github.event.pull_request.number }} --var PREVIEW:true
-          secrets: |
-            CLERK_SECRET_KEY
-            ANON_RATE_LIMIT_SALT
           packageManager: pnpm
+
+      - name: Upload secrets to Preview API Worker
+        working-directory: ./apps/api
         env:
-          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY_DEV }}
-          ANON_RATE_LIMIT_SALT: ${{ secrets.ANON_RATE_LIMIT_SALT }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          echo "${{ secrets.CLERK_SECRET_KEY_DEV }}" | pnpm wrangler secret put CLERK_SECRET_KEY --name api-pr-${{ github.event.pull_request.number }}
+          echo "${{ secrets.ANON_RATE_LIMIT_SALT }}" | pnpm wrangler secret put ANON_RATE_LIMIT_SALT --name api-pr-${{ github.event.pull_request.number }}
 
       - name: Build web (with preview API)
         run: pnpm --filter @htoprc/web build
