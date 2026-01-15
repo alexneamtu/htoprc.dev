@@ -37,6 +37,7 @@ pnpm-debug.log*
 # Misc
 *.tsbuildinfo
 .eslintcache
+.worktrees/
 
 # Generated config files
 vite.config.js
