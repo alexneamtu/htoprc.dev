@@ -85,7 +85,7 @@ export function Layout({ children }: LayoutProps) {
         </div>
         <p className="mb-2">Open source project for the htop community</p>
         <p>
-          Built with love by{' '}
+          Built with ❤️ by{' '}
           <a
             href="https://github.com/alexneamtu"
             className="text-blue-500 hover:text-blue-400"

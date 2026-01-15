@@ -1,9 +1,13 @@
 import { scrapeGitHub } from './github'
 import { scrapeGitLab } from './gitlab'
+import { scrapeGists } from './gist'
+import { scrapeReddit } from './reddit'
 import type { Platform, ScraperResult, ScraperContext } from './types'
 
 export { scrapeGitHub } from './github'
 export { scrapeGitLab } from './gitlab'
+export { scrapeGists } from './gist'
+export { scrapeReddit } from './reddit'
 export type { Platform, ScraperResult, ScraperContext, ScrapedConfig, ProcessedConfig } from './types'
 
 export async function runScraper(
@@ -29,23 +33,13 @@ export async function runScraper(
         result = await scrapeGitHub(ctx)
         break
       case 'gist':
-        result = {
-          success: false,
-          configsFound: 0,
-          configsAdded: 0,
-          error: 'Gist scraper not implemented',
-        }
+        result = await scrapeGists(ctx)
         break
       case 'gitlab':
         result = await scrapeGitLab(ctx)
         break
       case 'reddit':
-        result = {
-          success: false,
-          configsFound: 0,
-          configsAdded: 0,
-          error: 'Reddit scraper not implemented',
-        }
+        result = await scrapeReddit(ctx)
         break
       default:
         result = {
@@ -97,7 +91,7 @@ export async function runScraper(
 export async function runAllScrapers(ctx: ScraperContext): Promise<Map<Platform, ScraperResult>> {
   const results = new Map<Platform, ScraperResult>()
 
-  const platforms: Platform[] = ['github', 'gitlab']
+  const platforms: Platform[] = ['github', 'gitlab', 'gist', 'reddit']
 
   for (const platform of platforms) {
     const result = await runScraper(platform, ctx)
