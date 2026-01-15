@@ -154,6 +154,23 @@ export function ConfigPage() {
         >
           Copy Config
         </button>
+        <button
+          onClick={() => {
+            const url = `${window.location.origin}/config/${config.slug}`
+            if (navigator.share) {
+              navigator.share({
+                title: config.title,
+                text: `Check out this htop config: ${config.title}`,
+                url,
+              })
+            } else {
+              navigator.clipboard.writeText(url)
+            }
+          }}
+          className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-md text-gray-900 dark:text-white"
+        >
+          Share
+        </button>
         {!reportSubmitted ? (
           <button
             onClick={() => setShowReportDialog(true)}
