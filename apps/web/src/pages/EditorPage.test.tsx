@@ -4,6 +4,21 @@ import { MemoryRouter } from 'react-router-dom'
 import { HelmetProvider } from 'react-helmet-async'
 import { EditorPage } from './EditorPage'
 
+// Mock the auth service
+vi.mock('../services/auth', () => ({
+  useAuth: () => ({
+    user: null,
+    isSignedIn: false,
+    isLoaded: true,
+  }),
+}))
+
+// Mock urql
+vi.mock('urql', () => ({
+  useQuery: () => [{ data: null, fetching: false }],
+  useMutation: () => [{ fetching: false }, vi.fn()],
+}))
+
 function renderWithRouter(initialEntries = ['/editor']) {
   return render(
     <HelmetProvider>

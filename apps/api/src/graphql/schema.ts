@@ -25,6 +25,7 @@ interface ConfigRow {
   source_type: string
   source_url: string | null
   source_platform: string | null
+  author_id: string | null
   forked_from_id: string | null
   status: string
   score: number
@@ -92,6 +93,15 @@ class RateLimitError extends Error {
   }
 }
 
+// Check if user is admin
+async function isUserAdmin(db: D1Database, userId: string): Promise<boolean> {
+  const user = await db
+    .prepare('SELECT is_admin FROM users WHERE id = ?')
+    .bind(userId)
+    .first<{ is_admin: number }>()
+  return user?.is_admin === 1
+}
+
 // Simple initial schema - will be expanded with Pothos later
 export const schema = createSchema<GraphQLContext>({
   typeDefs: /* GraphQL */ `
@@ -114,14 +124,17 @@ export const schema = createSchema<GraphQLContext>({
       configs(page: Int = 1, limit: Int = 20, sort: ConfigSort = SCORE_DESC, minScore: Int = 0, search: String, level: CustomizationLevel = ALL): ConfigConnection!
       config(id: ID, slug: String): Config
       recentConfigs(limit: Int = 6): [Config!]!
-      adminStats: AdminStats!
-      pendingConfigs: [Config!]!
-      pendingComments: [PendingComment!]!
-      pendingReports: [Report!]!
+      myConfigs(userId: ID!): [Config!]!
+      adminStats(userId: ID!): AdminStats
+      pendingConfigs(userId: ID!): [Config!]!
+      pendingComments(userId: ID!): [PendingComment!]!
+      pendingReports(userId: ID!): [Report!]!
+      isAdmin(userId: ID!): Boolean!
     }
 
     type Mutation {
       uploadConfig(input: UploadConfigInput!): Config!
+      updateConfig(id: ID!, title: String, content: String!, userId: ID!): Config!
       forkConfig(id: ID!, title: String!): Config!
       toggleLike(configId: ID!, userId: ID!, username: String, avatarUrl: String): LikeResult!
       addComment(configId: ID!, userId: ID!, content: String!, username: String, avatarUrl: String): Comment!
@@ -179,6 +192,7 @@ export const schema = createSchema<GraphQLContext>({
       sourceType: String!
       sourceUrl: String
       sourcePlatform: String
+      authorId: ID
       forkedFromId: ID
       forkedFrom: ForkedFromConfig
       status: String!
@@ -224,6 +238,7 @@ export const schema = createSchema<GraphQLContext>({
       title: String!
       content: String!
       userId: ID
+      forkedFromId: ID
     }
   `,
   resolvers: {
@@ -301,6 +316,7 @@ export const schema = createSchema<GraphQLContext>({
           sourceType: row.source_type,
           sourceUrl: row.source_url,
           sourcePlatform: row.source_platform,
+          authorId: row.author_id,
           forkedFromId: row.forked_from_id,
           status: row.status,
           score: row.score,
@@ -345,6 +361,7 @@ export const schema = createSchema<GraphQLContext>({
           sourceType: row.source_type,
           sourceUrl: row.source_url,
           sourcePlatform: row.source_platform,
+          authorId: row.author_id,
           forkedFromId: row.forked_from_id,
           status: row.status,
           score: row.score,
@@ -370,6 +387,7 @@ export const schema = createSchema<GraphQLContext>({
           sourceType: row.source_type,
           sourceUrl: row.source_url,
           sourcePlatform: row.source_platform,
+          authorId: row.author_id,
           forkedFromId: row.forked_from_id,
           status: row.status,
           score: row.score,
@@ -377,7 +395,50 @@ export const schema = createSchema<GraphQLContext>({
           createdAt: row.created_at,
         }))
       },
-      adminStats: async (_: unknown, _args: unknown, ctx: GraphQLContext) => {
+      myConfigs: async (
+        _: unknown,
+        { userId }: { userId: string },
+        ctx: GraphQLContext
+      ) => {
+        const result = await ctx.db
+          .prepare('SELECT * FROM configs WHERE author_id = ? ORDER BY created_at DESC')
+          .bind(userId)
+          .all<ConfigRow>()
+
+        return (result.results ?? []).map((row) => ({
+          id: row.id,
+          slug: row.slug,
+          title: row.title,
+          content: row.content,
+          sourceType: row.source_type,
+          sourceUrl: row.source_url,
+          sourcePlatform: row.source_platform,
+          authorId: row.author_id,
+          forkedFromId: row.forked_from_id,
+          status: row.status,
+          score: row.score,
+          likesCount: row.likes_count,
+          createdAt: row.created_at,
+        }))
+      },
+      isAdmin: async (
+        _: unknown,
+        { userId }: { userId: string },
+        ctx: GraphQLContext
+      ) => {
+        return isUserAdmin(ctx.db, userId)
+      },
+      adminStats: async (
+        _: unknown,
+        { userId }: { userId: string },
+        ctx: GraphQLContext
+      ) => {
+        // Only admins can see full stats
+        const admin = await isUserAdmin(ctx.db, userId)
+        if (!admin) {
+          return null
+        }
+
         const [totalConfigs, publishedConfigs, pendingConfigs, totalComments, pendingComments, totalLikes, pendingReports] =
           await Promise.all([
             ctx.db.prepare('SELECT COUNT(*) as count FROM configs').first<{ count: number }>(),
@@ -399,7 +460,17 @@ export const schema = createSchema<GraphQLContext>({
           pendingReports: pendingReports?.count ?? 0,
         }
       },
-      pendingConfigs: async (_: unknown, _args: unknown, ctx: GraphQLContext) => {
+      pendingConfigs: async (
+        _: unknown,
+        { userId }: { userId: string },
+        ctx: GraphQLContext
+      ) => {
+        // Only admins can see all pending configs
+        const admin = await isUserAdmin(ctx.db, userId)
+        if (!admin) {
+          return []
+        }
+
         const result = await ctx.db
           .prepare('SELECT * FROM configs WHERE status = ? ORDER BY created_at DESC')
           .bind('pending')
@@ -413,6 +484,7 @@ export const schema = createSchema<GraphQLContext>({
           sourceType: row.source_type,
           sourceUrl: row.source_url,
           sourcePlatform: row.source_platform,
+          authorId: row.author_id,
           forkedFromId: row.forked_from_id,
           status: row.status,
           score: row.score,
@@ -420,7 +492,17 @@ export const schema = createSchema<GraphQLContext>({
           createdAt: row.created_at,
         }))
       },
-      pendingComments: async (_: unknown, _args: unknown, ctx: GraphQLContext) => {
+      pendingComments: async (
+        _: unknown,
+        { userId }: { userId: string },
+        ctx: GraphQLContext
+      ) => {
+        // Only admins can see pending comments
+        const admin = await isUserAdmin(ctx.db, userId)
+        if (!admin) {
+          return []
+        }
+
         const result = await ctx.db
           .prepare(`
             SELECT c.id, c.content, c.config_id, c.author_id, c.created_at,
@@ -453,7 +535,17 @@ export const schema = createSchema<GraphQLContext>({
           createdAt: row.created_at,
         }))
       },
-      pendingReports: async (_: unknown, _args: unknown, ctx: GraphQLContext) => {
+      pendingReports: async (
+        _: unknown,
+        { userId }: { userId: string },
+        ctx: GraphQLContext
+      ) => {
+        // Only admins can see reports
+        const admin = await isUserAdmin(ctx.db, userId)
+        if (!admin) {
+          return []
+        }
+
         const result = await ctx.db
           .prepare(`
             SELECT id, content_type, content_id, reason, created_at
@@ -482,7 +574,7 @@ export const schema = createSchema<GraphQLContext>({
     Mutation: {
       uploadConfig: async (
         _: unknown,
-        { input }: { input: { title: string; content: string; userId?: string } },
+        { input }: { input: { title: string; content: string; userId?: string; forkedFromId?: string } },
         ctx: GraphQLContext
       ) => {
         // Check rate limit if user is authenticated
@@ -503,8 +595,8 @@ export const schema = createSchema<GraphQLContext>({
 
         await ctx.db
           .prepare(
-            `INSERT INTO configs (id, slug, title, content, content_hash, source_type, score, htop_version, status, likes_count, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            `INSERT INTO configs (id, slug, title, content, content_hash, source_type, author_id, forked_from_id, score, htop_version, status, likes_count, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
           )
           .bind(
             id,
@@ -513,6 +605,8 @@ export const schema = createSchema<GraphQLContext>({
             input.content,
             contentHash,
             'uploaded',
+            input.userId || null,
+            input.forkedFromId || null,
             parsed.score,
             parsed.config.htopVersion ?? null,
             'published',
@@ -529,11 +623,72 @@ export const schema = createSchema<GraphQLContext>({
           sourceType: 'uploaded',
           sourceUrl: null,
           sourcePlatform: null,
-          forkedFromId: null,
+          authorId: input.userId || null,
+          forkedFromId: input.forkedFromId || null,
           status: 'published',
           score: parsed.score,
           likesCount: 0,
           createdAt,
+        }
+      },
+      updateConfig: async (
+        _: unknown,
+        { id, title, content, userId }: { id: string; title?: string; content: string; userId: string },
+        ctx: GraphQLContext
+      ) => {
+        // Get the existing config
+        const existing = await ctx.db
+          .prepare('SELECT * FROM configs WHERE id = ?')
+          .bind(id)
+          .first<ConfigRow>()
+
+        if (!existing) {
+          throw new Error('Config not found')
+        }
+
+        // Check if user is the author (only uploaded configs can be edited by their author)
+        if (existing.source_type !== 'uploaded') {
+          throw new Error('Only uploaded configs can be edited')
+        }
+
+        // For uploaded configs, check author_id or allow if it's null (legacy)
+        if (existing.author_id && existing.author_id !== userId) {
+          throw new Error('You can only edit your own configs')
+        }
+
+        // Parse the new content to calculate score
+        const parsed = parseHtoprc(content)
+        const contentHash = await sha256(content)
+        const newTitle = title || existing.title
+
+        await ctx.db
+          .prepare(
+            `UPDATE configs SET title = ?, content = ?, content_hash = ?, score = ?, htop_version = ? WHERE id = ?`
+          )
+          .bind(
+            newTitle,
+            content,
+            contentHash,
+            parsed.score,
+            parsed.config.htopVersion ?? null,
+            id
+          )
+          .run()
+
+        return {
+          id: existing.id,
+          slug: existing.slug,
+          title: newTitle,
+          content,
+          sourceType: existing.source_type,
+          sourceUrl: existing.source_url,
+          sourcePlatform: existing.source_platform,
+          authorId: existing.author_id,
+          forkedFromId: existing.forked_from_id,
+          status: existing.status,
+          score: parsed.score,
+          likesCount: existing.likes_count,
+          createdAt: existing.created_at,
         }
       },
       forkConfig: async (

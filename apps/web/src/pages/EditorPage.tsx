@@ -1,9 +1,43 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useMutation, useQuery } from 'urql'
 import { HtopPreview } from '../components/htop/HtopPreview'
 import { HtoprcEditor } from '../components/editor'
 import { SEO } from '../components/SEO'
 import { parseHtoprc } from '@htoprc/parser'
+import { useAuth } from '../services/auth'
+
+const CLERK_ENABLED = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
+
+const UPLOAD_CONFIG_MUTATION = /* GraphQL */ `
+  mutation UploadConfig($input: UploadConfigInput!) {
+    uploadConfig(input: $input) {
+      id
+      slug
+      title
+    }
+  }
+`
+
+const UPDATE_CONFIG_MUTATION = /* GraphQL */ `
+  mutation UpdateConfig($id: ID!, $title: String, $content: String!, $userId: ID!) {
+    updateConfig(id: $id, title: $title, content: $content, userId: $userId) {
+      id
+      slug
+      title
+    }
+  }
+`
+
+const GET_CONFIG_QUERY = /* GraphQL */ `
+  query GetConfig($slug: String) {
+    config(slug: $slug) {
+      id
+      title
+      authorId
+    }
+  }
+`
 
 const STORAGE_KEY = 'htoprc-editor-content'
 
@@ -50,19 +84,52 @@ function useLocalStorage(key: string, initialValue: string): [string, (value: st
 }
 
 export function EditorPage() {
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const [content, setContent] = useLocalStorage(STORAGE_KEY, DEFAULT_HTOPRC)
   const [debouncedContent, setDebouncedContent] = useState(content)
+  const [showUploadModal, setShowUploadModal] = useState(false)
+  const [uploadTitle, setUploadTitle] = useState('')
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+
+  // Get auth if Clerk is enabled
+  const auth = CLERK_ENABLED ? useAuth() : { user: null, isSignedIn: false }
+
+  // Fork and edit params
+  const forkSlug = searchParams.get('fork')
+  const editSlug = searchParams.get('edit')
+
+  // Query for config info when forking or editing
+  const [{ data: forkData }] = useQuery({
+    query: GET_CONFIG_QUERY,
+    variables: { slug: forkSlug },
+    pause: !forkSlug,
+  })
+  const [{ data: editData }] = useQuery({
+    query: GET_CONFIG_QUERY,
+    variables: { slug: editSlug },
+    pause: !editSlug,
+  })
+
+  const [, uploadConfig] = useMutation(UPLOAD_CONFIG_MUTATION)
+  const [, updateConfig] = useMutation(UPDATE_CONFIG_MUTATION)
+
+  const isEditing = !!editSlug && !!editData?.config
+  const canEdit = isEditing && auth.user?.id === editData?.config?.authorId
 
   // Load content from URL parameter if present
   useEffect(() => {
     const urlContent = searchParams.get('content')
     if (urlContent) {
       setContent(urlContent)
-      // Clear the URL parameter to avoid reloading on refresh
-      setSearchParams({}, { replace: true })
+      // Keep fork/edit params, clear content param
+      const newParams = new URLSearchParams()
+      if (forkSlug) newParams.set('fork', forkSlug)
+      if (editSlug) newParams.set('edit', editSlug)
+      setSearchParams(newParams, { replace: true })
     }
-  }, [searchParams, setContent, setSearchParams])
+  }, [searchParams, setContent, setSearchParams, forkSlug, editSlug])
 
   // Debounce parsing for performance
   useEffect(() => {
@@ -77,6 +144,71 @@ export function EditorPage() {
   const handleReset = useCallback(() => {
     setContent(DEFAULT_HTOPRC)
   }, [setContent])
+
+  const handleUpload = useCallback(async () => {
+    if (!uploadTitle.trim()) {
+      setUploadError('Please enter a title')
+      return
+    }
+
+    setIsUploading(true)
+    setUploadError(null)
+
+    try {
+      if (isEditing && canEdit && editData?.config?.id) {
+        // Update existing config
+        const result = await updateConfig({
+          id: editData.config.id,
+          title: uploadTitle.trim(),
+          content,
+          userId: auth.user?.id,
+        })
+
+        if (result.error) {
+          setUploadError(result.error.message)
+          return
+        }
+
+        if (result.data?.updateConfig?.slug) {
+          navigate(`/config/${result.data.updateConfig.slug}`)
+        }
+      } else {
+        // Upload new config (possibly as fork)
+        const result = await uploadConfig({
+          input: {
+            title: uploadTitle.trim(),
+            content,
+            userId: auth.user?.id || null,
+            forkedFromId: forkData?.config?.id || null,
+          },
+        })
+
+        if (result.error) {
+          setUploadError(result.error.message)
+          return
+        }
+
+        if (result.data?.uploadConfig?.slug) {
+          navigate(`/config/${result.data.uploadConfig.slug}`)
+        }
+      }
+    } finally {
+      setIsUploading(false)
+    }
+  }, [uploadTitle, content, auth.user?.id, forkData?.config?.id, isEditing, canEdit, editData?.config?.id, uploadConfig, updateConfig, navigate])
+
+  const openUploadModal = useCallback(() => {
+    // Pre-fill title for editing or forking
+    if (isEditing && editData?.config?.title) {
+      setUploadTitle(editData.config.title)
+    } else if (forkSlug && forkData?.config?.title) {
+      setUploadTitle(`Fork of ${forkData.config.title}`)
+    } else {
+      setUploadTitle('')
+    }
+    setUploadError(null)
+    setShowUploadModal(true)
+  }, [isEditing, editData?.config?.title, forkSlug, forkData?.config?.title])
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-200px)]">
@@ -115,6 +247,12 @@ export function EditorPage() {
         </div>
         <div className="mt-4 space-y-3">
           <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={openUploadModal}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm text-white"
+            >
+              {isEditing && canEdit ? 'Save Changes' : forkSlug ? 'Save Fork' : 'Upload to Gallery'}
+            </button>
             <button
               onClick={() => navigator.clipboard.writeText(content)}
               className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded text-sm text-gray-900 dark:text-white"
@@ -158,6 +296,49 @@ export function EditorPage() {
           </div>
         </div>
       </div>
+
+      {/* Upload Modal */}
+      {showUploadModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-lg font-semibold mb-4">
+              {isEditing && canEdit ? 'Save Changes' : forkSlug ? 'Save Fork to Gallery' : 'Upload to Gallery'}
+            </h3>
+            {forkSlug && !isEditing && (
+              <p className="text-sm text-purple-500 mb-4">
+                Forking from: {forkData?.config?.title || forkSlug}
+              </p>
+            )}
+            <input
+              type="text"
+              value={uploadTitle}
+              onChange={(e) => setUploadTitle(e.target.value)}
+              placeholder="Config title..."
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white mb-4"
+              autoFocus
+            />
+            {uploadError && (
+              <p className="text-red-500 text-sm mb-4">{uploadError}</p>
+            )}
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowUploadModal(false)}
+                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                disabled={isUploading}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpload}
+                disabled={isUploading || !uploadTitle.trim()}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 rounded-md text-white"
+              >
+                {isUploading ? 'Saving...' : isEditing && canEdit ? 'Save' : 'Upload'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -56,6 +56,7 @@ function createMockDB() {
         }),
         run: vi.fn(async () => {
           if (sql.includes('INSERT INTO configs')) {
+            // INSERT INTO configs (id, slug, title, content, content_hash, source_type, author_id, forked_from_id, score, htop_version, status, likes_count, created_at)
             const config = {
               id: args[0],
               slug: args[1],
@@ -63,11 +64,13 @@ function createMockDB() {
               content: args[3],
               content_hash: args[4],
               source_type: args[5],
-              score: args[6],
-              htop_version: args[7],
-              status: args[8],
-              likes_count: args[9],
-              created_at: args[10],
+              author_id: args[6],
+              forked_from_id: args[7],
+              score: args[8],
+              htop_version: args[9],
+              status: args[10],
+              likes_count: args[11],
+              created_at: args[12],
             }
             data.configs.push(config)
             return { success: true }

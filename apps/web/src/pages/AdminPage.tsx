@@ -8,9 +8,29 @@ import { useAuth } from '../services/auth'
 
 const CLERK_ENABLED = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
+const IS_ADMIN_QUERY = /* GraphQL */ `
+  query IsAdmin($userId: ID!) {
+    isAdmin(userId: $userId)
+  }
+`
+
+const MY_CONFIGS_QUERY = /* GraphQL */ `
+  query MyConfigs($userId: ID!) {
+    myConfigs(userId: $userId) {
+      id
+      slug
+      title
+      content
+      status
+      score
+      createdAt
+    }
+  }
+`
+
 const ADMIN_STATS_QUERY = /* GraphQL */ `
-  query AdminStats {
-    adminStats {
+  query AdminStats($userId: ID!) {
+    adminStats(userId: $userId) {
       totalConfigs
       publishedConfigs
       pendingConfigs
@@ -23,8 +43,8 @@ const ADMIN_STATS_QUERY = /* GraphQL */ `
 `
 
 const PENDING_CONFIGS_QUERY = /* GraphQL */ `
-  query PendingConfigs {
-    pendingConfigs {
+  query PendingConfigs($userId: ID!) {
+    pendingConfigs(userId: $userId) {
       id
       slug
       title
@@ -36,8 +56,8 @@ const PENDING_CONFIGS_QUERY = /* GraphQL */ `
 `
 
 const PENDING_COMMENTS_QUERY = /* GraphQL */ `
-  query PendingComments {
-    pendingComments {
+  query PendingComments($userId: ID!) {
+    pendingComments(userId: $userId) {
       id
       content
       configId
@@ -82,8 +102,8 @@ const REJECT_COMMENT_MUTATION = /* GraphQL */ `
 `
 
 const PENDING_REPORTS_QUERY = /* GraphQL */ `
-  query PendingReports {
-    pendingReports {
+  query PendingReports($userId: ID!) {
+    pendingReports(userId: $userId) {
       id
       contentType
       contentId
@@ -114,6 +134,7 @@ interface PendingConfig {
   slug: string
   title: string
   content: string
+  status: string
   score: number
   createdAt: string
 }
@@ -136,24 +157,50 @@ interface Report {
   createdAt: string
 }
 
-type Tab = 'stats' | 'configs' | 'comments' | 'reports'
+type Tab = 'myconfigs' | 'stats' | 'configs' | 'comments' | 'reports'
 
 export function AdminPage() {
   const auth = CLERK_ENABLED ? useAuth() : { isSignedIn: false, isLoaded: true, user: null }
-  const [activeTab, setActiveTab] = useState<Tab>('stats')
+  const [activeTab, setActiveTab] = useState<Tab>('myconfigs')
 
-  const [statsResult] = useQuery<{ adminStats: AdminStats }>({ query: ADMIN_STATS_QUERY })
+  const userId = auth.user?.id
+
+  // Check if user is admin
+  const [{ data: adminData, fetching: checkingAdmin }] = useQuery<{ isAdmin: boolean }>({
+    query: IS_ADMIN_QUERY,
+    variables: { userId },
+    pause: !userId,
+  })
+
+  const isAdmin = adminData?.isAdmin ?? false
+
+  // User's own configs (always shown)
+  const [myConfigsResult] = useQuery<{ myConfigs: PendingConfig[] }>({
+    query: MY_CONFIGS_QUERY,
+    variables: { userId },
+    pause: !userId || activeTab !== 'myconfigs',
+  })
+
+  // Admin-only queries
+  const [statsResult] = useQuery<{ adminStats: AdminStats | null }>({
+    query: ADMIN_STATS_QUERY,
+    variables: { userId },
+    pause: !userId || !isAdmin,
+  })
   const [configsResult, refetchConfigs] = useQuery<{ pendingConfigs: PendingConfig[] }>({
     query: PENDING_CONFIGS_QUERY,
-    pause: activeTab !== 'configs',
+    variables: { userId },
+    pause: !userId || !isAdmin || activeTab !== 'configs',
   })
   const [commentsResult, refetchComments] = useQuery<{ pendingComments: PendingComment[] }>({
     query: PENDING_COMMENTS_QUERY,
-    pause: activeTab !== 'comments',
+    variables: { userId },
+    pause: !userId || !isAdmin || activeTab !== 'comments',
   })
   const [reportsResult, refetchReports] = useQuery<{ pendingReports: Report[] }>({
     query: PENDING_REPORTS_QUERY,
-    pause: activeTab !== 'reports',
+    variables: { userId },
+    pause: !userId || !isAdmin || activeTab !== 'reports',
   })
 
   const [, approveConfig] = useMutation(APPROVE_CONFIG_MUTATION)
@@ -162,9 +209,7 @@ export function AdminPage() {
   const [, rejectComment] = useMutation(REJECT_COMMENT_MUTATION)
   const [, dismissReport] = useMutation(DISMISS_REPORT_MUTATION)
 
-  // In production, check if user is admin
-  // For now, just require authentication
-  if (!auth.isLoaded) {
+  if (!auth.isLoaded || checkingAdmin) {
     return (
       <div className="text-center py-12">
         <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent" />
@@ -211,55 +256,114 @@ export function AdminPage() {
 
   return (
     <div className="max-w-6xl mx-auto">
-      <SEO title="Admin Dashboard" url="/admin" />
-      <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
+      <SEO title={isAdmin ? 'Admin Dashboard' : 'My Dashboard'} url="/admin" />
+      <h1 className="text-3xl font-bold mb-6">{isAdmin ? 'Admin Dashboard' : 'My Dashboard'}</h1>
 
       {/* Tabs */}
       <div className="flex gap-2 mb-6 border-b border-gray-200 dark:border-gray-700">
         <button
-          onClick={() => setActiveTab('stats')}
+          onClick={() => setActiveTab('myconfigs')}
           className={`px-4 py-2 -mb-px ${
-            activeTab === 'stats'
+            activeTab === 'myconfigs'
               ? 'border-b-2 border-blue-500 text-blue-600'
               : 'text-gray-500 hover:text-gray-700'
           }`}
         >
-          Stats
+          My Configs
         </button>
-        <button
-          onClick={() => setActiveTab('configs')}
-          className={`px-4 py-2 -mb-px ${
-            activeTab === 'configs'
-              ? 'border-b-2 border-blue-500 text-blue-600'
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          Pending Configs ({stats?.pendingConfigs ?? 0})
-        </button>
-        <button
-          onClick={() => setActiveTab('comments')}
-          className={`px-4 py-2 -mb-px ${
-            activeTab === 'comments'
-              ? 'border-b-2 border-blue-500 text-blue-600'
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          Pending Comments ({stats?.pendingComments ?? 0})
-        </button>
-        <button
-          onClick={() => setActiveTab('reports')}
-          className={`px-4 py-2 -mb-px ${
-            activeTab === 'reports'
-              ? 'border-b-2 border-blue-500 text-blue-600'
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          Reports ({stats?.pendingReports ?? 0})
-        </button>
+        {isAdmin && (
+          <>
+            <button
+              onClick={() => setActiveTab('stats')}
+              className={`px-4 py-2 -mb-px ${
+                activeTab === 'stats'
+                  ? 'border-b-2 border-blue-500 text-blue-600'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Stats
+            </button>
+            <button
+              onClick={() => setActiveTab('configs')}
+              className={`px-4 py-2 -mb-px ${
+                activeTab === 'configs'
+                  ? 'border-b-2 border-blue-500 text-blue-600'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Pending Configs ({stats?.pendingConfigs ?? 0})
+            </button>
+            <button
+              onClick={() => setActiveTab('comments')}
+              className={`px-4 py-2 -mb-px ${
+                activeTab === 'comments'
+                  ? 'border-b-2 border-blue-500 text-blue-600'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Pending Comments ({stats?.pendingComments ?? 0})
+            </button>
+            <button
+              onClick={() => setActiveTab('reports')}
+              className={`px-4 py-2 -mb-px ${
+                activeTab === 'reports'
+                  ? 'border-b-2 border-blue-500 text-blue-600'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Reports ({stats?.pendingReports ?? 0})
+            </button>
+          </>
+        )}
       </div>
 
+      {/* My Configs Tab */}
+      {activeTab === 'myconfigs' && (
+        <div className="space-y-6">
+          {myConfigsResult.fetching && <p>Loading...</p>}
+          {myConfigsResult.data?.myConfigs.length === 0 && (
+            <p className="text-gray-500">You haven't uploaded any configs yet.</p>
+          )}
+          {myConfigsResult.data?.myConfigs.map((config) => {
+            const parsed = parseHtoprc(config.content)
+            return (
+              <div
+                key={config.id}
+                className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="font-semibold text-lg">{config.title}</h3>
+                    <p className="text-sm text-gray-500">
+                      Score: {config.score} | Status: <span className={config.status === 'published' ? 'text-green-500' : config.status === 'pending' ? 'text-yellow-500' : 'text-red-500'}>{config.status}</span> | {new Date(config.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <a
+                      href={`/config/${config.slug}`}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm"
+                    >
+                      View
+                    </a>
+                    <a
+                      href={`/editor?content=${encodeURIComponent(config.content)}&edit=${config.slug}`}
+                      className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md text-sm"
+                    >
+                      Edit
+                    </a>
+                  </div>
+                </div>
+                <div className="rounded-lg overflow-hidden bg-black p-2">
+                  <HtopPreview config={parsed.config} />
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
       {/* Stats Tab */}
-      {activeTab === 'stats' && (
+      {activeTab === 'stats' && isAdmin && (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <StatCard label="Total Configs" value={stats?.totalConfigs ?? 0} />
           <StatCard label="Published" value={stats?.publishedConfigs ?? 0} />
@@ -272,7 +376,7 @@ export function AdminPage() {
       )}
 
       {/* Pending Configs Tab */}
-      {activeTab === 'configs' && (
+      {activeTab === 'configs' && isAdmin && (
         <div className="space-y-6">
           {configsResult.fetching && <p>Loading...</p>}
           {configsResult.data?.pendingConfigs.length === 0 && (
@@ -317,7 +421,7 @@ export function AdminPage() {
       )}
 
       {/* Pending Comments Tab */}
-      {activeTab === 'comments' && (
+      {activeTab === 'comments' && isAdmin && (
         <div className="space-y-4">
           {commentsResult.fetching && <p>Loading...</p>}
           {commentsResult.data?.pendingComments.length === 0 && (
@@ -357,7 +461,7 @@ export function AdminPage() {
       )}
 
       {/* Reports Tab */}
-      {activeTab === 'reports' && (
+      {activeTab === 'reports' && isAdmin && (
         <div className="space-y-4">
           {reportsResult.fetching && <p>Loading...</p>}
           {reportsResult.data?.pendingReports.length === 0 && (

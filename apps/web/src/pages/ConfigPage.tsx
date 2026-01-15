@@ -7,6 +7,9 @@ import { SEO } from '../components/SEO'
 import { parseHtoprc } from '@htoprc/parser'
 import { useConfig } from '../hooks'
 import { useMutation } from 'urql'
+import { useAuth } from '../services/auth'
+
+const CLERK_ENABLED = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
 const REPORT_MUTATION = /* GraphQL */ `
   mutation ReportContent($contentType: String!, $contentId: ID!, $reason: String!) {
@@ -21,6 +24,8 @@ export function ConfigPage() {
   const [showReportDialog, setShowReportDialog] = useState(false)
   const [reportReason, setReportReason] = useState('')
   const [reportSubmitted, setReportSubmitted] = useState(false)
+
+  const auth = CLERK_ENABLED ? useAuth() : { user: null, isSignedIn: false }
 
   const handleReport = async () => {
     if (!reportReason.trim() || !data?.config) return
@@ -123,6 +128,14 @@ export function ConfigPage() {
       </div>
 
       <div className="flex flex-wrap gap-4 mb-8">
+        {auth.isSignedIn && auth.user?.id === config.authorId && config.sourceType === 'uploaded' && (
+          <Link
+            to={`/editor?content=${encodeURIComponent(config.content)}&edit=${config.slug}`}
+            className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-md text-white"
+          >
+            Edit
+          </Link>
+        )}
         <Link
           to={`/editor?content=${encodeURIComponent(config.content)}`}
           className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md text-white"
