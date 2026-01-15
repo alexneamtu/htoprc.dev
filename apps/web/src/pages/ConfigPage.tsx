@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { HtopPreview } from '../components/htop/HtopPreview'
 import { LikeButton } from '../components/LikeButton'
 import { Comments } from '../components/Comments'
 import { SEO } from '../components/SEO'
 import { parseHtoprc } from '@htoprc/parser'
 import { useConfig } from '../hooks'
-import { useMutation } from 'urql'
+import { useMutation, useQuery } from 'urql'
 import { useAuth } from '../services/auth'
 
 const CLERK_ENABLED = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
@@ -17,15 +17,38 @@ const REPORT_MUTATION = /* GraphQL */ `
   }
 `
 
+const DELETE_CONFIG_MUTATION = /* GraphQL */ `
+  mutation DeleteConfig($id: ID!, $userId: ID!) {
+    deleteConfig(id: $id, userId: $userId)
+  }
+`
+
+const IS_ADMIN_QUERY = /* GraphQL */ `
+  query IsAdmin($userId: ID!) {
+    isAdmin(userId: $userId)
+  }
+`
+
 export function ConfigPage() {
   const { slug } = useParams<{ slug: string }>()
+  const navigate = useNavigate()
   const { data, fetching, error } = useConfig({ slug })
   const [, reportContent] = useMutation(REPORT_MUTATION)
+  const [, deleteConfig] = useMutation(DELETE_CONFIG_MUTATION)
   const [showReportDialog, setShowReportDialog] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [reportReason, setReportReason] = useState('')
   const [reportSubmitted, setReportSubmitted] = useState(false)
 
   const auth = CLERK_ENABLED ? useAuth() : { user: null, isSignedIn: false }
+
+  const [{ data: adminData }] = useQuery<{ isAdmin: boolean }>({
+    query: IS_ADMIN_QUERY,
+    variables: { userId: auth.user?.id },
+    pause: !auth.user?.id,
+  })
+
+  const isAdmin = adminData?.isAdmin ?? false
 
   const handleReport = async () => {
     if (!reportReason.trim() || !data?.config || !auth.user?.id) return
@@ -39,6 +62,19 @@ export function ConfigPage() {
     setReportReason('')
     setReportSubmitted(true)
   }
+
+  const handleDelete = async () => {
+    if (!data?.config || !auth.user?.id) return
+    const result = await deleteConfig({
+      id: data.config.id,
+      userId: auth.user.id,
+    })
+    if (!result.error) {
+      navigate('/')
+    }
+  }
+
+  const canDelete = auth.isSignedIn && (auth.user?.id === data?.config?.authorId || isAdmin)
 
   if (fetching) {
     return (
@@ -186,6 +222,14 @@ export function ConfigPage() {
             </span>
           )
         )}
+        {canDelete && (
+          <button
+            onClick={() => setShowDeleteDialog(true)}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-md text-white"
+          >
+            Delete
+          </button>
+        )}
       </div>
 
       {showReportDialog && (
@@ -215,6 +259,31 @@ export function ConfigPage() {
                 className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-400 rounded-md text-white"
               >
                 Submit Report
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDeleteDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-lg font-semibold mb-4">Delete Config</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+              Are you sure you want to delete "{config.title}"? This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowDeleteDialog(false)}
+                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-md text-white"
+              >
+                Delete
               </button>
             </div>
           </div>

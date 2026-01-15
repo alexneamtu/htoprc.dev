@@ -144,6 +144,7 @@ export const schema = createSchema<GraphQLContext>({
       rejectComment(id: ID!, reason: String!): Boolean!
       reportContent(contentType: String!, contentId: ID!, reason: String!, userId: ID!): Boolean!
       dismissReport(id: ID!): Boolean!
+      deleteConfig(id: ID!, userId: ID!): Boolean!
     }
 
     type AdminStats {
@@ -1099,6 +1100,37 @@ export const schema = createSchema<GraphQLContext>({
             .bind('published', report.content_id, 'pending')
             .run()
         }
+
+        return true
+      },
+      deleteConfig: async (
+        _: unknown,
+        { id, userId }: { id: string; userId: string },
+        ctx: GraphQLContext
+      ) => {
+        // Get the config to check ownership
+        const config = await ctx.db
+          .prepare('SELECT author_id FROM configs WHERE id = ?')
+          .bind(id)
+          .first<{ author_id: string | null }>()
+
+        if (!config) {
+          throw new GraphQLError('Config not found')
+        }
+
+        // Check if user is owner or admin
+        const isOwner = config.author_id === userId
+        const isAdmin = await isUserAdmin(ctx.db, userId)
+
+        if (!isOwner && !isAdmin) {
+          throw new GraphQLError('Not authorized to delete this config')
+        }
+
+        // Soft delete by setting status to 'deleted'
+        await ctx.db
+          .prepare('UPDATE configs SET status = ? WHERE id = ?')
+          .bind('deleted', id)
+          .run()
 
         return true
       },
