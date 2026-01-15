@@ -44,7 +44,13 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: ./apps/api
           command: deploy --env preview --name api-pr-${{ github.event.pull_request.number }} --var PREVIEW:true
+          secrets: |
+            CLERK_SECRET_KEY
+            ANON_RATE_LIMIT_SALT
           packageManager: pnpm
+        env:
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY_DEV }}
+          ANON_RATE_LIMIT_SALT: ${{ secrets.ANON_RATE_LIMIT_SALT }}
 
       - name: Build web (with preview API)
         run: pnpm --filter @htoprc/web build
