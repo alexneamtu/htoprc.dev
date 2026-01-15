@@ -122,6 +122,17 @@ export function isValidUUID(str: string): boolean {
 }
 
 /**
+ * Validate a safe ID format
+ * Accepts UUIDs, Clerk user IDs (user_xxx), and alphanumeric IDs with hyphens/underscores
+ * This prevents SQL injection while allowing legitimate ID formats
+ */
+export function isValidId(str: string): boolean {
+  // Allow alphanumeric characters, hyphens, and underscores
+  // Max 128 chars to prevent abuse
+  return /^[a-zA-Z0-9_-]{1,128}$/.test(str)
+}
+
+/**
  * Validate a required ID parameter
  */
 export function validateRequiredId(id: string | undefined | null, fieldName: string): string {
@@ -129,8 +140,8 @@ export function validateRequiredId(id: string | undefined | null, fieldName: str
     throw new ValidationError(`${fieldName} is required`)
   }
 
-  if (!isValidUUID(id)) {
-    throw new ValidationError(`${fieldName} must be a valid UUID`)
+  if (!isValidId(id)) {
+    throw new ValidationError(`${fieldName} must be a valid ID`)
   }
 
   return id

@@ -193,9 +193,21 @@ describe('validateRequiredId', () => {
     expect(() => validateRequiredId(null, 'configId')).toThrow('configId is required')
   })
 
-  it('throws for invalid UUID format', () => {
-    expect(() => validateRequiredId('not-a-uuid', 'configId')).toThrow(
-      'configId must be a valid UUID'
+  it('accepts alphanumeric IDs with hyphens and underscores', () => {
+    expect(validateRequiredId('seed-001', 'configId')).toBe('seed-001')
+    expect(validateRequiredId('user_38HcEJgEvxmYq06pdkLUW4hEmzO', 'userId')).toBe('user_38HcEJgEvxmYq06pdkLUW4hEmzO')
+    expect(validateRequiredId('not-a-uuid', 'configId')).toBe('not-a-uuid')
+  })
+
+  it('throws for IDs with invalid characters', () => {
+    expect(() => validateRequiredId('id with spaces', 'configId')).toThrow(
+      'configId must be a valid ID'
+    )
+    expect(() => validateRequiredId('id;DROP TABLE', 'configId')).toThrow(
+      'configId must be a valid ID'
+    )
+    expect(() => validateRequiredId('../etc/passwd', 'configId')).toThrow(
+      'configId must be a valid ID'
     )
   })
 })
