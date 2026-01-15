@@ -243,7 +243,13 @@ export function EditorPage() {
         <div className="flex items-center justify-between mb-2 shrink-0">
           <h2 className="text-xl font-bold">Preview</h2>
           <span className="text-sm text-gray-500">
-            Score: {parsed.score} | Version: {parsed.version}
+            <span
+              title="Customization score: +10 custom color scheme, +5 tree view, +5 each meter column, +3 for >8 columns, +3 custom header layout"
+              className="cursor-help border-b border-dotted border-gray-500"
+            >
+              Score: {parsed.score}
+            </span>
+            {' | '}Version: {parsed.version}
           </span>
         </div>
         <div className="flex-1 min-h-0 rounded-lg p-4 overflow-auto border border-gray-300 dark:border-gray-700 bg-black">

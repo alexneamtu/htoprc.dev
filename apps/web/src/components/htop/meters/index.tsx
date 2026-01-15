@@ -13,6 +13,14 @@ import {
   PressureMeter,
   ZramMeter,
   BlankMeter,
+  DateMeter,
+  DateTimeMeter,
+  BatteryMeter,
+  SysArchMeter,
+  FileDescriptorMeter,
+  SELinuxMeter,
+  SystemdMeter,
+  GPUMeter,
 } from './TextMeters'
 
 interface MeterRendererProps {
@@ -71,6 +79,30 @@ export function MeterRenderer({ meter }: MeterRendererProps) {
 
     case 'Blank':
       return <BlankMeter />
+
+    case 'Date':
+      return <DateMeter />
+
+    case 'DateTime':
+      return <DateTimeMeter />
+
+    case 'Battery':
+      return <BatteryMeter meter={meter} />
+
+    case 'SysArch':
+      return <SysArchMeter />
+
+    case 'FileDescriptors':
+      return <FileDescriptorMeter meter={meter} />
+
+    case 'SELinux':
+      return <SELinuxMeter />
+
+    case 'Systemd':
+      return <SystemdMeter />
+
+    case 'GPU':
+      return <GPUMeter meter={meter} />
 
     default:
       // Generic fallback for unknown meters
@@ -140,4 +172,12 @@ export {
   PressureMeter,
   ZramMeter,
   BlankMeter,
+  DateMeter,
+  DateTimeMeter,
+  BatteryMeter,
+  SysArchMeter,
+  FileDescriptorMeter,
+  SELinuxMeter,
+  SystemdMeter,
+  GPUMeter,
 } from './TextMeters'

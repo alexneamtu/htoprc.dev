@@ -310,3 +310,153 @@ export function BlankMeter() {
   // Blank meter is just an empty space for visual separation
   return <div className="h-4" />
 }
+
+export function DateMeter() {
+  const now = new Date()
+  const dateStr = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+  return (
+    <div className="text-xs font-mono">
+      <span className="text-white">{dateStr}</span>
+    </div>
+  )
+}
+
+export function DateTimeMeter() {
+  const now = new Date()
+  const dateTimeStr = now.toLocaleString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+  return (
+    <div className="text-xs font-mono">
+      <span className="text-white">{dateTimeStr}</span>
+    </div>
+  )
+}
+
+export function BatteryMeter({ meter }: { meter: { mode: string } }) {
+  const percent = Math.floor(Math.random() * 60) + 40
+  const isCharging = Math.random() > 0.5
+
+  if (meter.mode === 'bar') {
+    const barWidth = 20
+    const filled = Math.round((percent / 100) * barWidth)
+    const color = percent > 50 ? 'text-green-400' : percent > 20 ? 'text-yellow-400' : 'text-red-400'
+    return (
+      <div className="text-xs font-mono flex items-center">
+        <span className="text-gray-400">Bat</span>
+        <span className="text-cyan-400">[</span>
+        <span className={color}>{'|'.repeat(filled)}</span>
+        <span>{' '.repeat(barWidth - filled)}</span>
+        <span className="text-cyan-400">]</span>
+        <span className="ml-1 text-gray-300">{percent}%</span>
+        {isCharging && <span className="text-yellow-400 ml-1">⚡</span>}
+      </div>
+    )
+  }
+
+  return (
+    <div className="text-xs font-mono">
+      <span className="text-gray-400">Battery: </span>
+      <span className={percent > 50 ? 'text-green-400' : percent > 20 ? 'text-yellow-400' : 'text-red-400'}>
+        {percent}%
+      </span>
+      {isCharging && <span className="text-yellow-400 ml-1">charging</span>}
+    </div>
+  )
+}
+
+export function SysArchMeter() {
+  return (
+    <div className="text-xs font-mono">
+      <span className="text-cyan-400">Linux 6.1.0 x86_64</span>
+    </div>
+  )
+}
+
+export function FileDescriptorMeter({ meter }: { meter: { mode: string } }) {
+  const used = Math.floor(Math.random() * 5000) + 1000
+  const max = 65536
+  const percent = (used / max) * 100
+
+  if (meter.mode === 'bar') {
+    const barWidth = 20
+    const filled = Math.round((percent / 100) * barWidth)
+    return (
+      <div className="text-xs font-mono flex items-center">
+        <span className="text-gray-400">FD</span>
+        <span className="text-cyan-400">[</span>
+        <span className="text-blue-400">{'|'.repeat(filled)}</span>
+        <span>{' '.repeat(barWidth - filled)}</span>
+        <span className="text-cyan-400">]</span>
+        <span className="ml-1 text-gray-300">{used}/{max}</span>
+      </div>
+    )
+  }
+
+  return (
+    <div className="text-xs font-mono">
+      <span className="text-gray-400">FDs: </span>
+      <span className="text-blue-400">{used}</span>
+      <span className="text-gray-500">/{max}</span>
+    </div>
+  )
+}
+
+export function SELinuxMeter() {
+  const status = Math.random() > 0.5 ? 'Enforcing' : 'Permissive'
+  return (
+    <div className="text-xs font-mono">
+      <span className="text-gray-400">SELinux: </span>
+      <span className={status === 'Enforcing' ? 'text-green-400' : 'text-yellow-400'}>{status}</span>
+    </div>
+  )
+}
+
+export function SystemdMeter() {
+  const running = Math.floor(Math.random() * 50) + 150
+  const failed = Math.floor(Math.random() * 3)
+  return (
+    <div className="text-xs font-mono">
+      <span className="text-gray-400">Systemd: </span>
+      <span className="text-green-400">{running} running</span>
+      {failed > 0 && <span className="text-red-400 ml-1">{failed} failed</span>}
+    </div>
+  )
+}
+
+export function GPUMeter({ meter }: { meter: { mode: string } }) {
+  const usage = Math.floor(Math.random() * 80) + 10
+  const memory = Math.floor(Math.random() * 60) + 20
+  const temp = Math.floor(Math.random() * 30) + 50
+
+  if (meter.mode === 'bar') {
+    const barWidth = 15
+    const filled = Math.round((usage / 100) * barWidth)
+    return (
+      <div className="text-xs font-mono flex items-center">
+        <span className="text-gray-400">GPU</span>
+        <span className="text-cyan-400">[</span>
+        <span className="text-green-400">{'|'.repeat(filled)}</span>
+        <span>{' '.repeat(barWidth - filled)}</span>
+        <span className="text-cyan-400">]</span>
+        <span className="ml-1 text-gray-300">{usage}%</span>
+        <span className="text-gray-500 ml-1">{temp}°C</span>
+      </div>
+    )
+  }
+
+  return (
+    <div className="text-xs font-mono">
+      <span className="text-gray-400">GPU: </span>
+      <span className="text-green-400">{usage}%</span>
+      <span className="text-gray-500"> mem:</span>
+      <span className="text-blue-400">{memory}%</span>
+      <span className="text-gray-500"> {temp}°C</span>
+    </div>
+  )
+}

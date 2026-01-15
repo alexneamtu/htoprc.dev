@@ -212,6 +212,120 @@ describe('MeterRenderer', () => {
     })
   })
 
+  describe('Additional meters', () => {
+    it('renders Blank meter', () => {
+      const meter: Meter = { type: 'Blank', mode: 'bar' }
+      const { container } = render(<MeterRenderer meter={meter} />)
+
+      // Blank meter should render an empty div with height
+      expect(container.querySelector('.h-4')).toBeInTheDocument()
+    })
+
+    it('renders Date meter', () => {
+      const meter: Meter = { type: 'Date', mode: 'text' }
+      render(<MeterRenderer meter={meter} />)
+
+      // Date meter should show current date
+      const dateRegex = /\w{3}, \w{3} \d{1,2}/
+      expect(screen.getByText(dateRegex)).toBeInTheDocument()
+    })
+
+    it('renders DateTime meter', () => {
+      const meter: Meter = { type: 'DateTime', mode: 'text' }
+      render(<MeterRenderer meter={meter} />)
+
+      // DateTime meter should show date and time
+      const dateTimeRegex = /\w{3}, \w{3} \d{1,2}/
+      expect(screen.getByText(dateTimeRegex)).toBeInTheDocument()
+    })
+
+    it('renders Battery meter in bar mode', () => {
+      const meter: Meter = { type: 'Battery', mode: 'bar' }
+      render(<MeterRenderer meter={meter} />)
+
+      expect(screen.getByText('Bat')).toBeInTheDocument()
+    })
+
+    it('renders Battery meter in text mode', () => {
+      const meter: Meter = { type: 'Battery', mode: 'text' }
+      render(<MeterRenderer meter={meter} />)
+
+      expect(screen.getByText(/Battery:/)).toBeInTheDocument()
+    })
+
+    it('renders SysArch meter', () => {
+      const meter: Meter = { type: 'SysArch', mode: 'text' }
+      render(<MeterRenderer meter={meter} />)
+
+      expect(screen.getByText(/Linux.*x86_64/)).toBeInTheDocument()
+    })
+
+    it('renders FileDescriptors meter in bar mode', () => {
+      const meter: Meter = { type: 'FileDescriptors', mode: 'bar' }
+      render(<MeterRenderer meter={meter} />)
+
+      expect(screen.getByText('FD')).toBeInTheDocument()
+    })
+
+    it('renders FileDescriptors meter in text mode', () => {
+      const meter: Meter = { type: 'FileDescriptors', mode: 'text' }
+      render(<MeterRenderer meter={meter} />)
+
+      expect(screen.getByText(/FDs:/)).toBeInTheDocument()
+    })
+
+    it('renders SELinux meter', () => {
+      const meter: Meter = { type: 'SELinux', mode: 'text' }
+      render(<MeterRenderer meter={meter} />)
+
+      expect(screen.getByText(/SELinux:/)).toBeInTheDocument()
+    })
+
+    it('renders Systemd meter', () => {
+      const meter: Meter = { type: 'Systemd', mode: 'text' }
+      render(<MeterRenderer meter={meter} />)
+
+      expect(screen.getByText(/Systemd:/)).toBeInTheDocument()
+    })
+
+    it('renders GPU meter in bar mode', () => {
+      const meter: Meter = { type: 'GPU', mode: 'bar' }
+      render(<MeterRenderer meter={meter} />)
+
+      expect(screen.getByText('GPU')).toBeInTheDocument()
+    })
+
+    it('renders GPU meter in text mode', () => {
+      const meter: Meter = { type: 'GPU', mode: 'text' }
+      render(<MeterRenderer meter={meter} />)
+
+      expect(screen.getByText(/GPU:/)).toBeInTheDocument()
+    })
+
+    it('renders Pressure meter in bar mode', () => {
+      const meter: Meter = { type: 'Pressure', mode: 'bar' }
+      render(<MeterRenderer meter={meter} />)
+
+      // Pressure meter may show either 'Pressure' or 'Dis' (disabled)
+      const hasPressureOrDis = screen.queryByText('Pressure') || screen.queryByText('Dis')
+      expect(hasPressureOrDis).toBeInTheDocument()
+    })
+
+    it('renders Zram meter in bar mode', () => {
+      const meter: Meter = { type: 'Zram', mode: 'bar' }
+      render(<MeterRenderer meter={meter} />)
+
+      expect(screen.getByText('zrm')).toBeInTheDocument()
+    })
+
+    it('renders Zram meter in text mode', () => {
+      const meter: Meter = { type: 'Zram', mode: 'text' }
+      render(<MeterRenderer meter={meter} />)
+
+      expect(screen.getByText(/Zram:/)).toBeInTheDocument()
+    })
+  })
+
   describe('Unknown meters', () => {
     it('renders unknown meter in bar mode with generic fallback', () => {
       const meter: Meter = { type: 'UnknownMeter', mode: 'bar' }

@@ -150,7 +150,12 @@ export function ConfigPage() {
       <h1 className="text-3xl font-bold mb-4">{config.title}</h1>
 
       <div className="flex flex-wrap items-center gap-4 text-gray-500 dark:text-gray-400 mb-6">
-        <span>Score: {config.score}</span>
+        <span
+          title="Customization score: +10 custom color scheme, +5 tree view, +5 each meter column, +3 for >8 columns, +3 custom header layout"
+          className="cursor-help border-b border-dotted border-gray-500"
+        >
+          Score: {config.score}
+        </span>
         <LikeButton configId={config.id} initialLikesCount={config.likesCount} />
         {config.sourceUrl ? (
           <a

@@ -142,4 +142,253 @@ describe('ConfigPage', () => {
       expect(screen.getByText(/Raw Config/i)).toBeInTheDocument()
     })
   })
+
+  it('shows source link when sourceUrl is present', async () => {
+    const mockData = {
+      config: {
+        id: '123',
+        slug: 'scraped-config',
+        title: 'Scraped Config',
+        content: 'htop_version=3.2.1',
+        sourceType: 'scraped',
+        sourceUrl: 'https://github.com/example/dotfiles',
+        sourcePlatform: 'github',
+        status: 'published',
+        score: 10,
+        likesCount: 3,
+        createdAt: '2026-01-14T00:00:00Z',
+        comments: [],
+      },
+    }
+
+    const mockClient = createMockClient(mockData)
+    renderWithProviders(mockClient, '/config/scraped-config')
+
+    await waitFor(() => {
+      const sourceLink = screen.getByText('View original source')
+      expect(sourceLink).toBeInTheDocument()
+      expect(sourceLink).toHaveAttribute('href', 'https://github.com/example/dotfiles')
+    })
+  })
+
+  it('shows source type when sourceUrl is not present', async () => {
+    const mockData = {
+      config: {
+        id: '123',
+        slug: 'uploaded-config',
+        title: 'Uploaded Config',
+        content: 'htop_version=3.2.1',
+        sourceType: 'uploaded',
+        sourceUrl: null,
+        sourcePlatform: null,
+        status: 'published',
+        score: 10,
+        likesCount: 3,
+        createdAt: '2026-01-14T00:00:00Z',
+        comments: [],
+      },
+    }
+
+    const mockClient = createMockClient(mockData)
+    renderWithProviders(mockClient, '/config/uploaded-config')
+
+    await waitFor(() => {
+      expect(screen.getByText(/Source: uploaded/)).toBeInTheDocument()
+    })
+  })
+
+  it('shows forked from link when config is forked', async () => {
+    const mockData = {
+      config: {
+        id: '123',
+        slug: 'forked-config',
+        title: 'Forked Config',
+        content: 'htop_version=3.2.1',
+        sourceType: 'uploaded',
+        sourceUrl: null,
+        sourcePlatform: null,
+        status: 'published',
+        score: 10,
+        likesCount: 3,
+        createdAt: '2026-01-14T00:00:00Z',
+        comments: [],
+        forkedFrom: {
+          slug: 'original-config',
+          title: 'Original Config',
+        },
+      },
+    }
+
+    const mockClient = createMockClient(mockData)
+    renderWithProviders(mockClient, '/config/forked-config')
+
+    await waitFor(() => {
+      expect(screen.getByText(/Forked from "Original Config"/)).toBeInTheDocument()
+    })
+  })
+
+  it('has Fork button', async () => {
+    const mockData = {
+      config: {
+        id: '123',
+        slug: 'test-config',
+        title: 'Test Config',
+        content: 'htop_version=3.2.1',
+        sourceType: 'uploaded',
+        sourceUrl: null,
+        sourcePlatform: null,
+        status: 'published',
+        score: 10,
+        likesCount: 3,
+        createdAt: '2026-01-14T00:00:00Z',
+        comments: [],
+      },
+    }
+
+    const mockClient = createMockClient(mockData)
+    renderWithProviders(mockClient, '/config/test-config')
+
+    await waitFor(() => {
+      expect(screen.getByText('Fork')).toBeInTheDocument()
+    })
+  })
+
+  it('has Copy Config button', async () => {
+    const mockData = {
+      config: {
+        id: '123',
+        slug: 'test-config',
+        title: 'Test Config',
+        content: 'htop_version=3.2.1',
+        sourceType: 'uploaded',
+        sourceUrl: null,
+        sourcePlatform: null,
+        status: 'published',
+        score: 10,
+        likesCount: 3,
+        createdAt: '2026-01-14T00:00:00Z',
+        comments: [],
+      },
+    }
+
+    const mockClient = createMockClient(mockData)
+    renderWithProviders(mockClient, '/config/test-config')
+
+    await waitFor(() => {
+      expect(screen.getByText('Copy Config')).toBeInTheDocument()
+    })
+  })
+
+  it('has Share button', async () => {
+    const mockData = {
+      config: {
+        id: '123',
+        slug: 'test-config',
+        title: 'Test Config',
+        content: 'htop_version=3.2.1',
+        sourceType: 'uploaded',
+        sourceUrl: null,
+        sourcePlatform: null,
+        status: 'published',
+        score: 10,
+        likesCount: 3,
+        createdAt: '2026-01-14T00:00:00Z',
+        comments: [],
+      },
+    }
+
+    const mockClient = createMockClient(mockData)
+    renderWithProviders(mockClient, '/config/test-config')
+
+    await waitFor(() => {
+      expect(screen.getByText('Share')).toBeInTheDocument()
+    })
+  })
+
+  it('displays comments section', async () => {
+    const mockData = {
+      config: {
+        id: '123',
+        slug: 'test-config',
+        title: 'Test Config',
+        content: 'htop_version=3.2.1',
+        sourceType: 'uploaded',
+        sourceUrl: null,
+        sourcePlatform: null,
+        status: 'published',
+        score: 10,
+        likesCount: 3,
+        createdAt: '2026-01-14T00:00:00Z',
+        comments: [
+          {
+            id: 'comment-1',
+            content: 'Great config!',
+            author: { id: 'user-1', username: 'testuser', avatarUrl: null },
+            createdAt: '2026-01-14T10:00:00Z',
+          },
+        ],
+      },
+    }
+
+    const mockClient = createMockClient(mockData)
+    renderWithProviders(mockClient, '/config/test-config')
+
+    await waitFor(() => {
+      expect(screen.getByText('Comments (1)')).toBeInTheDocument()
+      expect(screen.getByText('Great config!')).toBeInTheDocument()
+    })
+  })
+
+  it('has back to gallery link', async () => {
+    const mockData = {
+      config: {
+        id: '123',
+        slug: 'test-config',
+        title: 'Test Config',
+        content: 'htop_version=3.2.1',
+        sourceType: 'uploaded',
+        sourceUrl: null,
+        sourcePlatform: null,
+        status: 'published',
+        score: 10,
+        likesCount: 3,
+        createdAt: '2026-01-14T00:00:00Z',
+        comments: [],
+      },
+    }
+
+    const mockClient = createMockClient(mockData)
+    renderWithProviders(mockClient, '/config/test-config')
+
+    await waitFor(() => {
+      expect(screen.getByText(/Back to Gallery/)).toBeInTheDocument()
+    })
+  })
+
+  it('shows score tooltip', async () => {
+    const mockData = {
+      config: {
+        id: '123',
+        slug: 'test-config',
+        title: 'Test Config',
+        content: 'htop_version=3.2.1',
+        sourceType: 'uploaded',
+        sourceUrl: null,
+        sourcePlatform: null,
+        status: 'published',
+        score: 10,
+        likesCount: 3,
+        createdAt: '2026-01-14T00:00:00Z',
+        comments: [],
+      },
+    }
+
+    const mockClient = createMockClient(mockData)
+    renderWithProviders(mockClient, '/config/test-config')
+
+    await waitFor(() => {
+      const scoreElement = screen.getByText(/Score: 10/)
+      expect(scoreElement).toHaveAttribute('title', expect.stringContaining('Customization score'))
+    })
+  })
 })
