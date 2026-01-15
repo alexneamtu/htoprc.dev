@@ -35,14 +35,14 @@ jobs:
         run: pnpm --filter @htoprc/parser build
 
       - name: Upload parser build
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: parser-dist
           path: packages/htoprc-parser/dist
           retention-days: 1
 
       - name: Upload node_modules cache info
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: pnpm-store-path
           path: |
@@ -199,7 +199,7 @@ jobs:
           VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.VITE_CLERK_PUBLISHABLE_KEY_PROD }}
 
       - name: Upload web build
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: web-dist
           path: apps/web/dist
