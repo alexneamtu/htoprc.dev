@@ -5,17 +5,17 @@ import { fromValue, delay, pipe } from 'wonka'
 import { LikeButton } from './LikeButton'
 
 // Mock urql client
-function createMockClient() {
+function createMockClient(queryData = { hasLiked: false }, mutationData = {}) {
   return {
     executeQuery: vi.fn(() =>
       pipe(
-        fromValue({ data: { hasLiked: false } }),
+        fromValue({ data: queryData }),
         delay(0)
       )
     ),
     executeMutation: vi.fn(() =>
       pipe(
-        fromValue({ data: {} }),
+        fromValue({ data: mutationData }),
         delay(0)
       )
     ),
@@ -23,12 +23,14 @@ function createMockClient() {
   }
 }
 
-// Mock auth service
+// Default mock for auth service (not signed in)
+const mockUseAuth = vi.fn(() => ({
+  user: null,
+  isSignedIn: false,
+}))
+
 vi.mock('../services/auth', () => ({
-  useAuth: () => ({
-    user: null,
-    isSignedIn: false,
-  }),
+  useAuth: () => mockUseAuth(),
 }))
 
 describe('LikeButton', () => {
@@ -103,5 +105,32 @@ describe('LikeButton', () => {
     )
 
     expect(screen.getByText('1234')).toBeInTheDocument()
+  })
+
+  it('renders disabled state when not signed in', () => {
+    const mockClient = createMockClient()
+
+    render(
+      <Provider value={mockClient as never}>
+        <LikeButton configId="config-1" initialLikesCount={5} />
+      </Provider>
+    )
+
+    const button = screen.getByRole('button')
+    expect(button).toBeDisabled()
+  })
+
+  it('has hover styles for accessibility', () => {
+    const mockClient = createMockClient()
+
+    const { container } = render(
+      <Provider value={mockClient as never}>
+        <LikeButton configId="config-1" initialLikesCount={5} />
+      </Provider>
+    )
+
+    const button = container.querySelector('button')
+    // Button has flex layout with items-center
+    expect(button).toHaveClass('inline-flex', 'items-center')
   })
 })

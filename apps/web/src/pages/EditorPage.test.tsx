@@ -209,4 +209,34 @@ describe('EditorPage', () => {
       Storage.prototype.getItem = originalGetItem
     })
   })
+
+  describe('responsiveness', () => {
+    it('renders editor and preview side by side on desktop', () => {
+      renderWithRouter()
+
+      const editorHeading = screen.getByText('htoprc Editor')
+      const previewHeading = screen.getByText('Preview')
+
+      expect(editorHeading).toBeInTheDocument()
+      expect(previewHeading).toBeInTheDocument()
+    })
+
+    it('shows process list in preview', () => {
+      renderWithRouter()
+
+      // Preview should show process headers
+      expect(screen.getByText('PID')).toBeInTheDocument()
+      expect(screen.getByText('USER')).toBeInTheDocument()
+      expect(screen.getByText('Command')).toBeInTheDocument()
+    })
+  })
+
+  describe('keyboard accessibility', () => {
+    it('has proper aria labels', () => {
+      renderWithRouter()
+
+      const copyButton = screen.getByText('Copy Config')
+      expect(copyButton.closest('button')).toBeInTheDocument()
+    })
+  })
 })

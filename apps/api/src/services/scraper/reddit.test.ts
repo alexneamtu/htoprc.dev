@@ -1,4 +1,10 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { searchRedditSubreddit, scrapeReddit } from './reddit'
+import type { ScraperContext } from './types'
+
+// Mock fetch globally
+const mockFetch = vi.fn()
+global.fetch = mockFetch
 
 // Helper functions mirroring reddit.ts logic for testing
 function looksLikeHtoprc(content: string): boolean {
@@ -40,6 +46,10 @@ function extractHtoprcFromText(text: string): string | null {
 }
 
 describe('reddit scraper', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
   describe('looksLikeHtoprc', () => {
     it('identifies valid htoprc content', () => {
       const content = `htop_version=3
@@ -187,6 +197,144 @@ fields=0 48 17 18 38
 color_scheme=0
 tree_view=1`)
     })
+  })
+
+  describe('searchRedditSubreddit', () => {
+    it('returns listing on successful response', async () => {
+      const mockListing = {
+        kind: 'Listing',
+        data: {
+          children: [
+            { data: { id: '1', title: 'Test', selftext: 'content', author: 'user' } },
+          ],
+          after: null,
+        },
+      }
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockListing),
+      })
+
+      const result = await searchRedditSubreddit('unixporn', 'htoprc')
+
+      expect(result).toEqual(mockListing)
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('reddit.com/r/unixporn/search.json'),
+        expect.any(Object)
+      )
+    })
+
+    it('includes query parameter', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ kind: 'Listing', data: { children: [], after: null } }),
+      })
+
+      await searchRedditSubreddit('unixporn', 'htoprc')
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('q=htoprc'),
+        expect.any(Object)
+      )
+    })
+
+    it('includes after parameter for pagination', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ kind: 'Listing', data: { children: [], after: null } }),
+      })
+
+      await searchRedditSubreddit('unixporn', 'htoprc', 't3_abc123')
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('after=t3_abc123'),
+        expect.any(Object)
+      )
+    })
+
+    it('returns null on API error', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 429,
+      })
+
+      const result = await searchRedditSubreddit('unixporn', 'htoprc')
+
+      expect(result).toBeNull()
+    })
+
+    it('returns null on network error', async () => {
+      mockFetch.mockRejectedValueOnce(new Error('Network error'))
+
+      const result = await searchRedditSubreddit('unixporn', 'htoprc')
+
+      expect(result).toBeNull()
+    })
+  })
+
+  describe('scrapeReddit', () => {
+    function createMockDb() {
+      return {
+        prepare: vi.fn().mockReturnValue({
+          bind: vi.fn().mockReturnValue({
+            run: vi.fn().mockResolvedValue({ success: true }),
+            first: vi.fn().mockResolvedValue(null),
+          }),
+        }),
+      }
+    }
+
+    it('returns success with zero configs when no posts found', async () => {
+      // Mock all fetch calls to return empty listings immediately
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ kind: 'Listing', data: { children: [], after: null } }),
+      })
+
+      // Mock setTimeout to avoid 1000ms delays
+      vi.useFakeTimers()
+
+      const ctx: ScraperContext = {
+        db: createMockDb() as unknown as D1Database,
+      }
+
+      const resultPromise = scrapeReddit(ctx)
+
+      // Advance timers to skip all delays (2 subreddits × 3 queries = 6 calls, 5 delays)
+      await vi.runAllTimersAsync()
+
+      const result = await resultPromise
+
+      expect(result.success).toBe(true)
+      expect(result.configsFound).toBe(0)
+      expect(result.configsAdded).toBe(0)
+
+      vi.useRealTimers()
+    })
+
+    it('returns success when search returns null', async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 500,
+      })
+
+      // Mock setTimeout to avoid delays
+      vi.useFakeTimers()
+
+      const ctx: ScraperContext = {
+        db: createMockDb() as unknown as D1Database,
+      }
+
+      const resultPromise = scrapeReddit(ctx)
+      await vi.runAllTimersAsync()
+      const result = await resultPromise
+
+      expect(result.success).toBe(true)
+      expect(result.configsFound).toBe(0)
+
+      vi.useRealTimers()
+    })
+
   })
 
   describe('subreddit configuration', () => {

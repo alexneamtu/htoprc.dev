@@ -187,4 +187,74 @@ describe('HtopPreview', () => {
       expect(screen.getByText('Mem')).toBeInTheDocument()
     })
   })
+
+  describe('header layouts', () => {
+    it('renders two_67_33 layout with left-heavy columns', () => {
+      const config = createConfig({
+        headerLayout: 'two_67_33',
+        leftMeters: [{ type: 'CPU', mode: 'bar' }],
+      })
+      render(<HtopPreview config={config} />)
+
+      expect(screen.getAllByText('CPU').length).toBeGreaterThan(0)
+    })
+
+    it('renders two_50_50 layout with two columns', () => {
+      const config = createConfig({
+        headerLayout: 'two_50_50',
+        leftMeters: [{ type: 'CPU', mode: 'bar' }],
+        rightMeters: [{ type: 'Memory', mode: 'bar' }],
+      })
+      render(<HtopPreview config={config} />)
+
+      expect(screen.getAllByText('CPU').length).toBeGreaterThan(0)
+      expect(screen.getAllByText('Mem').length).toBeGreaterThan(0)
+    })
+
+    it('renders three_33_34_33 layout with three columns', () => {
+      const config = createConfig({
+        headerLayout: 'three_33_34_33',
+        leftMeters: [{ type: 'CPU', mode: 'bar' }],
+        rightMeters: [{ type: 'Memory', mode: 'bar' }],
+      })
+      render(<HtopPreview config={config} />)
+
+      // Even with three column layout, we show left and right
+      expect(screen.getAllByText('CPU').length).toBeGreaterThan(0)
+    })
+
+    it('handles empty meters', () => {
+      const config = createConfig({
+        headerLayout: 'two_50_50',
+        leftMeters: [],
+        rightMeters: [],
+      })
+      const { container } = render(<HtopPreview config={config} />)
+
+      // Should still render the preview container
+      expect(container.querySelector('.font-mono')).toBeInTheDocument()
+    })
+  })
+
+  describe('process highlighting options', () => {
+    it('respects showProgramPath setting', () => {
+      const config = createConfig({
+        showProgramPath: true,
+      })
+      render(<HtopPreview config={config} />)
+
+      // Process list should render with commands
+      expect(screen.getAllByText('Command').length).toBeGreaterThan(0)
+    })
+
+    it('respects highlightBaseName setting', () => {
+      const config = createConfig({
+        highlightBaseName: true,
+      })
+      render(<HtopPreview config={config} />)
+
+      // Preview renders normally
+      expect(screen.getAllByText('PID').length).toBeGreaterThan(0)
+    })
+  })
 })

@@ -144,4 +144,56 @@ describe('Comments', () => {
     expect(screen.getByText('Jan 14, 2026')).toBeInTheDocument()
     expect(screen.getByText('Jan 15, 2026')).toBeInTheDocument()
   })
+
+  it('shows pending comments with approval badge', () => {
+    const mockClient = createMockClient()
+    const pendingComments = [
+      {
+        id: 'pending-1',
+        content: 'My pending comment',
+        author: {
+          id: 'user-3',
+          username: 'newuser',
+          avatarUrl: null,
+        },
+        createdAt: '2026-01-15T10:00:00Z',
+      },
+    ]
+
+    render(
+      <Provider value={mockClient as never}>
+        <Comments configId="config-1" comments={mockComments} pendingComments={pendingComments} />
+      </Provider>
+    )
+
+    expect(screen.getByText('My pending comment')).toBeInTheDocument()
+    expect(screen.getByText('Pending approval')).toBeInTheDocument()
+    expect(screen.getByText('+ 1 pending')).toBeInTheDocument()
+  })
+
+  it('shows pending comments count in header', () => {
+    const mockClient = createMockClient()
+    const pendingComments = [
+      {
+        id: 'pending-1',
+        content: 'Comment 1',
+        author: { id: 'user-3', username: 'user1', avatarUrl: null },
+        createdAt: '2026-01-15T10:00:00Z',
+      },
+      {
+        id: 'pending-2',
+        content: 'Comment 2',
+        author: { id: 'user-4', username: 'user2', avatarUrl: null },
+        createdAt: '2026-01-15T11:00:00Z',
+      },
+    ]
+
+    render(
+      <Provider value={mockClient as never}>
+        <Comments configId="config-1" comments={[]} pendingComments={pendingComments} />
+      </Provider>
+    )
+
+    expect(screen.getByText('+ 2 pending')).toBeInTheDocument()
+  })
 })
