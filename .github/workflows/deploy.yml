@@ -114,10 +114,10 @@ jobs:
           echo "| Project | htoprc-${{ needs.determine-environment.outputs.environment }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Trigger | ${{ github.event_name }} |" >> $GITHUB_STEP_SUMMARY
           if [ "${{ needs.determine-environment.outputs.environment }}" = "production" ]; then
-            echo "| Custom Domain | htoprc.dev |" >> $GITHUB_STEP_SUMMARY
+            echo "| Custom Domain | [htoprc.dev](https://htoprc.dev) |" >> $GITHUB_STEP_SUMMARY
             echo "| Release | ${{ github.event.release.tag_name }} |" >> $GITHUB_STEP_SUMMARY
           else
-            echo "| Custom Domain | staging.htoprc.dev |" >> $GITHUB_STEP_SUMMARY
+            echo "| Custom Domain | [staging.htoprc.dev](https://staging.htoprc.dev) |" >> $GITHUB_STEP_SUMMARY
           fi
 
   deploy-api:
@@ -210,11 +210,11 @@ jobs:
           if [ "${{ needs.determine-environment.outputs.environment }}" = "production" ]; then
             echo "| DB Backup | d1-backup-${{ github.run_id }} (30 days retention) |" >> $GITHUB_STEP_SUMMARY
             echo "| Worker | htoprc-api-production |" >> $GITHUB_STEP_SUMMARY
-            echo "| Custom Domain | api.htoprc.dev |" >> $GITHUB_STEP_SUMMARY
+            echo "| Custom Domain | [api.htoprc.dev](https://api.htoprc.dev) |" >> $GITHUB_STEP_SUMMARY
             echo "| Release | ${{ github.event.release.tag_name }} |" >> $GITHUB_STEP_SUMMARY
           else
             echo "| Worker | htoprc-api-staging |" >> $GITHUB_STEP_SUMMARY
-            echo "| Custom Domain | api-staging.htoprc.dev |" >> $GITHUB_STEP_SUMMARY
+            echo "| Custom Domain | [api-staging.htoprc.dev](https://api-staging.htoprc.dev) |" >> $GITHUB_STEP_SUMMARY
           fi
 
   notify-failure:

@@ -59,7 +59,7 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: ./apps/web
-          command: pages deploy dist --project-name=htoprc-staging --branch=${{ github.head_ref }}
+          command: pages deploy dist --project-name=htoprc-staging --branch=pr-${{ github.event.pull_request.number }}
           packageManager: pnpm
 
       - name: Find existing comment
