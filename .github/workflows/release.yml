@@ -149,6 +149,43 @@ jobs:
           # (GITHUB_TOKEN actions don't trigger other workflows to prevent infinite loops)
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
 
+      - name: Install pnpm
+        if: steps.changelog.outputs.skip != 'true'
+        uses: pnpm/action-setup@fe02b34f77f8bc703788d5817da081398fad5dd2 # v4.0.0
+        with:
+          version: 10.28.0
+
+      - name: Setup Node.js
+        if: steps.changelog.outputs.skip != 'true'
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        if: steps.changelog.outputs.skip != 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Update parser version
+        if: steps.changelog.outputs.skip != 'true'
+        run: |
+          VERSION="${{ steps.next_version.outputs.version }}"
+          # Remove 'v' prefix for npm version
+          NPM_VERSION="${VERSION#v}"
+          cd packages/htoprc-parser
+          npm version "$NPM_VERSION" --no-git-tag-version
+
+      - name: Build and publish parser to npm
+        if: steps.changelog.outputs.skip != 'true'
+        working-directory: packages/htoprc-parser
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          pnpm run build
+          pnpm run test:run
+          pnpm publish --access public --no-git-checks
+
       - name: Release Summary
         if: steps.changelog.outputs.skip != 'true'
         run: |
@@ -159,6 +196,7 @@ jobs:
           echo "| Version | ${{ steps.next_version.outputs.version }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Bump Type | ${{ steps.next_version.outputs.bump }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Previous | ${{ steps.latest_tag.outputs.tag }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| npm Package | @htoprc/parser@${{ steps.next_version.outputs.version }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Changelog" >> $GITHUB_STEP_SUMMARY
           cat /tmp/changelog.md >> $GITHUB_STEP_SUMMARY
