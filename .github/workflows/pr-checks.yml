@@ -83,8 +83,6 @@ jobs:
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         with:
           script: |
-            const { execSync } = require('child_process');
-
             // Skip for Dependabot PRs
             const pr = context.payload.pull_request;
             if (pr.user.login === 'dependabot[bot]') {
@@ -92,15 +90,19 @@ jobs:
               return;
             }
 
-            // Get commits in the PR
-            const base = pr.base.sha;
-            const head = pr.head.sha;
-            const commits = execSync(`git log --format="%s" ${base}..${head}`).toString().trim().split('\n');
+            // Get commits in the PR using GitHub API (more reliable than git log)
+            const { owner, repo } = context.repo;
+            const { data: commits } = await github.rest.pulls.listCommits({
+              owner,
+              repo,
+              pull_number: pr.number,
+            });
 
             const conventionalPattern = /^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?!?:\s.+$/;
             const invalidCommits = [];
 
-            for (const msg of commits) {
+            for (const commit of commits) {
+              const msg = commit.commit.message.split('\n')[0]; // First line only
               if (msg && !conventionalPattern.test(msg)) {
                 // Allow merge commits
                 if (!msg.startsWith('Merge ')) {
