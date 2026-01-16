@@ -5,6 +5,7 @@ import { LikeButton } from '../components/LikeButton'
 import { Comments } from '../components/Comments'
 import { Modal, ModalActions, ModalButton } from '../components/Modal'
 import { SEO } from '../components/SEO'
+import { Breadcrumbs } from '../components/Breadcrumbs'
 import { parseHtoprc } from '@htoprc/parser'
 import { useConfig } from '../hooks'
 import { useMutation, useQuery } from 'urql'
@@ -181,11 +182,12 @@ export function ConfigPage() {
         type="article"
         jsonLd={jsonLd}
       />
-      <div className="mb-6">
-        <Link to="/" className="text-blue-600 dark:text-blue-400 hover:underline">
-          &larr; Back to Gallery
-        </Link>
-      </div>
+      <Breadcrumbs
+        items={[
+          { name: 'Gallery', path: '/gallery' },
+          { name: config.title, path: `/config/${config.slug}` },
+        ]}
+      />
 
       <h1 className="text-3xl font-bold mb-4">{config.title}</h1>
 
