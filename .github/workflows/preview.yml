@@ -73,34 +73,6 @@ jobs:
           command: pages deploy dist --project-name=htoprc-staging --branch=pr-${{ github.event.pull_request.number }}
           packageManager: pnpm
 
-      - name: Find existing comment
-        uses: peter-evans/find-comment@b30e6a3c0ed37e7c023ccd3f1db5c6c0b0c23aad # v4.0.0
-        id: find-comment
-        with:
-          issue-number: ${{ github.event.pull_request.number }}
-          comment-author: 'github-actions[bot]'
-          body-includes: Preview deployed
-
-      - name: Create or update comment
-        uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5.0.0
-        with:
-          comment-id: ${{ steps.find-comment.outputs.comment-id }}
-          issue-number: ${{ github.event.pull_request.number }}
-          edit-mode: replace
-          body: |
-            ## Preview deployed!
-
-            | App | URL |
-            |-----|-----|
-            | Web | https://pr-${{ github.event.pull_request.number }}.htoprc-staging.pages.dev |
-            | API | https://api-pr-${{ github.event.pull_request.number }}.${{ vars.CLOUDFLARE_ACCOUNT_SUBDOMAIN }}.workers.dev |
-
-            **Branch:** `${{ github.head_ref }}`
-            **Commit:** `${{ github.sha }}`
-            **Updated:** ${{ github.event.pull_request.updated_at }}
-
-            > This preview uses its own API worker with the **staging database**.
-
       - name: Preview Summary
         run: |
           echo "## Preview Deployment" >> $GITHUB_STEP_SUMMARY
