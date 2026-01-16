@@ -12,6 +12,8 @@ on:
 
 jobs:
   determine-environment:
+    # Skip entirely if triggered by workflow_run and CI failed
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     outputs:
       environment: ${{ steps.set-env.outputs.environment }}
@@ -29,20 +31,16 @@ jobs:
             echo "environment=staging" >> $GITHUB_OUTPUT
             echo "should_deploy=true" >> $GITHUB_OUTPUT
           elif [ "${{ github.event_name }}" = "workflow_run" ]; then
-            if [ "${{ github.event.workflow_run.conclusion }}" = "success" ]; then
-              # Also check Security workflow passed for this commit
-              SHA="${{ github.event.workflow_run.head_sha }}"
-              SECURITY_STATUS=$(gh api repos/${{ github.repository }}/commits/${SHA}/check-runs --jq '.check_runs[] | select(.name == "Scan for secrets") | .conclusion' 2>/dev/null || echo "pending")
+            # CI already passed (checked in job-level if condition)
+            # Also check Security workflow passed for this commit
+            SHA="${{ github.event.workflow_run.head_sha }}"
+            SECURITY_STATUS=$(gh api repos/${{ github.repository }}/commits/${SHA}/check-runs --jq '.check_runs[] | select(.name == "Scan for secrets") | .conclusion' 2>/dev/null || echo "pending")
 
-              if [ "$SECURITY_STATUS" = "success" ]; then
-                echo "environment=staging" >> $GITHUB_OUTPUT
-                echo "should_deploy=true" >> $GITHUB_OUTPUT
-              else
-                echo "Security check status: $SECURITY_STATUS - skipping deploy"
-                echo "environment=staging" >> $GITHUB_OUTPUT
-                echo "should_deploy=false" >> $GITHUB_OUTPUT
-              fi
+            if [ "$SECURITY_STATUS" = "success" ]; then
+              echo "environment=staging" >> $GITHUB_OUTPUT
+              echo "should_deploy=true" >> $GITHUB_OUTPUT
             else
+              echo "Security check status: $SECURITY_STATUS - skipping deploy"
               echo "environment=staging" >> $GITHUB_OUTPUT
               echo "should_deploy=false" >> $GITHUB_OUTPUT
             fi
@@ -267,10 +265,10 @@ jobs:
     if: needs.determine-environment.outputs.should_deploy == 'false'
     runs-on: ubuntu-latest
     steps:
-      - name: CI Failed - Skip Deploy
+      - name: Security Check Failed - Skip Deploy
         run: |
           echo "## Deployment Skipped" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "CI workflow failed. Deployment was not attempted." >> $GITHUB_STEP_SUMMARY
+          echo "Security check failed or is pending. Deployment was not attempted." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "[View CI Run](https://github.com/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }})" >> $GITHUB_STEP_SUMMARY
