@@ -19,7 +19,7 @@ describe('IndexNow', () => {
       await submitConfigToIndexNow('my-config-slug')
 
       expect(mockFetch).toHaveBeenCalledTimes(1)
-      const url = mockFetch.mock.calls[0][0] as string
+      const url = mockFetch.mock.calls[0]?.[0] as string
       expect(url).toContain('api.indexnow.org/indexnow')
       expect(url).toContain(encodeURIComponent('https://htoprc.dev/config/my-config-slug'))
     })
