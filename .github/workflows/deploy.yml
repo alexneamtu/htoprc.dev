@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: Determine environment
         id: set-env
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           if [ "${{ github.event_name }}" = "release" ]; then
             echo "environment=production" >> $GITHUB_OUTPUT
@@ -28,8 +30,18 @@ jobs:
             echo "should_deploy=true" >> $GITHUB_OUTPUT
           elif [ "${{ github.event_name }}" = "workflow_run" ]; then
             if [ "${{ github.event.workflow_run.conclusion }}" = "success" ]; then
-              echo "environment=staging" >> $GITHUB_OUTPUT
-              echo "should_deploy=true" >> $GITHUB_OUTPUT
+              # Also check Security workflow passed for this commit
+              SHA="${{ github.event.workflow_run.head_sha }}"
+              SECURITY_STATUS=$(gh api repos/${{ github.repository }}/commits/${SHA}/check-runs --jq '.check_runs[] | select(.name == "Scan for secrets") | .conclusion' 2>/dev/null || echo "pending")
+
+              if [ "$SECURITY_STATUS" = "success" ]; then
+                echo "environment=staging" >> $GITHUB_OUTPUT
+                echo "should_deploy=true" >> $GITHUB_OUTPUT
+              else
+                echo "Security check status: $SECURITY_STATUS - skipping deploy"
+                echo "environment=staging" >> $GITHUB_OUTPUT
+                echo "should_deploy=false" >> $GITHUB_OUTPUT
+              fi
             else
               echo "environment=staging" >> $GITHUB_OUTPUT
               echo "should_deploy=false" >> $GITHUB_OUTPUT
