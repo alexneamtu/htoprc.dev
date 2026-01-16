@@ -116,6 +116,20 @@ export function HomePage() {
         </div>
       </section>
 
+      <section className="mb-12 max-w-3xl mx-auto text-gray-600 dark:text-gray-400">
+        <p className="text-lg">
+          htoprc.dev is a visual htop configuration editor. Learn the basics in our{' '}
+          <Link to="/what-is-htoprc" className="text-blue-600 dark:text-blue-400 hover:underline">
+            what is an htoprc file guide
+          </Link>
+          , then customize your layout with the{' '}
+          <Link to="/customize-htop" className="text-blue-600 dark:text-blue-400 hover:underline">
+            colors, meters, and columns guide
+          </Link>
+          .
+        </p>
+      </section>
+
       <HeroConfig />
 
       <RecentlyAdded />

@@ -1472,6 +1472,12 @@ describe('API', () => {
       expect(xml).toContain('<?xml version="1.0"')
       expect(xml).toContain('<urlset')
       expect(xml).toContain('https://htoprc.dev')
+      expect(xml).toContain('https://htoprc.dev/gallery')
+      expect(xml).toContain('https://htoprc.dev/about')
+      expect(xml).toContain('https://htoprc.dev/privacy')
+      expect(xml).toContain('https://htoprc.dev/what-is-htoprc')
+      expect(xml).toContain('https://htoprc.dev/customize-htop')
+      expect(xml).toContain('https://htoprc.dev/htop-config-quick-guide')
     })
   })
 
