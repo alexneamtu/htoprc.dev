@@ -66,7 +66,7 @@ describe('ConfigPage', () => {
     renderWithProviders(mockClient, '/config/test-config')
 
     await waitFor(() => {
-      expect(screen.getByText('Test Config')).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'Test Config' })).toBeInTheDocument()
     })
 
     expect(screen.getByText(/Score: 25/)).toBeInTheDocument()
@@ -339,7 +339,7 @@ describe('ConfigPage', () => {
     })
   })
 
-  it('has back to gallery link', async () => {
+  it('has breadcrumb navigation', async () => {
     const mockData = {
       config: {
         id: '123',
@@ -361,7 +361,9 @@ describe('ConfigPage', () => {
     renderWithProviders(mockClient, '/config/test-config')
 
     await waitFor(() => {
-      expect(screen.getByText(/Back to Gallery/)).toBeInTheDocument()
+      expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: 'Gallery' })).toBeInTheDocument()
     })
   })
 

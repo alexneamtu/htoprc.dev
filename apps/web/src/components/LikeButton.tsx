@@ -101,6 +101,7 @@ function HeartIcon({ filled, className }: { filled: boolean; className?: string 
       fill={filled ? 'currentColor' : 'none'}
       stroke="currentColor"
       viewBox="0 0 24 24"
+      aria-hidden="true"
     >
       <path
         strokeLinecap="round"
