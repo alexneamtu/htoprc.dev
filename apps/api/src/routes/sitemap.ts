@@ -29,7 +29,7 @@ sitemapRoutes.get('/sitemap.xml', async (c) => {
     ...staticUrls,
     ...configs.map((config) => ({
       loc: `${baseUrl}/config/${config.slug}`,
-      lastmod: config.created_at.split('T')[0],
+      lastmod: config.created_at.split(/[T ]/)[0],
       priority: '0.6',
       changefreq: 'monthly',
     })),
