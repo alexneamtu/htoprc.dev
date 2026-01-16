@@ -37,7 +37,7 @@ jobs:
           fi
 
   deploy-web:
-    needs: determine-environment
+    needs: [determine-environment, deploy-api]
     if: needs.determine-environment.outputs.should_deploy == 'true'
     runs-on: ubuntu-latest
     permissions:
@@ -46,7 +46,7 @@ jobs:
       actions: read
     environment:
       name: ${{ needs.determine-environment.outputs.environment }}
-      url: ${{ steps.deploy.outputs.deployment-url }}
+      url: ${{ needs.determine-environment.outputs.environment == 'production' && 'https://htoprc.dev' || 'https://staging.htoprc.dev' }}
 
     steps:
       - name: Checkout

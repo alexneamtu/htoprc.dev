@@ -16,6 +16,7 @@ import {
 type Bindings = {
   DB: D1Database
   GITHUB_TOKEN?: string
+  GITLAB_TOKEN?: string
   CLERK_SECRET_KEY?: string
   ANON_RATE_LIMIT_SALT?: string
   BASE_URL?: string  // For sitemap generation (defaults to https://htoprc.dev)
@@ -160,6 +161,7 @@ ${urls
     const ctx = {
       db: c.env.DB,
       githubToken: c.env.GITHUB_TOKEN,
+      gitlabToken: c.env.GITLAB_TOKEN,
     }
 
     const result = await runScraper(platform as Platform, ctx)
@@ -230,6 +232,7 @@ const scheduled: ExportedHandler<Bindings>['scheduled'] = async (event, env) => 
   const ctx = {
     db: env.DB,
     githubToken: env.GITHUB_TOKEN,
+    gitlabToken: env.GITLAB_TOKEN,
   }
 
   // Run scrapers
