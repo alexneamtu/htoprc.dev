@@ -3,9 +3,11 @@ import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useMutation, useQuery } from 'urql'
 import { HtopPreview } from '../components/htop/HtopPreview'
 import { HtoprcEditor } from '../components/editor'
+import { Modal, ModalActions, ModalButton } from '../components/Modal'
 import { SEO } from '../components/SEO'
 import { parseHtoprc } from '@htoprc/parser'
 import { useAuth } from '../services/auth'
+import { useLocalStorage, useDebounce } from '../hooks'
 
 const UPLOAD_CONFIG_MUTATION = /* GraphQL */ `
   mutation UploadConfig($input: UploadConfigInput!) {
@@ -60,33 +62,11 @@ highlight_megabytes=1
 highlight_threads=1
 `
 
-function useLocalStorage(key: string, initialValue: string): [string, (value: string) => void] {
-  const [storedValue, setStoredValue] = useState(() => {
-    try {
-      const item = localStorage.getItem(key)
-      return item ?? initialValue
-    } catch {
-      return initialValue
-    }
-  })
-
-  const setValue = useCallback((value: string) => {
-    setStoredValue(value)
-    try {
-      localStorage.setItem(key, value)
-    } catch {
-      // Ignore storage errors
-    }
-  }, [key])
-
-  return [storedValue, setValue]
-}
-
 export function EditorPage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const [content, setContent] = useLocalStorage(STORAGE_KEY, DEFAULT_HTOPRC)
-  const [debouncedContent, setDebouncedContent] = useState(content)
+  const debouncedContent = useDebounce(content, 100)
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [uploadTitle, setUploadTitle] = useState('')
   const [isUploading, setIsUploading] = useState(false)
@@ -132,14 +112,6 @@ export function EditorPage() {
       setSearchParams(newParams, { replace: true })
     }
   }, [searchParams, setContent, setSearchParams, forkParam, editParam])
-
-  // Debounce parsing for performance
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedContent(content)
-    }, 100)
-    return () => clearTimeout(timer)
-  }, [content])
 
   const parsed = useMemo(() => parseHtoprc(debouncedContent), [debouncedContent])
 
@@ -305,48 +277,36 @@ export function EditorPage() {
         </div>
       </div>
 
-      {/* Upload Modal */}
-      {showUploadModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full">
-            <h3 className="text-lg font-semibold mb-4">
-              {isEditing && canEdit ? 'Save Changes' : forkParam ? 'Save Fork to Gallery' : 'Upload to Gallery'}
-            </h3>
-            {forkParam && !isEditing && (
-              <p className="text-sm text-purple-500 mb-4">
-                Forking from: {forkData?.config?.title || forkParam}
-              </p>
-            )}
-            <input
-              type="text"
-              value={uploadTitle}
-              onChange={(e) => setUploadTitle(e.target.value)}
-              placeholder="Config title..."
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white mb-4"
-              autoFocus
-            />
-            {uploadError && (
-              <p className="text-red-500 text-sm mb-4">{uploadError}</p>
-            )}
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setShowUploadModal(false)}
-                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
-                disabled={isUploading}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleUpload}
-                disabled={isUploading || !uploadTitle.trim()}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 rounded-md text-white"
-              >
-                {isUploading ? 'Saving...' : isEditing && canEdit ? 'Save' : 'Upload'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        isOpen={showUploadModal}
+        onClose={() => setShowUploadModal(false)}
+        title={isEditing && canEdit ? 'Save Changes' : forkParam ? 'Save Fork to Gallery' : 'Upload to Gallery'}
+      >
+        {forkParam && !isEditing && (
+          <p className="text-sm text-purple-500 mb-4">
+            Forking from: {forkData?.config?.title || forkParam}
+          </p>
+        )}
+        <input
+          type="text"
+          value={uploadTitle}
+          onChange={(e) => setUploadTitle(e.target.value)}
+          placeholder="Config title..."
+          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white mb-4"
+          autoFocus
+        />
+        {uploadError && (
+          <p className="text-red-500 text-sm mb-4">{uploadError}</p>
+        )}
+        <ModalActions>
+          <ModalButton onClick={() => setShowUploadModal(false)} disabled={isUploading}>
+            Cancel
+          </ModalButton>
+          <ModalButton onClick={handleUpload} disabled={isUploading || !uploadTitle.trim()} variant="primary">
+            {isUploading ? 'Saving...' : isEditing && canEdit ? 'Save' : 'Upload'}
+          </ModalButton>
+        </ModalActions>
+      </Modal>
     </div>
   )
 }

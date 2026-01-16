@@ -11,3 +11,6 @@ export type { RecentConfigsData } from './useRecentConfigs'
 
 export { useLikedConfigs } from './useLikedConfigs'
 export type { LikedConfigsData } from './useLikedConfigs'
+
+export { useLocalStorage } from './useLocalStorage'
+export { useDebounce } from './useDebounce'

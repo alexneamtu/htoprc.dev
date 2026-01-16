@@ -4,10 +4,7 @@ import type {
   ScraperContext,
   GitLabProject,
 } from './types'
-import {
-  processScrapedConfig,
-  generateSlug,
-} from './github'
+import { processScrapedConfig, generateSlug } from './common'
 
 const GITLAB_API_BASE = 'https://gitlab.com/api/v4'
 

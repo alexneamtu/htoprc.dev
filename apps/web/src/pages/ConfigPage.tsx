@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { HtopPreview } from '../components/htop/HtopPreview'
 import { LikeButton } from '../components/LikeButton'
 import { Comments } from '../components/Comments'
+import { Modal, ModalActions, ModalButton } from '../components/Modal'
 import { SEO } from '../components/SEO'
 import { parseHtoprc } from '@htoprc/parser'
 import { useConfig } from '../hooks'
@@ -287,63 +288,34 @@ export function ConfigPage() {
         )}
       </div>
 
-      {showReportDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full">
-            <h3 className="text-lg font-semibold mb-4">Report Config</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-              Please describe why you're reporting this config.
-            </p>
-            <textarea
-              value={reportReason}
-              onChange={(e) => setReportReason(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white mb-4"
-              rows={3}
-              placeholder="Reason for reporting..."
-            />
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setShowReportDialog(false)}
-                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleReport}
-                disabled={!reportReason.trim()}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-400 rounded-md text-white"
-              >
-                Submit Report
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal isOpen={showReportDialog} onClose={() => setShowReportDialog(false)} title="Report Config">
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+          Please describe why you're reporting this config.
+        </p>
+        <textarea
+          value={reportReason}
+          onChange={(e) => setReportReason(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white mb-4"
+          rows={3}
+          placeholder="Reason for reporting..."
+        />
+        <ModalActions>
+          <ModalButton onClick={() => setShowReportDialog(false)}>Cancel</ModalButton>
+          <ModalButton onClick={handleReport} disabled={!reportReason.trim()} variant="danger">
+            Submit Report
+          </ModalButton>
+        </ModalActions>
+      </Modal>
 
-      {showDeleteDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full">
-            <h3 className="text-lg font-semibold mb-4">Delete Config</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-              Are you sure you want to delete "{config.title}"? This action cannot be undone.
-            </p>
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setShowDeleteDialog(false)}
-                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDelete}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-md text-white"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal isOpen={showDeleteDialog} onClose={() => setShowDeleteDialog(false)} title="Delete Config">
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+          Are you sure you want to delete "{config.title}"? This action cannot be undone.
+        </p>
+        <ModalActions>
+          <ModalButton onClick={() => setShowDeleteDialog(false)}>Cancel</ModalButton>
+          <ModalButton onClick={handleDelete} variant="danger">Delete</ModalButton>
+        </ModalActions>
+      </Modal>
 
       <details className="bg-gray-100 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-transparent">
         <summary className="px-4 py-3 cursor-pointer font-semibold text-gray-900 dark:text-white">

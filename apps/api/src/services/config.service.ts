@@ -1,23 +1,17 @@
 import { GraphQLError } from 'graphql'
 import { parseHtoprc } from '@htoprc/parser'
-import { secureRandomString } from '../utils/random'
-import { CONFIG_STATUS, type ConfigRow } from '../graphql/types'
+import { sha256 } from '../utils/crypto'
+import { generateUniqueSlug } from '../utils/slug'
+import {
+  CONFIG_STATUS,
+  type ConfigRow,
+  type ConfigGraphQL,
+  mapConfigRow as mapConfigRowBase,
+} from '../graphql/types'
 
-export interface Config {
-  id: string
-  slug: string
-  title: string
-  content: string
-  sourceType: string
-  sourceUrl: string | null
-  sourcePlatform: string | null
-  authorId: string | null
-  forkedFromId: string | null
+// Extends ConfigGraphQL with forked_from_id for field resolver compatibility
+export interface Config extends ConfigGraphQL {
   forked_from_id?: string | null
-  status: string
-  score: number
-  likesCount: number
-  createdAt: string
 }
 
 export interface CreateConfigInput {
@@ -33,53 +27,10 @@ export interface UpdateConfigInput {
   content: string
 }
 
-async function sha256(content: string): Promise<string> {
-  const encoder = new TextEncoder()
-  const data = encoder.encode(content)
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
-  const hashArray = Array.from(new Uint8Array(hashBuffer))
-  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
-}
-
-async function generateUniqueSlug(db: D1Database, title: string): Promise<string> {
-  const baseSlug = title
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
-    || 'config'
-
-  const count = await db
-    .prepare('SELECT COUNT(*) as count FROM configs WHERE slug = ?')
-    .bind(baseSlug)
-    .first<{ count: number }>()
-
-  if (!count || count.count === 0) {
-    return baseSlug
-  }
-
-  const timestamp = Date.now().toString(36)
-  const randomSuffix = secureRandomString(4)
-  return `${baseSlug}-${timestamp}-${randomSuffix}`
-}
-
 function mapConfigRow(row: ConfigRow): Config {
   return {
-    id: row.id,
-    slug: row.slug,
-    title: row.title,
-    content: row.content,
-    sourceType: row.source_type,
-    sourceUrl: row.source_url,
-    sourcePlatform: row.source_platform,
-    authorId: row.author_id,
-    forkedFromId: row.forked_from_id,
-    forked_from_id: row.forked_from_id, // For field resolver
-    status: row.status,
-    score: row.score,
-    likesCount: row.likes_count,
-    createdAt: row.created_at,
+    ...mapConfigRowBase(row),
+    forked_from_id: row.forked_from_id,
   }
 }
 
