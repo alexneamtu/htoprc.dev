@@ -4,6 +4,7 @@ A web-based htoprc visualizer and editor. Preview and edit htop configurations i
 
 [![CI](https://github.com/alexneamtu/htoprc.dev/actions/workflows/ci.yml/badge.svg)](https://github.com/alexneamtu/htoprc.dev/actions/workflows/ci.yml)
 [![Deploy](https://github.com/alexneamtu/htoprc.dev/actions/workflows/deploy.yml/badge.svg)](https://github.com/alexneamtu/htoprc.dev/actions/workflows/deploy.yml)
+[![npm](https://img.shields.io/npm/v/@htoprc/parser)](https://www.npmjs.com/package/@htoprc/parser)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
 **Live:** [htoprc.dev](https://htoprc.dev) | **Staging:** [staging.htoprc.dev](https://staging.htoprc.dev)
@@ -51,10 +52,32 @@ htoprc.dev/
 │   ├── web/                 # React frontend
 │   └── api/                 # Cloudflare Workers API
 ├── packages/
-│   └── htoprc-parser/       # Shared parser library
+│   └── htoprc-parser/       # Shared parser library (npm package)
 └── docs/
     └── plans/               # Design documents
 ```
+
+## npm Package
+
+The htoprc parser is available as a standalone npm package:
+
+```bash
+npm install @htoprc/parser
+```
+
+```typescript
+import { parseHtoprc, serializeHtoprc } from '@htoprc/parser'
+
+// Parse an htoprc file
+const result = parseHtoprc(fileContent)
+console.log(result.config.colorScheme)
+console.log(result.config.treeView)
+
+// Serialize back to htoprc format
+const output = serializeHtoprc(result.config)
+```
+
+See the [package README](packages/htoprc-parser/README.md) for full API documentation.
 
 ## Getting Started
 
