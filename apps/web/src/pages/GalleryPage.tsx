@@ -112,6 +112,21 @@ export function GalleryPage() {
         </div>
       </div>
 
+      <p className="text-gray-600 dark:text-gray-400 max-w-2xl mb-6">
+        Browse htop themes and configs from the community. New to htoprc? Start with{' '}
+        <Link to="/what-is-htoprc" className="text-blue-600 dark:text-blue-400 hover:underline">
+          what is an htoprc
+        </Link>
+        , then try the{' '}
+        <Link
+          to="/htop-config-quick-guide"
+          className="text-blue-600 dark:text-blue-400 hover:underline"
+        >
+          quick guide
+        </Link>
+        .
+      </p>
+
       {fetching && (
         <div className="text-center py-12">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent" />

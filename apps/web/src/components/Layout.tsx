@@ -89,6 +89,18 @@ export function Layout({ children }: LayoutProps) {
           <Link to="/privacy" className="hover:text-gray-700 dark:hover:text-gray-300">
             Privacy
           </Link>
+          <Link to="/what-is-htoprc" className="hover:text-gray-700 dark:hover:text-gray-300">
+            What is htoprc
+          </Link>
+          <Link to="/customize-htop" className="hover:text-gray-700 dark:hover:text-gray-300">
+            Customize htop
+          </Link>
+          <Link
+            to="/htop-config-quick-guide"
+            className="hover:text-gray-700 dark:hover:text-gray-300"
+          >
+            Quick guide
+          </Link>
           <a
             href="https://github.com/alexneamtu/htoprc.dev"
             className="hover:text-gray-700 dark:hover:text-gray-300"

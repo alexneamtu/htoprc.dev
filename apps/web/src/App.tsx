@@ -12,6 +12,9 @@ import { ConfigPage } from './pages/ConfigPage'
 import { UploadPage } from './pages/UploadPage'
 import { AdminPage } from './pages/AdminPage'
 import { AboutPage } from './pages/AboutPage'
+import { WhatIsHtoprcPage } from './pages/WhatIsHtoprcPage'
+import { CustomizeHtopPage } from './pages/CustomizeHtopPage'
+import { HtopQuickGuidePage } from './pages/HtopQuickGuidePage'
 import { PrivacyPage } from './pages/PrivacyPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { LikesPage } from './pages/LikesPage'
@@ -36,6 +39,9 @@ function AppContent() {
             <Route path="/gallery" element={<GalleryPage />} />
             <Route path="/editor" element={<EditorPage />} />
             <Route path="/config/:slug" element={<ConfigPage />} />
+            <Route path="/what-is-htoprc" element={<WhatIsHtoprcPage />} />
+            <Route path="/customize-htop" element={<CustomizeHtopPage />} />
+            <Route path="/htop-config-quick-guide" element={<HtopQuickGuidePage />} />
             <Route
               path="/upload"
               element={

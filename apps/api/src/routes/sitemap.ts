@@ -14,9 +14,19 @@ sitemapRoutes.get('/sitemap.xml', async (c) => {
 
   const configs = result.results ?? []
 
-  const urls: Array<{ loc: string; lastmod?: string; priority: string; changefreq: string }> = [
+  const staticUrls: Array<{ loc: string; priority: string; changefreq: string }> = [
     { loc: baseUrl, priority: '1.0', changefreq: 'daily' },
+    { loc: `${baseUrl}/gallery`, priority: '0.9', changefreq: 'daily' },
     { loc: `${baseUrl}/editor`, priority: '0.8', changefreq: 'monthly' },
+    { loc: `${baseUrl}/what-is-htoprc`, priority: '0.7', changefreq: 'monthly' },
+    { loc: `${baseUrl}/customize-htop`, priority: '0.7', changefreq: 'monthly' },
+    { loc: `${baseUrl}/htop-config-quick-guide`, priority: '0.7', changefreq: 'monthly' },
+    { loc: `${baseUrl}/about`, priority: '0.4', changefreq: 'yearly' },
+    { loc: `${baseUrl}/privacy`, priority: '0.3', changefreq: 'yearly' },
+  ]
+
+  const urls: Array<{ loc: string; lastmod?: string; priority: string; changefreq: string }> = [
+    ...staticUrls,
     ...configs.map((config) => ({
       loc: `${baseUrl}/config/${config.slug}`,
       lastmod: config.created_at.split('T')[0],
