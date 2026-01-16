@@ -141,6 +141,7 @@ jobs:
       actions: read
     environment:
       name: ${{ needs.determine-environment.outputs.environment }}
+      url: ${{ needs.determine-environment.outputs.environment == 'production' && 'https://api.htoprc.dev' || 'https://api-staging.htoprc.dev' }}
 
     steps:
       - name: Checkout
