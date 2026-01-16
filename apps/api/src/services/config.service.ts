@@ -1,24 +1,7 @@
 import { GraphQLError } from 'graphql'
 import { parseHtoprc } from '@htoprc/parser'
 import { secureRandomString } from '../utils/random'
-
-export interface ConfigRow {
-  id: string
-  slug: string
-  title: string
-  content: string
-  content_hash: string
-  source_type: string
-  source_url: string | null
-  source_platform: string | null
-  author_id: string | null
-  forked_from_id: string | null
-  status: string
-  score: number
-  likes_count: number
-  htop_version: string | null
-  created_at: string
-}
+import { CONFIG_STATUS, type ConfigRow } from '../graphql/types'
 
 export interface Config {
   id: string
@@ -30,7 +13,7 @@ export interface Config {
   sourcePlatform: string | null
   authorId: string | null
   forkedFromId: string | null
-  forked_from_id?: string | null // For field resolver compatibility
+  forked_from_id?: string | null
   status: string
   score: number
   likesCount: number
@@ -49,14 +32,6 @@ export interface UpdateConfigInput {
   title?: string
   content: string
 }
-
-const CONFIG_STATUS = {
-  PUBLISHED: 'published',
-  PENDING: 'pending',
-  REJECTED: 'rejected',
-  FLAGGED: 'flagged',
-  DELETED: 'deleted',
-} as const
 
 async function sha256(content: string): Promise<string> {
   const encoder = new TextEncoder()
@@ -331,4 +306,5 @@ export async function getForkedFromConfig(
     .first<{ id: string; slug: string; title: string }>()
 }
 
-export { CONFIG_STATUS, mapConfigRow }
+export { mapConfigRow }
+export { CONFIG_STATUS, type ConfigRow } from '../graphql/types'

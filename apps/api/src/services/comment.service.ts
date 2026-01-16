@@ -1,4 +1,14 @@
 import { GraphQLError } from 'graphql'
+import { COMMENT_STATUS } from '../graphql/types'
+
+interface CommentJoinRow {
+  id: string
+  content: string
+  created_at: string
+  author_id: string
+  author_username: string
+  author_avatar_url: string | null
+}
 
 export interface Comment {
   id: string
@@ -21,21 +31,6 @@ export interface PendingComment {
   authorUsername: string
   createdAt: string
 }
-
-interface CommentRow {
-  id: string
-  content: string
-  created_at: string
-  author_id: string
-  author_username: string
-  author_avatar_url: string | null
-}
-
-const COMMENT_STATUS = {
-  PUBLISHED: 'published',
-  PENDING: 'pending',
-  REJECTED: 'rejected',
-} as const
 
 export interface AddCommentInput {
   configId: string
@@ -94,7 +89,7 @@ export async function getCommentsForConfig(
       ORDER BY c.created_at ASC
     `)
     .bind(configId, COMMENT_STATUS.PUBLISHED)
-    .all<CommentRow>()
+    .all<CommentJoinRow>()
 
   return (result.results ?? []).map((row) => ({
     id: row.id,
@@ -126,7 +121,7 @@ export async function getPendingCommentsByUser(
       ORDER BY c.created_at ASC
     `)
     .bind(configId, userId, COMMENT_STATUS.PENDING)
-    .all<CommentRow>()
+    .all<CommentJoinRow>()
 
   return (result.results ?? []).map((row) => ({
     id: row.id,
@@ -211,7 +206,7 @@ export async function approveComment(db: D1Database, id: string): Promise<Commen
       WHERE c.id = ?
     `)
     .bind(id)
-    .first<CommentRow>()
+    .first<CommentJoinRow>()
 
   if (!row) {
     throw new GraphQLError('Comment not found', {
@@ -259,4 +254,4 @@ export async function updateCommentStatus(
     .run()
 }
 
-export { COMMENT_STATUS }
+export { COMMENT_STATUS } from '../graphql/types'

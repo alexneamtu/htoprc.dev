@@ -1,4 +1,4 @@
-import { GraphQLError } from 'graphql'
+import { CONFIG_STATUS, COMMENT_STATUS, REPORT_STATUS } from '../graphql/types'
 
 export interface Report {
   id: string
@@ -9,23 +9,6 @@ export interface Report {
   reason: string
   createdAt: string
 }
-
-const REPORT_STATUS = {
-  PENDING: 'pending',
-  DISMISSED: 'dismissed',
-  RESOLVED: 'resolved',
-} as const
-
-const CONFIG_STATUS = {
-  PUBLISHED: 'published',
-  PENDING: 'pending',
-  FLAGGED: 'flagged',
-} as const
-
-const COMMENT_STATUS = {
-  PUBLISHED: 'published',
-  PENDING: 'pending',
-} as const
 
 /**
  * Creates a new content report.
@@ -165,4 +148,4 @@ export async function isContentAuthor(
   }
 }
 
-export { REPORT_STATUS }
+export { REPORT_STATUS } from '../graphql/types'

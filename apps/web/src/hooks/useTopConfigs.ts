@@ -1,20 +1,6 @@
 import { useQuery } from 'urql'
-import type { Config } from './useConfigs'
-
-const TOP_CONFIGS_QUERY = /* GraphQL */ `
-  query TopConfigs($limit: Int) {
-    configs(limit: $limit, sort: SCORE_DESC) {
-      nodes {
-        id
-        slug
-        title
-        content
-        score
-        likesCount
-      }
-    }
-  }
-`
+import { TOP_CONFIGS_QUERY } from '../graphql/queries'
+import type { Config } from '../graphql/types'
 
 interface TopConfigsData {
   configs: {

@@ -1,34 +1,10 @@
 import { useState, useCallback } from 'react'
 import { useMutation } from 'urql'
 import { useAuth } from '../services/auth'
+import { ADD_COMMENT_MUTATION } from '../graphql/mutations'
+import type { Comment } from '../graphql/types'
 
 const CLERK_ENABLED = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
-
-const ADD_COMMENT_MUTATION = /* GraphQL */ `
-  mutation AddComment($configId: ID!, $userId: ID!, $content: String!, $username: String, $avatarUrl: String) {
-    addComment(configId: $configId, userId: $userId, content: $content, username: $username, avatarUrl: $avatarUrl) {
-      id
-      content
-      author {
-        id
-        username
-        avatarUrl
-      }
-      createdAt
-    }
-  }
-`
-
-interface Comment {
-  id: string
-  content: string
-  author: {
-    id: string
-    username: string
-    avatarUrl: string | null
-  }
-  createdAt: string
-}
 
 interface CommentsProps {
   configId: string

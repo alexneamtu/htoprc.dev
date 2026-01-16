@@ -1,62 +1,6 @@
 import { useQuery } from 'urql'
-import type { Config } from './useConfigs'
-
-const CONFIG_QUERY = /* GraphQL */ `
-  query Config($id: ID, $slug: String) {
-    config(id: $id, slug: $slug) {
-      id
-      slug
-      title
-      content
-      sourceType
-      sourceUrl
-      sourcePlatform
-      authorId
-      forkedFromId
-      forkedFrom {
-        id
-        slug
-        title
-      }
-      status
-      score
-      likesCount
-      createdAt
-      comments {
-        id
-        content
-        author {
-          id
-          username
-          avatarUrl
-        }
-        createdAt
-      }
-    }
-  }
-`
-
-export interface Comment {
-  id: string
-  content: string
-  author: {
-    id: string
-    username: string
-    avatarUrl: string | null
-  }
-  createdAt: string
-}
-
-export interface ForkedFromConfig {
-  id: string
-  slug: string
-  title: string
-}
-
-export interface ConfigWithComments extends Config {
-  forkedFrom: ForkedFromConfig | null
-  comments: Comment[]
-}
+import { CONFIG_QUERY } from '../graphql/queries'
+import type { ConfigWithComments } from '../graphql/types'
 
 export interface ConfigData {
   config: ConfigWithComments | null
@@ -78,3 +22,6 @@ export function useConfig(options: UseConfigOptions) {
 
   return result
 }
+
+// Re-export types for backwards compatibility
+export type { Comment, ForkedFromConfig, ConfigWithComments } from '../graphql/types'

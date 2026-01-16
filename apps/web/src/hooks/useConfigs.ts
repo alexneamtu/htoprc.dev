@@ -1,54 +1,6 @@
 import { useQuery } from 'urql'
-
-const CONFIGS_QUERY = /* GraphQL */ `
-  query Configs($page: Int, $limit: Int, $sort: ConfigSort, $minScore: Int, $search: String, $level: CustomizationLevel) {
-    configs(page: $page, limit: $limit, sort: $sort, minScore: $minScore, search: $search, level: $level) {
-      nodes {
-        id
-        slug
-        title
-        content
-        sourceType
-        sourceUrl
-        sourcePlatform
-        status
-        score
-        likesCount
-        createdAt
-      }
-      totalCount
-      pageInfo {
-        hasNextPage
-        hasPreviousPage
-        page
-        totalPages
-      }
-    }
-  }
-`
-
-export interface Config {
-  id: string
-  slug: string
-  title: string
-  content: string
-  sourceType: string
-  sourceUrl: string | null
-  sourcePlatform: string | null
-  authorId: string | null
-  forkedFromId: string | null
-  status: string
-  score: number
-  likesCount: number
-  createdAt: string
-}
-
-export interface PageInfo {
-  hasNextPage: boolean
-  hasPreviousPage: boolean
-  page: number
-  totalPages: number
-}
+import { CONFIGS_QUERY } from '../graphql/queries'
+import type { Config, PageInfo } from '../graphql/types'
 
 export interface ConfigsData {
   configs: {
@@ -80,3 +32,6 @@ export function useConfigs(options: UseConfigsOptions = {}) {
 
   return result
 }
+
+// Re-export types for backwards compatibility
+export type { Config, PageInfo }
