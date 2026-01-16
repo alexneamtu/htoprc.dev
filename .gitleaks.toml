@@ -6,8 +6,7 @@ useDefault = true
 
 # IndexNow keys are public verification keys, not secrets
 # They must be publicly accessible at the website root for verification
-[[allowlist]]
-description = "IndexNow verification key (public by design)"
+[allowlist]
 paths = [
   '''apps/api/src/utils/indexnow\.ts''',
   '''apps/web/public/.*\.txt''',
