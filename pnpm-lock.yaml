@@ -124,6 +124,9 @@ importers:
         specifier: ^5.0.1
         version: 5.0.1(@urql/core@6.0.1(graphql@16.12.0))(react@19.2.3)
     devDependencies:
+      '@cloudflare/workers-types':
+        specifier: ^4.20260115.0
+        version: 4.20260115.0
       '@testing-library/jest-dom':
         specifier: ^6.9.1
         version: 6.9.1
