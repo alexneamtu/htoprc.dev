@@ -1,23 +1,6 @@
 import { useQuery } from 'urql'
-import type { Config } from './useConfigs'
-
-const RECENT_CONFIGS_QUERY = /* GraphQL */ `
-  query RecentConfigs($limit: Int) {
-    recentConfigs(limit: $limit) {
-      id
-      slug
-      title
-      content
-      sourceType
-      sourceUrl
-      sourcePlatform
-      status
-      score
-      likesCount
-      createdAt
-    }
-  }
-`
+import { RECENT_CONFIGS_QUERY } from '../graphql/queries'
+import type { Config } from '../graphql/types'
 
 export interface RecentConfigsData {
   recentConfigs: Config[]

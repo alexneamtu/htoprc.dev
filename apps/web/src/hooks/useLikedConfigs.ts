@@ -1,23 +1,6 @@
 import { useQuery } from 'urql'
-import type { Config } from './useConfigs'
-
-const LIKED_CONFIGS_QUERY = /* GraphQL */ `
-  query LikedConfigs($userId: ID!) {
-    likedConfigs(userId: $userId) {
-      id
-      slug
-      title
-      content
-      sourceType
-      sourceUrl
-      sourcePlatform
-      status
-      score
-      likesCount
-      createdAt
-    }
-  }
-`
+import { LIKED_CONFIGS_QUERY } from '../graphql/queries'
+import type { Config } from '../graphql/types'
 
 export interface LikedConfigsData {
   likedConfigs: Config[]

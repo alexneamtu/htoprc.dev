@@ -1,21 +1,8 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useMutation, useQuery } from 'urql'
 import { useAuth } from '../services/auth'
-
-const TOGGLE_LIKE_MUTATION = /* GraphQL */ `
-  mutation ToggleLike($configId: ID!, $userId: ID!, $username: String, $avatarUrl: String) {
-    toggleLike(configId: $configId, userId: $userId, username: $username, avatarUrl: $avatarUrl) {
-      liked
-      likesCount
-    }
-  }
-`
-
-const CHECK_LIKE_QUERY = /* GraphQL */ `
-  query CheckLike($configId: ID!, $userId: ID!) {
-    hasLiked(configId: $configId, userId: $userId)
-  }
-`
+import { TOGGLE_LIKE_MUTATION } from '../graphql/mutations'
+import { CHECK_LIKE_QUERY } from '../graphql/queries'
 
 interface LikeButtonProps {
   configId: string

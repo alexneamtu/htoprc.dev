@@ -1,8 +1,5 @@
 import type { ScrapedConfig, ScraperResult, ScraperContext } from './types'
-import {
-  processScrapedConfig,
-  generateSlug,
-} from './github'
+import { processScrapedConfig, generateSlug } from './common'
 
 const GITHUB_API_BASE = 'https://api.github.com'
 

@@ -1,83 +1,22 @@
-import { parseHtoprc } from '@htoprc/parser'
-import type { ParseResult } from '@htoprc/parser'
-import { secureRandomString } from '../../utils/random'
+import {
+  processScrapedConfig,
+  generateSlug,
+  createContentHash,
+  shouldFlagConfig,
+} from './common'
 import type {
   ScrapedConfig,
-  ProcessedConfig,
   GitHubSearchResult,
   GitHubSearchItem,
   ScraperResult,
   ScraperContext,
 } from './types'
 
+// Re-export for backwards compatibility
+export { processScrapedConfig, generateSlug, createContentHash, shouldFlagConfig }
+
 const GITHUB_API_BASE = 'https://api.github.com'
-const MIN_SCORE_THRESHOLD = 5
-const MIN_LINES_THRESHOLD = 5
 
-export async function createContentHash(content: string): Promise<string> {
-  const encoder = new TextEncoder()
-  const data = encoder.encode(content)
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
-  const hashArray = Array.from(new Uint8Array(hashBuffer))
-  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
-}
-
-export function shouldFlagConfig(
-  parseResult: ParseResult,
-  lineCount: number
-): { shouldFlag: boolean; reason?: string } {
-  if (parseResult.errors.length > 0) {
-    return {
-      shouldFlag: true,
-      reason: `Parse error: ${parseResult.errors[0]?.message ?? 'Unknown error'}`,
-    }
-  }
-
-  if (lineCount < MIN_LINES_THRESHOLD) {
-    return {
-      shouldFlag: true,
-      reason: `Config too short (${lineCount} lines, minimum ${MIN_LINES_THRESHOLD})`,
-    }
-  }
-
-  if (parseResult.score < MIN_SCORE_THRESHOLD) {
-    return {
-      shouldFlag: true,
-      reason: `Low score (${parseResult.score}, minimum ${MIN_SCORE_THRESHOLD})`,
-    }
-  }
-
-  return { shouldFlag: false }
-}
-
-export function generateSlug(repoFullName: string, _fileName: string): string {
-  const sanitized = repoFullName
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')
-    .slice(0, 50)
-
-  const randomSuffix = secureRandomString(8)
-  return `${sanitized}-${randomSuffix}`
-}
-
-export async function processScrapedConfig(
-  scrapedConfig: ScrapedConfig
-): Promise<ProcessedConfig> {
-  const contentHash = await createContentHash(scrapedConfig.content)
-  const parseResult = parseHtoprc(scrapedConfig.content)
-  const lineCount = scrapedConfig.content.split('\n').filter((l) => l.trim()).length
-
-  const { shouldFlag, reason } = shouldFlagConfig(parseResult, lineCount)
-
-  return {
-    config: scrapedConfig,
-    parseResult,
-    contentHash,
-    status: shouldFlag ? 'flagged' : 'published',
-    flagReason: reason,
-  }
-}
 
 export async function fetchGitHubContent(
   url: string,

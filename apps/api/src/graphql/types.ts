@@ -97,3 +97,25 @@ export class RateLimitError extends GraphQLError {
     })
   }
 }
+
+/**
+ * Map a database config row to GraphQL response format.
+ * Converts snake_case to camelCase.
+ */
+export function mapConfigRow(row: ConfigRow): ConfigGraphQL {
+  return {
+    id: row.id,
+    slug: row.slug,
+    title: row.title,
+    content: row.content,
+    sourceType: row.source_type,
+    sourceUrl: row.source_url,
+    sourcePlatform: row.source_platform,
+    authorId: row.author_id,
+    forkedFromId: row.forked_from_id,
+    status: row.status,
+    score: row.score,
+    likesCount: row.likes_count,
+    createdAt: row.created_at,
+  }
+}
