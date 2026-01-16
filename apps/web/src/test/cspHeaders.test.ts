@@ -28,7 +28,10 @@ describe('CSP _headers', () => {
     const connectSrc = getDirective(csp, 'connect-src')
 
     expect(scriptSrc).toContain('https://*.clerk.com')
+    expect(scriptSrc).toContain('https://clerk.htoprc.dev')
     expect(connectSrc).toContain('https://*.clerk.com')
     expect(connectSrc).toContain('wss://*.clerk.com')
+    expect(connectSrc).toContain('https://clerk.htoprc.dev')
+    expect(connectSrc).toContain('wss://clerk.htoprc.dev')
   })
 })
