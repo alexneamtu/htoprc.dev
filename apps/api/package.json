@@ -7,6 +7,7 @@
     "dev": "wrangler dev",
     "build": "wrangler deploy --dry-run",
     "deploy": "wrangler deploy",
+    "pretest": "pnpm --filter @htoprc/parser build",
     "test": "vitest",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts",
