@@ -109,6 +109,14 @@ export function Layout({ children }: LayoutProps) {
           >
             GitHub
           </a>
+          <a
+            href="https://www.npmjs.com/package/@htoprc/parser"
+            className="hover:text-gray-700 dark:hover:text-gray-300"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            npm
+          </a>
         </div>
         <p className="mb-2">Open source project for the htop community</p>
         <p>

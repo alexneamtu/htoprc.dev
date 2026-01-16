@@ -62,6 +62,22 @@ export function AboutPage() {
         </a>. Contributions are welcome!
       </p>
 
+      <h2>npm Package</h2>
+      <p>
+        The htoprc parser is available as a standalone npm package for use in your own projects:
+      </p>
+      <pre className="bg-gray-100 dark:bg-gray-800 p-4 rounded-md overflow-x-auto">
+        <code>npm install @htoprc/parser</code>
+      </pre>
+      <p>
+        Parse htoprc files into typed objects, modify them programmatically, and serialize back to
+        the htoprc format. See the{' '}
+        <a href="https://www.npmjs.com/package/@htoprc/parser" target="_blank" rel="noopener noreferrer">
+          package documentation
+        </a>{' '}
+        for details.
+      </p>
+
       <h2>Technology Stack</h2>
       <ul>
         <li>React with TypeScript</li>
