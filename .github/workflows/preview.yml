@@ -15,7 +15,7 @@ jobs:
       deployments: write
     environment:
       name: preview
-      url: ${{ steps.deploy-web.outputs.deployment-url }}
+      url: https://pr-${{ github.event.pull_request.number }}.htoprc-staging.pages.dev
 
     steps:
       - name: Checkout

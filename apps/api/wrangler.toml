@@ -65,4 +65,5 @@ crons = ["0 3 * * *"]
 # Environment variables (set via wrangler secret)
 # CLERK_SECRET_KEY
 # ANON_RATE_LIMIT_SALT
-# GITHUB_TOKEN (required for GitHub scraper)
+# GITHUB_TOKEN (required for GitHub/Gist scraper)
+# GITLAB_TOKEN (required for GitLab scraper)

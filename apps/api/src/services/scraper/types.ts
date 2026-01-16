@@ -68,21 +68,11 @@ export interface ScraperContext {
   gitlabToken?: string
 }
 
-export interface GitLabSearchResult {
-  basename: string
-  data: string
-  path: string
-  filename: string
-  id: number | null
-  ref: string
-  startline: number
-  project_id: number
-}
-
 export interface GitLabProject {
   id: number
   path_with_namespace: string
   web_url: string
+  default_branch?: string
   namespace: {
     path: string
   }
