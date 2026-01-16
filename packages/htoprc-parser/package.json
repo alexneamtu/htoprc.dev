@@ -1,6 +1,7 @@
 {
   "name": "@htoprc/parser",
   "version": "0.1.0",
+  "description": "Parse and serialize htop configuration files (htoprc)",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -19,7 +20,31 @@
     "test": "vitest",
     "test:run": "vitest run",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src --ext .ts"
+    "lint": "eslint src --ext .ts",
+    "prepublishOnly": "pnpm run build && pnpm run test:run"
+  },
+  "keywords": [
+    "htop",
+    "htoprc",
+    "parser",
+    "config",
+    "dotfiles",
+    "terminal",
+    "process-monitor"
+  ],
+  "author": "Alex Neamtu",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alexneamtu/htoprc.dev",
+    "directory": "packages/htoprc-parser"
+  },
+  "homepage": "https://htoprc.dev",
+  "bugs": {
+    "url": "https://github.com/alexneamtu/htoprc.dev/issues"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^4.0.17",
