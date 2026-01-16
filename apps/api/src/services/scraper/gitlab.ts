@@ -2,7 +2,6 @@ import type {
   ScrapedConfig,
   ScraperResult,
   ScraperContext,
-  GitLabSearchResult,
   GitLabProject,
 } from './types'
 import {
@@ -12,12 +11,24 @@ import {
 
 const GITLAB_API_BASE = 'https://gitlab.com/api/v4'
 
-export async function searchGitLab(
+interface GitLabTreeItem {
+  id: string
+  name: string
+  type: 'blob' | 'tree'
+  path: string
+  mode: string
+}
+
+/**
+ * Search for public projects on GitLab
+ */
+export async function searchGitLabProjects(
   query: string,
   token?: string,
-  page: number = 1
-): Promise<GitLabSearchResult[] | null> {
-  const url = `${GITLAB_API_BASE}/search?scope=blobs&search=${encodeURIComponent(query)}&per_page=20&page=${page}`
+  page: number = 1,
+  perPage: number = 20
+): Promise<GitLabProject[] | null> {
+  const url = `${GITLAB_API_BASE}/projects?search=${encodeURIComponent(query)}&visibility=public&per_page=${perPage}&page=${page}&order_by=last_activity_at`
 
   const headers: HeadersInit = {
     'User-Agent': 'htoprc-scraper',
@@ -34,7 +45,41 @@ export async function searchGitLab(
       return null
     }
 
-    return (await response.json()) as GitLabSearchResult[]
+    return (await response.json()) as GitLabProject[]
+  } catch {
+    return null
+  }
+}
+
+/**
+ * List files in a GitLab project repository
+ */
+export async function listGitLabProjectFiles(
+  projectId: number,
+  token?: string,
+  ref?: string
+): Promise<GitLabTreeItem[] | null> {
+  let url = `${GITLAB_API_BASE}/projects/${projectId}/repository/tree?recursive=true&per_page=100`
+  if (ref) {
+    url += `&ref=${encodeURIComponent(ref)}`
+  }
+
+  const headers: HeadersInit = {
+    'User-Agent': 'htoprc-scraper',
+  }
+
+  if (token) {
+    headers['PRIVATE-TOKEN'] = token
+  }
+
+  try {
+    const response = await fetch(url, { headers })
+
+    if (!response.ok) {
+      return null
+    }
+
+    return (await response.json()) as GitLabTreeItem[]
   } catch {
     return null
   }
@@ -97,101 +142,119 @@ export async function fetchGitLabFileContent(
   }
 }
 
+/**
+ * Scrape GitLab for htoprc files by searching dotfiles projects
+ * and scanning their repository trees.
+ *
+ * This approach works with free GitLab accounts (global blob search requires Premium).
+ */
 export async function scrapeGitLab(ctx: ScraperContext): Promise<ScraperResult> {
   let configsFound = 0
   let configsAdded = 0
 
   try {
-    // Search for htoprc files
-    const searchResults = await searchGitLab('filename:htoprc', ctx.gitlabToken)
+    // Search for dotfiles projects
+    const projects = await searchGitLabProjects('dotfiles', ctx.gitlabToken)
 
-    if (!searchResults) {
+    if (!projects) {
       return {
         success: false,
         configsFound: 0,
         configsAdded: 0,
-        error: 'Failed to search GitLab',
+        error: 'Failed to search GitLab projects',
       }
     }
 
-    configsFound = searchResults.length
-
-    for (const item of searchResults) {
-      // Fetch project details for the URL
-      const project = await fetchGitLabProject(item.project_id, ctx.gitlabToken)
-      if (!project) {
-        continue
-      }
-
-      // Fetch full file content
-      const content = await fetchGitLabFileContent(
-        item.project_id,
-        item.path,
-        item.ref,
-        ctx.gitlabToken
+    for (const project of projects) {
+      // List files in the project
+      const files = await listGitLabProjectFiles(
+        project.id,
+        ctx.gitlabToken,
+        project.default_branch
       )
 
-      if (!content) {
+      if (!files) {
         continue
       }
 
-      const sourceUrl = `${project.web_url}/-/blob/${item.ref}/${item.path}`
+      // Filter for htoprc files
+      const htoprcFiles = files.filter(
+        (f) => f.type === 'blob' && f.name.toLowerCase().includes('htoprc')
+      )
 
-      const scrapedConfig: ScrapedConfig = {
-        content,
-        sourceUrl,
-        sourcePlatform: 'gitlab',
-        author: project.namespace.path,
-        title: `${project.path_with_namespace}/${item.path}`,
-      }
+      for (const file of htoprcFiles) {
+        configsFound++
 
-      const processed = await processScrapedConfig(scrapedConfig)
-
-      // Check for existing URL
-      const existingUrl = await ctx.db
-        .prepare('SELECT id FROM configs WHERE source_url = ?')
-        .bind(sourceUrl)
-        .first()
-
-      if (existingUrl) {
-        continue
-      }
-
-      // Check for existing content hash
-      const existingHash = await ctx.db
-        .prepare('SELECT id FROM configs WHERE content_hash = ?')
-        .bind(processed.contentHash)
-        .first()
-
-      if (existingHash) {
-        continue
-      }
-
-      const slug = generateSlug(project.path_with_namespace, item.filename)
-
-      const id = crypto.randomUUID()
-      await ctx.db
-        .prepare(
-          `INSERT INTO configs (
-            id, slug, title, content, content_hash, source_type, source_url,
-            source_platform, status, score
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        // Fetch file content
+        const content = await fetchGitLabFileContent(
+          project.id,
+          file.path,
+          project.default_branch || 'main',
+          ctx.gitlabToken
         )
-        .bind(
-          id,
-          slug,
-          scrapedConfig.title || slug,
-          scrapedConfig.content,
-          processed.contentHash,
-          'scraped',
+
+        if (!content) {
+          continue
+        }
+
+        const sourceUrl = `${project.web_url}/-/blob/${project.default_branch || 'main'}/${file.path}`
+
+        const scrapedConfig: ScrapedConfig = {
+          content,
           sourceUrl,
-          'gitlab',
-          processed.status,
-          processed.parseResult.score
-        )
-        .run()
+          sourcePlatform: 'gitlab',
+          author: project.namespace.path,
+          title: `${project.path_with_namespace}/${file.path}`,
+        }
 
-      configsAdded++
+        const processed = await processScrapedConfig(scrapedConfig)
+
+        // Check for existing URL
+        const existingUrl = await ctx.db
+          .prepare('SELECT id FROM configs WHERE source_url = ?')
+          .bind(sourceUrl)
+          .first()
+
+        if (existingUrl) {
+          continue
+        }
+
+        // Check for existing content hash
+        const existingHash = await ctx.db
+          .prepare('SELECT id FROM configs WHERE content_hash = ?')
+          .bind(processed.contentHash)
+          .first()
+
+        if (existingHash) {
+          continue
+        }
+
+        const slug = generateSlug(project.path_with_namespace, file.name)
+
+        const id = crypto.randomUUID()
+        await ctx.db
+          .prepare(
+            `INSERT INTO configs (
+              id, slug, title, content, content_hash, source_type, source_url,
+              source_platform, status, score
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          )
+          .bind(
+            id,
+            slug,
+            scrapedConfig.title || slug,
+            scrapedConfig.content,
+            processed.contentHash,
+            'scraped',
+            sourceUrl,
+            'gitlab',
+            processed.status,
+            processed.parseResult.score
+          )
+          .run()
+
+        configsAdded++
+      }
     }
 
     return {

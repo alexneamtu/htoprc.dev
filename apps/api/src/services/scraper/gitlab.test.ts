@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
-  searchGitLab,
+  searchGitLabProjects,
+  listGitLabProjectFiles,
   fetchGitLabProject,
   fetchGitLabFileContent,
   scrapeGitLab,
@@ -19,17 +20,22 @@ describe('gitlab scraper', () => {
   describe('GitLab API URL construction', () => {
     const GITLAB_API_BASE = 'https://gitlab.com/api/v4'
 
-    it('constructs correct search URL', () => {
-      const query = 'filename:htoprc'
-      const page = 1
-      const url = `${GITLAB_API_BASE}/search?scope=blobs&search=${encodeURIComponent(query)}&per_page=20&page=${page}`
-      expect(url).toBe('https://gitlab.com/api/v4/search?scope=blobs&search=filename%3Ahtoprc&per_page=20&page=1')
+    it('constructs correct project search URL', () => {
+      const query = 'dotfiles'
+      const url = `${GITLAB_API_BASE}/projects?search=${encodeURIComponent(query)}&visibility=public&per_page=20&page=1&order_by=last_activity_at`
+      expect(url).toBe('https://gitlab.com/api/v4/projects?search=dotfiles&visibility=public&per_page=20&page=1&order_by=last_activity_at')
     })
 
     it('constructs correct project URL', () => {
       const projectId = 12345
       const url = `${GITLAB_API_BASE}/projects/${projectId}`
       expect(url).toBe('https://gitlab.com/api/v4/projects/12345')
+    })
+
+    it('constructs correct repository tree URL', () => {
+      const projectId = 12345
+      const url = `${GITLAB_API_BASE}/projects/${projectId}/repository/tree?recursive=true&per_page=100`
+      expect(url).toBe('https://gitlab.com/api/v4/projects/12345/repository/tree?recursive=true&per_page=100')
     })
 
     it('constructs correct file content URL', () => {
@@ -42,19 +48,19 @@ describe('gitlab scraper', () => {
     })
   })
 
-  describe('searchGitLab', () => {
-    it('returns search results on successful response', async () => {
-      const mockResults = [
-        { project_id: 123, path: '.htoprc', ref: 'main', filename: 'htoprc' },
+  describe('searchGitLabProjects', () => {
+    it('returns projects on successful response', async () => {
+      const mockProjects = [
+        { id: 123, path_with_namespace: 'user/dotfiles', web_url: 'https://gitlab.com/user/dotfiles' },
       ]
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(mockResults),
+        json: () => Promise.resolve(mockProjects),
       })
 
-      const result = await searchGitLab('filename:htoprc')
+      const result = await searchGitLabProjects('dotfiles')
 
-      expect(result).toEqual(mockResults)
+      expect(result).toEqual(mockProjects)
     })
 
     it('includes auth token when provided', async () => {
@@ -63,7 +69,7 @@ describe('gitlab scraper', () => {
         json: () => Promise.resolve([]),
       })
 
-      await searchGitLab('filename:htoprc', 'my-token')
+      await searchGitLabProjects('dotfiles', 'my-token')
 
       expect(mockFetch).toHaveBeenCalledWith(
         expect.any(String),
@@ -81,7 +87,7 @@ describe('gitlab scraper', () => {
         status: 401,
       })
 
-      const result = await searchGitLab('filename:htoprc')
+      const result = await searchGitLabProjects('dotfiles')
 
       expect(result).toBeNull()
     })
@@ -89,7 +95,48 @@ describe('gitlab scraper', () => {
     it('returns null on network error', async () => {
       mockFetch.mockRejectedValueOnce(new Error('Network error'))
 
-      const result = await searchGitLab('filename:htoprc')
+      const result = await searchGitLabProjects('dotfiles')
+
+      expect(result).toBeNull()
+    })
+  })
+
+  describe('listGitLabProjectFiles', () => {
+    it('returns files on successful response', async () => {
+      const mockFiles = [
+        { id: 'abc', name: 'htoprc', type: 'blob', path: '.config/htop/htoprc', mode: '100644' },
+      ]
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockFiles),
+      })
+
+      const result = await listGitLabProjectFiles(123)
+
+      expect(result).toEqual(mockFiles)
+    })
+
+    it('includes ref in URL when provided', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve([]),
+      })
+
+      await listGitLabProjectFiles(123, 'my-token', 'main')
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('ref=main'),
+        expect.any(Object)
+      )
+    })
+
+    it('returns null on error', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+      })
+
+      const result = await listGitLabProjectFiles(123)
 
       expect(result).toBeNull()
     })
@@ -214,7 +261,7 @@ describe('gitlab scraper', () => {
       }
     }
 
-    it('returns error when search fails', async () => {
+    it('returns error when project search fails', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 403,
@@ -227,10 +274,10 @@ describe('gitlab scraper', () => {
       const result = await scrapeGitLab(ctx)
 
       expect(result.success).toBe(false)
-      expect(result.error).toBe('Failed to search GitLab')
+      expect(result.error).toBe('Failed to search GitLab projects')
     })
 
-    it('returns success with zero configs when no results found', async () => {
+    it('returns success with zero configs when no projects found', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve([]),
@@ -247,8 +294,7 @@ describe('gitlab scraper', () => {
       expect(result.configsAdded).toBe(0)
     })
 
-    it('handles network error in search', async () => {
-      // When searchGitLab throws (not returns null), it's caught by the try-catch
+    it('handles network error in project search', async () => {
       mockFetch.mockRejectedValueOnce(new Error('Network error'))
 
       const ctx: ScraperContext = {
@@ -257,12 +303,11 @@ describe('gitlab scraper', () => {
 
       const result = await scrapeGitLab(ctx)
 
-      // searchGitLab catches the error and returns null, then scrapeGitLab returns the "Failed to search" error
       expect(result.success).toBe(false)
-      expect(result.error).toBe('Failed to search GitLab')
+      expect(result.error).toBe('Failed to search GitLab projects')
     })
 
-    it('processes found search results successfully', async () => {
+    it('processes found htoprc files successfully', async () => {
       const htoprcContent = `htop_version=3
 fields=0 48 17 18 38
 color_scheme=0
@@ -271,30 +316,29 @@ show_program_path=1
 highlight_base_name=1
 hide_kernel_threads=1`
 
-      // Search returns results
+      // Project search returns results
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () =>
           Promise.resolve([
             {
-              project_id: 12345,
-              path: '.config/htop/htoprc',
-              ref: 'main',
-              filename: 'htoprc',
+              id: 12345,
+              web_url: 'https://gitlab.com/user/dotfiles',
+              path_with_namespace: 'user/dotfiles',
+              default_branch: 'main',
+              namespace: { path: 'user' },
             },
           ]),
       })
 
-      // Project fetch
+      // List files returns htoprc
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () =>
-          Promise.resolve({
-            id: 12345,
-            web_url: 'https://gitlab.com/user/dotfiles',
-            path_with_namespace: 'user/dotfiles',
-            namespace: { path: 'user' },
-          }),
+          Promise.resolve([
+            { id: 'abc', name: 'htoprc', type: 'blob', path: '.config/htop/htoprc', mode: '100644' },
+            { id: 'def', name: 'bashrc', type: 'blob', path: '.bashrc', mode: '100644' },
+          ]),
       })
 
       // File content fetch
@@ -315,22 +359,23 @@ hide_kernel_threads=1`
       expect(result.configsAdded).toBe(1)
     })
 
-    it('skips results when project fetch fails', async () => {
-      // Search returns results
+    it('skips projects when file listing fails', async () => {
+      // Project search returns results
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () =>
           Promise.resolve([
             {
-              project_id: 12345,
-              path: '.config/htop/htoprc',
-              ref: 'main',
-              filename: 'htoprc',
+              id: 12345,
+              web_url: 'https://gitlab.com/user/dotfiles',
+              path_with_namespace: 'user/dotfiles',
+              default_branch: 'main',
+              namespace: { path: 'user' },
             },
           ]),
       })
 
-      // Project fetch fails
+      // List files fails
       mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 404,
@@ -344,35 +389,33 @@ hide_kernel_threads=1`
       const result = await scrapeGitLab(ctx)
 
       expect(result.success).toBe(true)
-      expect(result.configsFound).toBe(1)
+      expect(result.configsFound).toBe(0)
       expect(result.configsAdded).toBe(0)
     })
 
-    it('skips results when file content fetch fails', async () => {
-      // Search returns results
+    it('skips files when content fetch fails', async () => {
+      // Project search returns results
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () =>
           Promise.resolve([
             {
-              project_id: 12345,
-              path: '.config/htop/htoprc',
-              ref: 'main',
-              filename: 'htoprc',
+              id: 12345,
+              web_url: 'https://gitlab.com/user/dotfiles',
+              path_with_namespace: 'user/dotfiles',
+              default_branch: 'main',
+              namespace: { path: 'user' },
             },
           ]),
       })
 
-      // Project fetch succeeds
+      // List files returns htoprc
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () =>
-          Promise.resolve({
-            id: 12345,
-            web_url: 'https://gitlab.com/user/dotfiles',
-            path_with_namespace: 'user/dotfiles',
-            namespace: { path: 'user' },
-          }),
+          Promise.resolve([
+            { id: 'abc', name: 'htoprc', type: 'blob', path: '.htoprc', mode: '100644' },
+          ]),
       })
 
       // File content fetch fails
@@ -391,6 +434,60 @@ hide_kernel_threads=1`
       expect(result.success).toBe(true)
       expect(result.configsFound).toBe(1)
       expect(result.configsAdded).toBe(0)
+    })
+
+    it('filters for htoprc files only', async () => {
+      const htoprcContent = `htop_version=3
+fields=0 48 17 18 38
+color_scheme=0
+tree_view=1`
+
+      // Project search returns results
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve([
+            {
+              id: 12345,
+              web_url: 'https://gitlab.com/user/dotfiles',
+              path_with_namespace: 'user/dotfiles',
+              default_branch: 'main',
+              namespace: { path: 'user' },
+            },
+          ]),
+      })
+
+      // List files returns mixed files
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve([
+            { id: 'a', name: 'htoprc', type: 'blob', path: '.htoprc', mode: '100644' },
+            { id: 'b', name: '.htoprc', type: 'blob', path: '.config/htop/.htoprc', mode: '100644' },
+            { id: 'c', name: 'bashrc', type: 'blob', path: '.bashrc', mode: '100644' },
+            { id: 'd', name: 'config', type: 'tree', path: '.config', mode: '040000' },
+          ]),
+      })
+
+      // File content fetches (called twice for 2 htoprc files)
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: () => Promise.resolve(htoprcContent),
+      })
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: () => Promise.resolve(htoprcContent),
+      })
+
+      const ctx: ScraperContext = {
+        db: createMockDb() as unknown as D1Database,
+        gitlabToken: 'test-token',
+      }
+
+      const result = await scrapeGitLab(ctx)
+
+      expect(result.success).toBe(true)
+      expect(result.configsFound).toBe(2) // Only htoprc files
     })
   })
 })
