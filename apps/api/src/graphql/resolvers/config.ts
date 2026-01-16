@@ -1,6 +1,7 @@
 import { GraphQLError } from 'graphql'
 import { validateTitle, validateContent, validateSearch, validateRequiredId } from '../../utils/validation'
 import { isUserAdmin } from '../../utils/auth'
+import { submitConfigToIndexNow } from '../../utils/indexnow'
 import { type GraphQLContext, CONFIG_STATUS, RATE_LIMITS, RateLimitError } from '../types'
 import { requireAuthUser, checkRateLimit, checkAnonRateLimit } from '../helpers'
 import * as configService from '../../services/config.service'
@@ -174,13 +175,20 @@ export const configMutations = {
       }
     }
 
-    return configService.createConfig(ctx.db, {
+    const config = await configService.createConfig(ctx.db, {
       title: validatedTitle,
       content: validatedContent,
       authorId: authedUserId,
       forkedFromId: validatedForkedFromId,
       autoPublish,
     })
+
+    // Submit to IndexNow for instant indexing (non-blocking, production only)
+    if (autoPublish) {
+      submitConfigToIndexNow(config.slug).catch(() => {})
+    }
+
+    return config
   },
 
   updateConfig: async (
@@ -250,13 +258,20 @@ export const configMutations = {
       })
     }
 
-    return configService.createConfig(ctx.db, {
+    const config = await configService.createConfig(ctx.db, {
       title: validatedTitle,
       content: original.content,
       authorId: authedUserId,
       forkedFromId: validatedId,
       autoPublish,
     })
+
+    // Submit to IndexNow for instant indexing (non-blocking, production only)
+    if (autoPublish) {
+      submitConfigToIndexNow(config.slug).catch(() => {})
+    }
+
+    return config
   },
 
   deleteConfig: async (
