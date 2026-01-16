@@ -23,6 +23,43 @@
     <meta name="twitter:image" content="https://htoprc.dev/og-image.png" />
 
     <link rel="canonical" href="https://htoprc.dev" />
+
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "htoprc.dev",
+      "url": "https://htoprc.dev",
+      "description": "Create, customize, and share beautiful htop configurations. Browse the gallery for inspiration or use the visual editor to build your own.",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "Any",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "featureList": [
+        "Visual htop configuration editor",
+        "Configuration gallery with community themes",
+        "Live preview of htop settings",
+        "Export and share configurations"
+      ]
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "htoprc.dev",
+      "url": "https://htoprc.dev",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://htoprc.dev/gallery?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
   </head>
   <body class="bg-htop-bg text-htop-fg">
     <div id="root"></div>
