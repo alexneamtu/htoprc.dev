@@ -48,7 +48,7 @@
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^4.0.17",
-    "tsup": "^8.0.0",
+    "tsup": "^8.5.1",
     "vitest": "^4.0.17"
   }
 }

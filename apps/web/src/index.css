@@ -1,6 +1,14 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    'Liberation Mono', 'Courier New', monospace;
+
+  --color-htop-bg: #0d0d0d;
+  --color-htop-fg: #cccccc;
+  --color-htop-header: #005577;
+  --color-htop-selection: #333333;
+}
 
 :root {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
