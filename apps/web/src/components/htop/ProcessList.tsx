@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react'
 import type { HtopConfig } from '@htoprc/parser'
 
 interface Process {
@@ -127,8 +128,11 @@ interface ProcessListProps {
   config: HtopConfig
 }
 
-export function ProcessList({ config }: ProcessListProps) {
-  const processes = buildProcessTree(MOCK_PROCESSES, config.treeView)
+export const ProcessList = memo(function ProcessList({ config }: ProcessListProps) {
+  const processes = useMemo(
+    () => buildProcessTree(MOCK_PROCESSES, config.treeView),
+    [config.treeView]
+  )
 
   return (
     <div className="font-mono text-xs">
@@ -196,7 +200,7 @@ export function ProcessList({ config }: ProcessListProps) {
       ))}
     </div>
   )
-}
+})
 
 interface CommandCellProps {
   command: string

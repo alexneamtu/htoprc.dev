@@ -28,34 +28,37 @@ vi.mock('./hooks', () => ({
 }))
 
 describe('App guide routes', () => {
-  it('renders the what is htoprc guide', () => {
+  it('renders the what is htoprc guide', async () => {
     render(
       <MemoryRouter initialEntries={['/what-is-htoprc']}>
         <App />
       </MemoryRouter>
     )
-    expect(screen.getByRole('heading', { name: /what is an htoprc file/i })).toBeInTheDocument()
+    // Lazy loaded - use findBy to wait for component
+    expect(await screen.findByRole('heading', { name: /what is an htoprc file/i })).toBeInTheDocument()
   })
 
-  it('renders the customize htop guide', () => {
+  it('renders the customize htop guide', async () => {
     render(
       <MemoryRouter initialEntries={['/customize-htop']}>
         <App />
       </MemoryRouter>
     )
+    // Lazy loaded - use findBy to wait for component
     expect(
-      screen.getByRole('heading', { name: /customize htop colors, meters, and columns/i })
+      await screen.findByRole('heading', { name: /customize htop colors, meters, and columns/i })
     ).toBeInTheDocument()
   })
 
-  it('renders the quick guide', () => {
+  it('renders the quick guide', async () => {
     render(
       <MemoryRouter initialEntries={['/htop-config-quick-guide']}>
         <App />
       </MemoryRouter>
     )
+    // Lazy loaded - use findBy to wait for component
     expect(
-      screen.getByRole('heading', { name: /htop configuration quick guide/i })
+      await screen.findByRole('heading', { name: /htop configuration quick guide/i })
     ).toBeInTheDocument()
   })
 })

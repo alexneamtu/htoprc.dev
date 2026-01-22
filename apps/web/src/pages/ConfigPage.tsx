@@ -6,6 +6,7 @@ import { Comments } from '../components/Comments'
 import { Modal, ModalActions, ModalButton } from '../components/Modal'
 import { SEO } from '../components/SEO'
 import { Breadcrumbs } from '../components/Breadcrumbs'
+import { useToast } from '../components/Toast'
 import { parseHtoprc } from '@htoprc/parser'
 import { useConfig } from '../hooks'
 import { useMutation, useQuery } from 'urql'
@@ -64,6 +65,7 @@ export function ConfigPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [reportReason, setReportReason] = useState('')
   const [reportSubmitted, setReportSubmitted] = useState(false)
+  const { showToast } = useToast()
 
   const auth = useAuth()
 
@@ -244,7 +246,10 @@ export function ConfigPage() {
           Fork
         </Link>
         <button
-          onClick={() => navigator.clipboard.writeText(config.content)}
+          onClick={() => {
+            navigator.clipboard.writeText(config.content)
+            showToast('Copied to clipboard!', 'success')
+          }}
           className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-md text-gray-900 dark:text-white"
         >
           Copy Config
@@ -260,6 +265,7 @@ export function ConfigPage() {
               })
             } else {
               navigator.clipboard.writeText(url)
+              showToast('Copied to clipboard!', 'success')
             }
           }}
           className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-md text-gray-900 dark:text-white"

@@ -5,6 +5,7 @@ import { Provider } from 'urql'
 import { HelmetProvider } from 'react-helmet-async'
 import { fromValue, delay, pipe } from 'wonka'
 import { ConfigPage } from './ConfigPage'
+import { ToastProvider } from '../components/Toast'
 
 // Mock Clerk hooks
 vi.mock('@clerk/clerk-react', () => ({
@@ -32,13 +33,15 @@ function renderWithProviders(
 ) {
   return render(
     <HelmetProvider>
-      <Provider value={client as never}>
-        <MemoryRouter initialEntries={[initialRoute]}>
-          <Routes>
-            <Route path="/config/:slug" element={<ConfigPage />} />
-          </Routes>
-        </MemoryRouter>
-      </Provider>
+      <ToastProvider>
+        <Provider value={client as never}>
+          <MemoryRouter initialEntries={[initialRoute]}>
+            <Routes>
+              <Route path="/config/:slug" element={<ConfigPage />} />
+            </Routes>
+          </MemoryRouter>
+        </Provider>
+      </ToastProvider>
     </HelmetProvider>
   )
 }

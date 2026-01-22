@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { HelmetProvider } from 'react-helmet-async'
 import { EditorPage } from './EditorPage'
+import { ToastProvider } from '../components/Toast'
 
 // Mock the auth service
 vi.mock('../services/auth', () => ({
@@ -22,9 +23,11 @@ vi.mock('urql', () => ({
 function renderWithRouter(initialEntries = ['/editor']) {
   return render(
     <HelmetProvider>
-      <MemoryRouter initialEntries={initialEntries}>
-        <EditorPage />
-      </MemoryRouter>
+      <ToastProvider>
+        <MemoryRouter initialEntries={initialEntries}>
+          <EditorPage />
+        </MemoryRouter>
+      </ToastProvider>
     </HelmetProvider>
   )
 }

@@ -5,6 +5,7 @@ import { HtopPreview } from '../components/htop/HtopPreview'
 import { HtoprcEditor } from '../components/editor'
 import { Modal, ModalActions, ModalButton } from '../components/Modal'
 import { SEO } from '../components/SEO'
+import { useToast } from '../components/Toast'
 import { parseHtoprc } from '@htoprc/parser'
 import { useAuth } from '../services/auth'
 import { useLocalStorage, useDebounce } from '../hooks'
@@ -71,6 +72,7 @@ export function EditorPage() {
   const [uploadTitle, setUploadTitle] = useState('')
   const [isUploading, setIsUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const { showToast } = useToast()
 
   // Auth state (handles disabled case internally)
   const auth = useAuth()
@@ -144,6 +146,7 @@ export function EditorPage() {
         }
 
         if (result.data?.updateConfig?.slug) {
+          showToast('Config uploaded!', 'success')
           navigate(`/config/${result.data.updateConfig.slug}`)
         }
       } else {
@@ -163,13 +166,14 @@ export function EditorPage() {
         }
 
         if (result.data?.uploadConfig?.slug) {
+          showToast('Config uploaded!', 'success')
           navigate(`/config/${result.data.uploadConfig.slug}`)
         }
       }
     } finally {
       setIsUploading(false)
     }
-  }, [uploadTitle, content, auth.user?.id, forkData?.config?.id, isEditing, canEdit, editData?.config?.id, uploadConfig, updateConfig, navigate])
+  }, [uploadTitle, content, auth.user?.id, forkData?.config?.id, isEditing, canEdit, editData?.config?.id, uploadConfig, updateConfig, navigate, showToast])
 
   const openUploadModal = useCallback(() => {
     // Pre-fill title for editing or forking
@@ -185,16 +189,16 @@ export function EditorPage() {
   }, [isEditing, editData?.config?.title, forkParam, forkData?.config?.title])
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-200px)] overflow-hidden">
+    <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 min-h-[60vh] lg:h-[calc(100vh-200px)] overflow-visible lg:overflow-hidden">
       <SEO
         title="Editor"
         description="Create and customize your htop configuration with a live preview. Edit htoprc settings visually and see real-time changes."
         url="/editor"
       />
       {/* Editor Panel */}
-      <div className="flex-1 flex flex-col min-h-0">
-        <h2 className="text-xl font-bold mb-2 shrink-0">htoprc Editor</h2>
-        <div className="flex-1 min-h-0 overflow-hidden">
+      <div className="flex-1 flex flex-col min-h-[300px] lg:min-h-0">
+        <h2 className="text-lg lg:text-xl font-bold mb-2 shrink-0">htoprc Editor</h2>
+        <div className="flex-1 min-h-[250px] lg:min-h-0 overflow-hidden">
           <HtoprcEditor value={content} onChange={setContent} />
         </div>
         {parsed.warnings.length > 0 && (
@@ -209,10 +213,10 @@ export function EditorPage() {
       </div>
 
       {/* Preview Panel */}
-      <div className="flex-1 flex flex-col min-h-0">
-        <div className="flex items-center justify-between mb-2 shrink-0">
-          <h2 className="text-xl font-bold">Preview</h2>
-          <span className="text-sm text-gray-500">
+      <div className="flex-1 flex flex-col min-h-[300px] lg:min-h-0">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 shrink-0 gap-1">
+          <h2 className="text-lg lg:text-xl font-bold">Preview</h2>
+          <span className="text-xs sm:text-sm text-gray-500">
             <span
               title="Customization score: +10 custom color scheme, +5 tree view, +5 each meter column, +3 for >8 columns, +3 custom header layout"
               className="cursor-help border-b border-dotted border-gray-500"
@@ -222,10 +226,10 @@ export function EditorPage() {
             {' | '}Version: {parsed.version}
           </span>
         </div>
-        <div className="flex-1 min-h-0 rounded-lg p-4 overflow-auto border border-gray-300 dark:border-gray-700 bg-black">
+        <div className="flex-1 min-h-[200px] lg:min-h-0 rounded-lg p-2 sm:p-4 overflow-auto border border-gray-300 dark:border-gray-700 bg-black">
           <HtopPreview config={parsed.config} />
         </div>
-        <div className="mt-4 space-y-3 shrink-0">
+        <div className="mt-3 lg:mt-4 space-y-3 shrink-0">
           <div className="flex gap-2 flex-wrap">
             <button
               onClick={openUploadModal}
@@ -234,7 +238,10 @@ export function EditorPage() {
               {isEditing && canEdit ? 'Save Changes' : forkParam ? 'Save Fork' : 'Upload to Gallery'}
             </button>
             <button
-              onClick={() => navigator.clipboard.writeText(content)}
+              onClick={() => {
+                navigator.clipboard.writeText(content)
+                showToast('Copied to clipboard!', 'success')
+              }}
               className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded text-sm text-gray-900 dark:text-white"
             >
               Copy Config
@@ -265,7 +272,10 @@ export function EditorPage() {
             <div className="flex items-center gap-2">
               <code className="flex-1 select-all text-gray-700 dark:text-gray-300">mkdir -p ~/.config/htop && cat &gt; ~/.config/htop/htoprc</code>
               <button
-                onClick={() => navigator.clipboard.writeText('mkdir -p ~/.config/htop && cat > ~/.config/htop/htoprc')}
+                onClick={() => {
+                  navigator.clipboard.writeText('mkdir -p ~/.config/htop && cat > ~/.config/htop/htoprc')
+                  showToast('Copied to clipboard!', 'success')
+                }}
                 className="px-2 py-1 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded text-xs shrink-0 text-gray-900 dark:text-white"
                 title="Copy command"
               >

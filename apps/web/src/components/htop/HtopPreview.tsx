@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import type { HtopConfig, Meter } from '@htoprc/parser'
 import { MeterRenderer } from './meters'
 import { ProcessList } from './ProcessList'
@@ -131,7 +131,7 @@ function PreviewModal({ config, onClose }: { config: HtopConfig; onClose: () => 
   )
 }
 
-export function HtopPreview({ config, compact }: HtopPreviewProps) {
+export const HtopPreview = memo(function HtopPreview({ config, compact }: HtopPreviewProps) {
   const [showModal, setShowModal] = useState(false)
 
   // If compact mode is forced, always show compact view
@@ -159,4 +159,4 @@ export function HtopPreview({ config, compact }: HtopPreviewProps) {
       </div>
     </>
   )
-}
+})

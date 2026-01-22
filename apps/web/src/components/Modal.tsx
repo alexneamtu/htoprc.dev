@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { type ReactNode, useEffect, useRef, useId, useCallback } from 'react'
 
 interface ModalProps {
   isOpen: boolean
@@ -7,7 +7,65 @@ interface ModalProps {
   children: ReactNode
 }
 
+const FOCUSABLE_SELECTOR =
+  'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+
 export function Modal({ isOpen, onClose, title, children }: ModalProps) {
+  const modalRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<Element | null>(null)
+  const titleId = useId()
+
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose()
+        return
+      }
+
+      if (event.key === 'Tab' && modalRef.current) {
+        const focusableElements = modalRef.current.querySelectorAll(FOCUSABLE_SELECTOR)
+        const firstElement = focusableElements[0] as HTMLElement | undefined
+        const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement | undefined
+
+        if (!firstElement || !lastElement) return
+
+        if (event.shiftKey && document.activeElement === firstElement) {
+          event.preventDefault()
+          lastElement.focus()
+        } else if (!event.shiftKey && document.activeElement === lastElement) {
+          event.preventDefault()
+          firstElement.focus()
+        }
+      }
+    },
+    [onClose]
+  )
+
+  useEffect(() => {
+    if (isOpen) {
+      triggerRef.current = document.activeElement
+
+      document.addEventListener('keydown', handleKeyDown)
+
+      const focusableElements = modalRef.current?.querySelectorAll(FOCUSABLE_SELECTOR)
+      const firstFocusable = focusableElements?.[0] as HTMLElement | undefined
+      if (firstFocusable) {
+        firstFocusable.focus()
+      } else {
+        modalRef.current?.focus()
+      }
+
+      return () => {
+        document.removeEventListener('keydown', handleKeyDown)
+      }
+    } else {
+      if (triggerRef.current instanceof HTMLElement) {
+        triggerRef.current.focus()
+      }
+      triggerRef.current = null
+    }
+  }, [isOpen, handleKeyDown])
+
   if (!isOpen) return null
 
   return (
@@ -16,10 +74,17 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
       onClick={onClose}
     >
       <div
-        className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full"
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full outline-none"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-lg font-semibold mb-4">{title}</h3>
+        <h3 id={titleId} className="text-lg font-semibold mb-4">
+          {title}
+        </h3>
         {children}
       </div>
     </div>

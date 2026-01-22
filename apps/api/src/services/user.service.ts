@@ -1,3 +1,5 @@
+import { validateSafeUrl } from '../utils/validation'
+
 export interface User {
   id: string
   username: string
@@ -22,6 +24,8 @@ export async function ensureUser(
 ): Promise<User> {
   const { username, avatarUrl } = options
   const finalUsername = username || 'User'
+  // Validate avatar URL to prevent XSS via malicious URLs
+  const safeAvatarUrl = validateSafeUrl(avatarUrl)
 
   const existing = await db
     .prepare('SELECT id, username, avatar_url, is_trusted, is_admin FROM users WHERE id = ?')
@@ -37,13 +41,13 @@ export async function ensureUser(
   if (!existing) {
     await db
       .prepare('INSERT INTO users (id, username, avatar_url, is_trusted, is_admin) VALUES (?, ?, ?, 0, 0)')
-      .bind(userId, finalUsername, avatarUrl || null)
+      .bind(userId, finalUsername, safeAvatarUrl)
       .run()
 
     return {
       id: userId,
       username: finalUsername,
-      avatarUrl: avatarUrl || null,
+      avatarUrl: safeAvatarUrl,
       isTrusted: false,
       isAdmin: false,
     }
@@ -52,7 +56,7 @@ export async function ensureUser(
   // Update profile if new values provided
   if (username || avatarUrl) {
     const updatedUsername = username || existing.username
-    const updatedAvatarUrl = avatarUrl || existing.avatar_url
+    const updatedAvatarUrl = safeAvatarUrl ?? existing.avatar_url
 
     await db
       .prepare('UPDATE users SET username = ?, avatar_url = ? WHERE id = ?')
