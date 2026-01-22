@@ -157,22 +157,15 @@ export function ConfigPage() {
   const parsed = parseHtoprc(config.content)
 
   // JSON-LD structured data for this config
+  // Using CreativeWork as Google doesn't support AggregateRating on SoftwareSourceCode
   const jsonLd = {
     '@context': 'https://schema.org',
-    '@type': 'SoftwareSourceCode',
+    '@type': 'CreativeWork',
     name: config.title,
     description: `htop configuration: ${config.title}. Score: ${config.score}, ${config.likesCount} likes.`,
-    codeRepository: config.sourceUrl || undefined,
-    programmingLanguage: 'htoprc',
-    aggregateRating: {
-      '@type': 'AggregateRating',
-      ratingValue: config.score,
-      ratingCount: config.likesCount || 1,
-      bestRating: 100,
-      worstRating: 0,
-    },
-    datePublished: config.createdAt,
     url: `https://htoprc.dev/config/${config.slug}`,
+    datePublished: config.createdAt,
+    ...(config.sourceUrl && { isBasedOn: config.sourceUrl }),
   }
 
   return (
