@@ -51,8 +51,8 @@ importers:
         specifier: ^5.18.0
         version: 5.18.0(graphql@16.12.0)
       hono:
-        specifier: ^4.11.6
-        version: 4.11.6
+        specifier: ^4.11.7
+        version: 4.11.7
     devDependencies:
       '@cloudflare/workers-types':
         specifier: ^4.20260124.0
@@ -1865,8 +1865,8 @@ packages:
     resolution: {integrity: sha512-EykJT/Q1KjTWctppgIAgfSO0tKVuZUjhgMr17kqTumMl6Afv3EISleU7qZUzoXDFTAHTDC4NOoG/ZxU3EvlMPQ==}
     engines: {node: '>=8'}
 
-  hono@4.11.6:
-    resolution: {integrity: sha512-ofIiiHyl34SV6AuhE3YT2mhO5HRWokce+eUYE82TsP6z0/H3JeJcjVWEMSIAiw2QkjDOEpES/lYsg8eEbsLtdw==}
+  hono@4.11.7:
+    resolution: {integrity: sha512-l7qMiNee7t82bH3SeyUCt9UF15EVmaBvsppY2zQtrbIhl/yzBTny+YUxsVjSjQ6gaqaeVtZmGocom8TzBlA4Yw==}
     engines: {node: '>=16.9.0'}
 
   html-encoding-sniffer@6.0.0:
@@ -4262,7 +4262,7 @@ snapshots:
 
   has-flag@4.0.0: {}
 
-  hono@4.11.6: {}
+  hono@4.11.7: {}
 
   html-encoding-sniffer@6.0.0:
     dependencies:
