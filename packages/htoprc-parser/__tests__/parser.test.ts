@@ -69,6 +69,7 @@ show_program_path=0
 highlight_base_name=1
 highlight_deleted_exe=0
 shadow_distribution_path_prefix=1
+hide_running_in_container=1
 highlight_megabytes=0
 highlight_threads=0
 highlight_changes=1
@@ -117,6 +118,10 @@ all_branches_collapsed=1`
       expect(result.config.degreeFahrenheit).toBe(true)
       expect(result.config.updateProcessNames).toBe(true)
       expect(result.config.accountGuestInCpuMeter).toBe(true)
+      expect(result.config.hideRunningInContainer).toBe(true)
+      expect(result.config.shadowDistributionPathPrefix).toBe(true)
+      expect(result.config.showCachedMemory).toBe(true)
+      expect(result.config.topologyAffinity).toBe(true)
       expect(result.config.enableMouse).toBe(false)
       expect(result.config.treeView).toBe(true)
       expect(result.config.treeViewAlwaysByPid).toBe(true)

@@ -1,4 +1,4 @@
-import type { ParseResult, HtopConfig, Meter, ParseWarning, MeterMode, ScreenDefinition } from './types'
+import type { ParseResult, HtopConfig, Meter, ParseError, ParseWarning, MeterMode, ScreenDefinition } from './types'
 
 /**
  * Known htoprc option names
@@ -116,6 +116,10 @@ export const DEFAULT_CONFIG: HtopConfig = {
   degreeFahrenheit: false,
   updateProcessNames: false,
   accountGuestInCpuMeter: false,
+  hideRunningInContainer: false,
+  shadowDistributionPathPrefix: false,
+  showCachedMemory: false,
+  topologyAffinity: false,
   enableMouse: true,
   delay: 15,
   hideFunctionBar: 0,
@@ -213,7 +217,7 @@ function calculateScore(config: HtopConfig): number {
 export function parseHtoprc(input: string): ParseResult {
   const config: HtopConfig = { ...DEFAULT_CONFIG, unknownOptions: {}, screens: [] }
   const warnings: ParseWarning[] = []
-  const errors: never[] = []
+  const errors: ParseError[] = []
   let version: 'v2' | 'v3' | 'unknown' = 'unknown'
 
   // Temporary storage for meter parsing
@@ -398,6 +402,22 @@ export function parseHtoprc(input: string): ParseResult {
 
       case 'account_guest_in_cpu_meter':
         config.accountGuestInCpuMeter = value === '1'
+        break
+
+      case 'hide_running_in_container':
+        config.hideRunningInContainer = value === '1'
+        break
+
+      case 'shadow_distribution_path_prefix':
+        config.shadowDistributionPathPrefix = value === '1'
+        break
+
+      case 'show_cached_memory':
+        config.showCachedMemory = value === '1'
+        break
+
+      case 'topology_affinity':
+        config.topologyAffinity = value === '1'
         break
 
       case 'enable_mouse':

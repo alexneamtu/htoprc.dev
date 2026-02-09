@@ -65,6 +65,10 @@ describe('serializeHtoprc', () => {
       degreeFahrenheit: true,
       updateProcessNames: true,
       accountGuestInCpuMeter: true,
+      hideRunningInContainer: true,
+      shadowDistributionPathPrefix: true,
+      showCachedMemory: true,
+      topologyAffinity: true,
       enableMouse: false,
       treeView: true,
       treeViewAlwaysByPid: true,
@@ -95,6 +99,10 @@ describe('serializeHtoprc', () => {
     expect(output).toContain('degree_fahrenheit=1')
     expect(output).toContain('update_process_names=1')
     expect(output).toContain('account_guest_in_cpu_meter=1')
+    expect(output).toContain('hide_running_in_container=1')
+    expect(output).toContain('shadow_distribution_path_prefix=1')
+    expect(output).toContain('show_cached_memory=1')
+    expect(output).toContain('topology_affinity=1')
     expect(output).toContain('enable_mouse=0')
     expect(output).toContain('tree_view=1')
     expect(output).toContain('tree_view_always_by_pid=1')

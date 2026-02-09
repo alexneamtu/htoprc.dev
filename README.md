@@ -117,7 +117,7 @@ pnpm --filter @htoprc/parser test:run -- --coverage
 pnpm --filter @htoprc/web vitest run --coverage
 ```
 
-**Coverage:** Parser 100% | API 100% | Web 81%
+**Coverage:** Coverage reports are generated in CI for each PR.
 
 ### Database
 

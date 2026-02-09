@@ -167,6 +167,10 @@ export function serializeHtoprc(config: HtopConfig, options: SerializeOptions = 
   addBoolOption('degree_fahrenheit', 'degreeFahrenheit')
   addBoolOption('update_process_names', 'updateProcessNames')
   addBoolOption('account_guest_in_cpu_meter', 'accountGuestInCpuMeter')
+  addBoolOption('hide_running_in_container', 'hideRunningInContainer')
+  addBoolOption('shadow_distribution_path_prefix', 'shadowDistributionPathPrefix')
+  addBoolOption('show_cached_memory', 'showCachedMemory')
+  addBoolOption('topology_affinity', 'topologyAffinity')
 
   // Function bar
   addOption('hide_function_bar', 'hideFunctionBar')

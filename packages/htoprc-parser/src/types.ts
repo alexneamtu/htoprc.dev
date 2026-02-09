@@ -61,6 +61,10 @@ export interface HtopConfig {
   degreeFahrenheit: boolean
   updateProcessNames: boolean
   accountGuestInCpuMeter: boolean
+  hideRunningInContainer: boolean
+  shadowDistributionPathPrefix: boolean
+  showCachedMemory: boolean
+  topologyAffinity: boolean
   enableMouse: boolean
   delay: number
   hideFunctionBar: number
