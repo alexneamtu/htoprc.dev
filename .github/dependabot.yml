@@ -24,5 +24,13 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
+    groups:
+      # Group minor and patch updates
+      actions:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
     commit-message:
       prefix: "ci"
