@@ -76,7 +76,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Download parser build
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
         with:
           name: parser-dist
           path: packages/htoprc-parser/dist
@@ -113,7 +113,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Download parser build
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
         with:
           name: parser-dist
           path: packages/htoprc-parser/dist
@@ -150,7 +150,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Download parser build
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
         with:
           name: parser-dist
           path: packages/htoprc-parser/dist
@@ -187,7 +187,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Download parser build
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
         with:
           name: parser-dist
           path: packages/htoprc-parser/dist
@@ -221,7 +221,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Download parser build
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
         with:
           name: parser-dist
           path: packages/htoprc-parser/dist
@@ -250,19 +250,19 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Download Parser Coverage
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
         with:
           name: coverage-parser
           path: packages/htoprc-parser/coverage
 
       - name: Download API Coverage
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
         with:
           name: coverage-api
           path: apps/api/coverage
 
       - name: Download Web Coverage
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
         with:
           name: coverage-web
           path: apps/web/coverage
