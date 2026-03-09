@@ -19,14 +19,14 @@
   "dependencies": {
     "@clerk/backend": "^2.33.0",
     "@htoprc/parser": "workspace:*",
-    "graphql": "^16.13.0",
-    "graphql-yoga": "^5.18.0",
-    "hono": "^4.12.4"
+    "graphql": "^16.13.1",
+    "graphql-yoga": "^5.18.1",
+    "hono": "^4.12.5"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260305.0",
+    "@cloudflare/workers-types": "^4.20260307.1",
     "@vitest/coverage-v8": "^4.0.18",
     "vitest": "^4.0.18",
-    "wrangler": "^4.69.0"
+    "wrangler": "^4.71.0"
   }
 }
