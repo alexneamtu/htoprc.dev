@@ -188,6 +188,8 @@ jobs:
 
       - name: Backup D1 Database (Production)
         if: needs.determine-environment.outputs.environment == 'production'
+        continue-on-error: true
+        id: d1-backup
         uses: cloudflare/wrangler-action@da0e0dfe58b7a431659754fdf3f186c529afbe65 # v3.14.1
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -197,7 +199,7 @@ jobs:
           packageManager: pnpm
 
       - name: Upload D1 Backup
-        if: needs.determine-environment.outputs.environment == 'production'
+        if: needs.determine-environment.outputs.environment == 'production' && steps.d1-backup.outcome == 'success'
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: d1-backup-${{ github.run_id }}
@@ -232,7 +234,11 @@ jobs:
           echo "| Migrations | Applied |" >> $GITHUB_STEP_SUMMARY
           echo "| Trigger | ${{ github.event_name }} |" >> $GITHUB_STEP_SUMMARY
           if [ "${{ needs.determine-environment.outputs.environment }}" = "production" ]; then
-            echo "| DB Backup | d1-backup-${{ github.run_id }} (30 days retention) |" >> $GITHUB_STEP_SUMMARY
+            if [ "${{ steps.d1-backup.outcome }}" = "success" ]; then
+              echo "| DB Backup | d1-backup-${{ github.run_id }} (30 days retention) |" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "| DB Backup | :warning: Backup failed — update API token permissions |" >> $GITHUB_STEP_SUMMARY
+            fi
             echo "| Worker | htoprc-api-production |" >> $GITHUB_STEP_SUMMARY
             echo "| Custom Domain | [api.htoprc.dev](https://api.htoprc.dev) |" >> $GITHUB_STEP_SUMMARY
             echo "| Release | ${{ github.event.release.tag_name }} |" >> $GITHUB_STEP_SUMMARY
