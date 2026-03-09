@@ -80,6 +80,7 @@ export function EditorPage() {
   // Fork and edit params (can be ID or slug)
   const forkParam = searchParams.get('fork')
   const editParam = searchParams.get('edit')
+  const hasQueryParams = searchParams.toString().length > 0
 
   // Helper to detect if a value is a UUID
   const isUUID = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
@@ -194,6 +195,7 @@ export function EditorPage() {
         title="Editor"
         description="Create and customize your htop configuration with a live preview. Edit htoprc settings visually and see real-time changes."
         url="/editor"
+        noindex={hasQueryParams}
       />
       {/* Editor Panel */}
       <div className="flex-1 flex flex-col min-h-[300px] lg:min-h-0">

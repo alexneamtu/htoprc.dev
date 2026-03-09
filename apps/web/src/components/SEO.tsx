@@ -7,6 +7,7 @@ interface SEOProps {
   url?: string
   type?: 'website' | 'article'
   jsonLd?: Record<string, unknown>
+  noindex?: boolean
 }
 
 const SITE_NAME = 'htoprc.dev'
@@ -23,6 +24,7 @@ export function SEO({
   url,
   type = 'website',
   jsonLd,
+  noindex = false,
 }: SEOProps) {
   const fullTitle = title ? `${title} | ${SITE_NAME}` : DEFAULT_TITLE
   const fullUrl = url ? `${BASE_URL}${url}` : BASE_URL
@@ -65,6 +67,7 @@ export function SEO({
       <meta name="twitter:image" content={fullImage} />
 
       {/* Additional meta */}
+      {noindex && <meta name="robots" content="noindex, nofollow" />}
       <link rel="canonical" href={fullUrl} />
 
       {/* JSON-LD Structured Data */}
