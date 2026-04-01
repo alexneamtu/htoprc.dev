@@ -38,14 +38,14 @@ jobs:
         run: pnpm --filter @htoprc/parser build
 
       - name: Upload parser build
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: parser-dist
           path: packages/htoprc-parser/dist
           retention-days: 1
 
       - name: Upload node_modules cache info
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: pnpm-store-path
           path: |
@@ -85,7 +85,7 @@ jobs:
         run: pnpm --filter @htoprc/parser exec vitest run --reporter=verbose --reporter=github-actions --coverage
 
       - name: Upload Parser Coverage
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: coverage-parser
           path: packages/htoprc-parser/coverage
@@ -122,7 +122,7 @@ jobs:
         run: pnpm --filter @htoprc/api exec vitest run --reporter=verbose --reporter=github-actions --coverage
 
       - name: Upload API Coverage
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: coverage-api
           path: apps/api/coverage
@@ -159,7 +159,7 @@ jobs:
         run: pnpm --filter @htoprc/web exec vitest run --reporter=verbose --reporter=github-actions --coverage
 
       - name: Upload Web Coverage
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: coverage-web
           path: apps/web/coverage
@@ -233,7 +233,7 @@ jobs:
           VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.VITE_CLERK_PUBLISHABLE_KEY_PROD }}
 
       - name: Upload web build
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: web-dist
           path: apps/web/dist
