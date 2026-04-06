@@ -268,21 +268,21 @@ jobs:
           path: apps/web/coverage
 
       - name: Coverage Report Parser
-        uses: davelosert/vitest-coverage-report-action@bd52af59d9cd548ea7cd405044d2458042e6d888 # v2.10.0
+        uses: davelosert/vitest-coverage-report-action@3c50566c523e04813df28de8f7c48dd97d663f1c # v2.11.2
         with:
           working-directory: packages/htoprc-parser
           name: Parser
           comment-on: none
 
       - name: Coverage Report API
-        uses: davelosert/vitest-coverage-report-action@bd52af59d9cd548ea7cd405044d2458042e6d888 # v2.10.0
+        uses: davelosert/vitest-coverage-report-action@3c50566c523e04813df28de8f7c48dd97d663f1c # v2.11.2
         with:
           working-directory: apps/api
           name: API
           comment-on: none
 
       - name: Coverage Report Web
-        uses: davelosert/vitest-coverage-report-action@bd52af59d9cd548ea7cd405044d2458042e6d888 # v2.10.0
+        uses: davelosert/vitest-coverage-report-action@3c50566c523e04813df28de8f7c48dd97d663f1c # v2.11.2
         with:
           working-directory: apps/web
           name: Web
