@@ -17,7 +17,7 @@
     "db:seed": "wrangler d1 execute DB --local --file=./migrations/seed.sql"
   },
   "dependencies": {
-    "@clerk/backend": "^2.33.0",
+    "@clerk/backend": "^2.33.3",
     "@htoprc/parser": "workspace:*",
     "graphql": "^16.13.2",
     "graphql-yoga": "^5.21.0",
