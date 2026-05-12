@@ -47,7 +47,7 @@
     "jsdom": "^28.1.0",
     "postcss": "^8.5.14",
     "tailwindcss": "^4.3.0",
-    "vite": "^7.3.2",
+    "vite": "^8.0.12",
     "vitest": "^4.1.6",
     "wonka": "^6.3.6",
     "wrangler": "^4.90.0"
