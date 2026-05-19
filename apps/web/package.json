@@ -21,7 +21,7 @@
     "@codemirror/lint": "^6.9.6",
     "@codemirror/state": "^6.6.0",
     "@codemirror/theme-one-dark": "^6.1.3",
-    "@codemirror/view": "^6.42.1",
+    "@codemirror/view": "^6.43.0",
     "@htoprc/parser": "workspace:*",
     "@urql/core": "^6.0.1",
     "@urql/exchange-auth": "^3.0.0",
@@ -29,11 +29,11 @@
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-helmet-async": "^2.0.5",
-    "react-router-dom": "^7.15.0",
+    "react-router-dom": "^7.15.1",
     "urql": "^5.0.2"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260511.1",
+    "@cloudflare/workers-types": "^4.20260519.1",
     "@tailwindcss/postcss": "^4.3.0",
     "@tailwindcss/vite": "^4.3.0",
     "@testing-library/jest-dom": "^6.9.1",
@@ -50,6 +50,6 @@
     "vite": "^7.3.2",
     "vitest": "^4.1.6",
     "wonka": "^6.3.6",
-    "wrangler": "^4.90.0"
+    "wrangler": "^4.92.0"
   }
 }
