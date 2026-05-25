@@ -33,23 +33,23 @@
     "urql": "^5.0.2"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260519.1",
+    "@cloudflare/workers-types": "^4.20260525.1",
     "@tailwindcss/postcss": "^4.3.0",
     "@tailwindcss/vite": "^4.3.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
-    "@types/react": "^19.2.14",
+    "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.4",
-    "@vitest/coverage-v8": "^4.1.6",
+    "@vitest/coverage-v8": "^4.1.7",
     "autoprefixer": "^10.5.0",
     "jsdom": "^28.1.0",
-    "postcss": "^8.5.14",
+    "postcss": "^8.5.15",
     "tailwindcss": "^4.3.0",
     "vite": "^7.3.2",
-    "vitest": "^4.1.6",
+    "vitest": "^4.1.7",
     "wonka": "^6.3.6",
-    "wrangler": "^4.92.0"
+    "wrangler": "^4.94.0"
   }
 }
