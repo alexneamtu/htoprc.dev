@@ -20,13 +20,13 @@
     "@clerk/backend": "^2.33.3",
     "@htoprc/parser": "workspace:*",
     "graphql": "^16.14.1",
-    "graphql-yoga": "^5.21.1",
-    "hono": "^4.12.23"
+    "graphql-yoga": "^5.21.2",
+    "hono": "^4.12.24"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260602.1",
+    "@cloudflare/workers-types": "^4.20260608.1",
     "@vitest/coverage-v8": "^4.1.8",
     "vitest": "^4.1.8",
-    "wrangler": "^4.97.0"
+    "wrangler": "^4.98.0"
   }
 }
