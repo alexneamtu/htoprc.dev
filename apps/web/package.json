@@ -25,7 +25,7 @@
     "@htoprc/parser": "workspace:*",
     "@urql/core": "^6.0.3",
     "@urql/exchange-auth": "^3.0.0",
-    "graphql": "^16.14.2",
+    "graphql": "^17.0.1",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-helmet-async": "^2.0.5",
