@@ -21,7 +21,7 @@
     "@htoprc/parser": "workspace:*",
     "graphql": "^16.14.2",
     "graphql-yoga": "^5.21.2",
-    "hono": "^4.12.30"
+    "hono": "^4.12.34"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260629.1",
