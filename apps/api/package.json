@@ -21,12 +21,12 @@
     "@htoprc/parser": "workspace:*",
     "graphql": "^16.14.2",
     "graphql-yoga": "^5.21.2",
-    "hono": "^4.12.34"
+    "hono": "^4.13.1"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260629.1",
     "@vitest/coverage-v8": "^4.1.10",
     "vitest": "^4.1.10",
-    "wrangler": "^4.110.0"
+    "wrangler": "^4.120.0"
   }
 }
