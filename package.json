@@ -5,7 +5,8 @@
   "type": "module",
   "pnpm": {
     "overrides": {
-      "undici": ">=7.18.2"
+      "undici": ">=7.18.2",
+      "minimatch@<11.0.1": ">=11.0.1"
     }
   },
   "scripts": {
