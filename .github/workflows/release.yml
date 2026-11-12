@@ -8,6 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write # npm trusted publishing (OIDC)
 
     steps:
       - name: Checkout
@@ -178,12 +179,11 @@ jobs:
       - name: Build and publish parser to npm
         if: steps.changelog.outputs.skip != 'true'
         working-directory: packages/htoprc-parser
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        # npm CLI, not pnpm: npm >= 11.5.1 authenticates via trusted publishing (no NPM_TOKEN).
         run: |
           pnpm run build
           pnpm run test:run
-          pnpm publish --access public --no-git-checks
+          npm publish --access public
 
       - name: Release Summary
         if: steps.changelog.outputs.skip != 'true'
