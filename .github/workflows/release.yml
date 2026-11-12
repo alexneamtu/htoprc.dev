@@ -144,10 +144,9 @@ jobs:
           name: ${{ steps.next_version.outputs.version }}
           body_path: /tmp/changelog.md
           generate_release_notes: false
-        env:
-          # Use PAT instead of GITHUB_TOKEN to trigger the deploy workflow
-          # (GITHUB_TOKEN actions don't trigger other workflows to prevent infinite loops)
-          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          # PAT, not GITHUB_TOKEN: GITHUB_TOKEN events don't trigger the deploy workflow.
+          # v3 ignores the GITHUB_TOKEN env var, so it must be the `token` input.
+          token: ${{ secrets.GH_PAT }}
 
       - name: Install pnpm
         if: steps.changelog.outputs.skip != 'true'
