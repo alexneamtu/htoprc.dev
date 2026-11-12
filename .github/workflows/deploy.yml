@@ -34,7 +34,7 @@ jobs:
             # CI already passed (checked in job-level if condition)
             # Also check Security workflow passed for this commit
             SHA="${{ github.event.workflow_run.head_sha }}"
-            SECURITY_STATUS=$(gh api repos/${{ github.repository }}/commits/${SHA}/check-runs --jq '.check_runs[] | select(.name == "Scan for secrets") | .conclusion' 2>/dev/null || echo "pending")
+            SECURITY_STATUS=$(gh api repos/${{ github.repository }}/commits/${SHA}/check-runs --jq '.check_runs[] | select(.name == "Secret Scanning") | .conclusion' 2>/dev/null || echo "pending")
 
             if [ "$SECURITY_STATUS" = "success" ]; then
               echo "environment=staging" >> $GITHUB_OUTPUT
