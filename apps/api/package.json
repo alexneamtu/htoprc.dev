@@ -17,16 +17,16 @@
     "db:seed": "wrangler d1 execute DB --local --file=./migrations/seed.sql"
   },
   "dependencies": {
-    "@clerk/backend": "^3.28.0",
+    "@clerk/backend": "^3.31.3",
     "@htoprc/parser": "workspace:*",
     "graphql": "^17.1.0",
     "graphql-yoga": "^6.1.0",
-    "hono": "^4.13.18"
+    "hono": "^4.13.19"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20261113.1",
-    "@vitest/coverage-v8": "^5.1.0",
-    "vitest": "^5.1.0",
-    "wrangler": "^4.161.0"
+    "@cloudflare/workers-types": "^5.20261120.1",
+    "@vitest/coverage-v8": "^5.1.1",
+    "vitest": "^5.1.1",
+    "wrangler": "^4.165.0"
   }
 }
